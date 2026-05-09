@@ -214,18 +214,84 @@ paths:
     post:
       tags:
         - Rentals
-      summary: Create a rental request
+      summary: Create a rental request waiting for escrow payment
+      description: Creates a rental with status pending_payment. The Owner is notified only after VNPay escrow succeeds.
       security:
         - bearerAuth: []
       requestBody:
         $ref: '#/components/requestBodies/CreateRentalInput'
       responses:
         '201':
-          description: Rental request created successfully
+          description: Rental request created successfully and is waiting for payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rental'
         '400':
           description: Bad request (e.g., dates not available)
         '401':
           description: Unauthorized
+
+  /rentals/{id}/create-vnpay-url:
+    post:
+      tags:
+        - Rentals
+      summary: Create VNPay payment URL for escrow
+      description: Renter creates a VNPay Sandbox payment URL for a rental that is still pending_payment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VNPay payment URL created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentUrl:
+                    type: string
+                    example: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Version=2.1.0
+        '400':
+          description: Rental is not waiting for payment
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not the renter)
+        '404':
+          description: Rental not found
+
+  /rentals/vnpay-return:
+    get:
+      tags:
+        - Rentals
+      summary: Handle VNPay return callback
+      description: VNPay redirects the browser here after payment. The backend verifies the secure hash, marks escrow as paid, moves the rental to pending_confirmation, and publishes the Owner notification.
+      parameters:
+        - in: query
+          name: vnp_TxnRef
+          schema:
+            type: string
+        - in: query
+          name: vnp_ResponseCode
+          schema:
+            type: string
+        - in: query
+          name: vnp_SecureHash
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects to the frontend VNPay result page after verification
+        '400':
+          description: Invalid signature or payment failed
+        '404':
+          description: Rental not found
 
   /rentals/{id}/confirm:
     patch:
@@ -422,9 +488,14 @@ components:
           format: date-time
         totalPrice:
           type: integer
+        escrowAmount:
+          type: integer
+        paymentStatus:
+          type: string
+          enum: [pending, escrowed, refunded]
         status:
           type: string
-          enum: [pending_confirmation, confirmed, rejected, in_progress, completed, cancelled]
+          enum: [pending_payment, pending_confirmation, confirmed, rejected, in_progress, completed, cancelled]
         item:
           $ref: '#/components/schemas/ItemSummary'
         counterparty:
@@ -512,6 +583,39 @@ components:
         status:
           type: string
           enum: [available, rented, delisted]
+        createdAt:
+          type: string
+          format: date-time
+
+    Rental:
+      type: object
+      properties:
+        _id:
+          type: string
+        itemId:
+          type: string
+        renterId:
+          type: string
+        ownerId:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        totalPrice:
+          type: integer
+        escrowAmount:
+          type: integer
+        paymentStatus:
+          type: string
+          enum: [pending, escrowed, refunded]
+        note:
+          type: string
+        status:
+          type: string
+          enum: [pending_payment, pending_confirmation, confirmed, rejected, in_progress, completed, cancelled]
         createdAt:
           type: string
           format: date-time

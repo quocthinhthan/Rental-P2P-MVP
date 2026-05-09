@@ -14,6 +14,7 @@ import RegisterPage from './pages/RegisterPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import PostItemPage from './pages/PostItemPage';
 import NotFoundPage from './pages/NotFoundPage';
+import VNPayReturnPage from './pages/VNPayReturnPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Route path="/items/:itemId" element={<ItemDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/vnpay-return" element={<VNPayReturnPage />} />
         <Route path="*" element={<NotFoundPage />} />
 
         {/* 2. Cấu hình Routes cần bảo vệ */}

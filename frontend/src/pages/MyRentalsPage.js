@@ -54,6 +54,16 @@ function MyRentalsPage() {
   };
 
 
+  const handlePayEscrow = async (rentalId) => {
+    try {
+      const response = await apiService.createVNPayUrl(rentalId);
+      window.location.href = response.data.paymentUrl;
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create VNPay payment URL.');
+      console.error(err);
+    }
+  };
+
   // Component con để render một thẻ rental
   const RentalCard = ({ rental, type }) => {
     
@@ -108,6 +118,17 @@ function MyRentalsPage() {
                 </p>
               )}
               
+              {type === 'asRenter' && rental.status === 'pending_payment' && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => handlePayEscrow(rental._id)}
+                    className="btn btn-primary"
+                  >
+                    Thanh toan ky quy qua VNPay
+                  </button>
+                </div>
+              )}
+
               {/* Hiển thị nút cho Chủ sở hữu (asOwner) */}
               {type === 'asOwner' && rental.status === 'pending_confirmation' && (
                 <div className="mt-3">

@@ -68,6 +68,9 @@ export const getMyRentals = () =>
 export const createRentalRequest = (itemId, startDate, endDate, note) =>
   api.post('/rentals', { itemId, startDate, endDate, note});
 
+export const createVNPayUrl = (rentalId) =>
+  api.post(`/rentals/${rentalId}/create-vnpay-url`);
+
 export const confirmRental = (rentalId) =>
   api.patch(`/rentals/${rentalId}/confirm`);
 
@@ -103,6 +106,7 @@ const apiService = {
   getItemDetails,
   getMyRentals,
   createRentalRequest,
+  createVNPayUrl,
   confirmRental,
   rejectRental,
   completeRental,

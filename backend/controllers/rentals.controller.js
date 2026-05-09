@@ -3,6 +3,51 @@ const Rental = require('../models/Rental.model');
 const Item = require('../models/Item.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
+const qs = require('qs');
+
+const sortObject = (obj) => {
+  const sorted = {};
+  const keys = Object.keys(obj).sort();
+
+  keys.forEach((key) => {
+    sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
+  });
+
+  return sorted;
+};
+
+const formatDateForVNPay = (date) => {
+  const pad = (number) => number.toString().padStart(2, '0');
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
+  ].join('');
+};
+
+const getClientIp = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  return req.connection?.remoteAddress
+    || req.socket?.remoteAddress
+    || req.connection?.socket?.remoteAddress
+    || '127.0.0.1';
+};
+
+const buildFrontendVNPayReturnUrl = (params = {}) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const query = qs.stringify(params);
+
+  return `${frontendUrl}/vnpay-return${query ? `?${query}` : ''}`;
+};
 
 // POST /api/rentals (Create a rental request)
 exports.createRentalRequest = async (req, res) => {
@@ -22,15 +67,14 @@ exports.createRentalRequest = async (req, res) => {
       return res.status(400).json({ message: 'You cannot rent your own item' });
     }
     if (item.status !== 'available') {
-        return res.status(400).json({ message: 'Item is not available for rent' });
+      return res.status(400).json({ message: 'Item is not available for rent' });
     }
-    
-    // Tính toán ngày và tổng giá
+
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1; // Tính cả ngày bắt đầu
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     if (days <= 0) {
-        return res.status(400).json({ message: 'End date must be after start date' });
+      return res.status(400).json({ message: 'End date must be after start date' });
     }
     const totalPrice = days * item.pricePerDay;
 
@@ -41,20 +85,154 @@ exports.createRentalRequest = async (req, res) => {
       startDate: start,
       endDate: end,
       totalPrice,
-      note: note,
-      status: 'pending_confirmation'
-    });
-
-    // Gửi message đến RabbitMQ báo cho chủ sở hữu
-    publishToQueue({
-      task: 'new_rental_request', // Tên tác vụ mới
-      rentalId: rental._id,
-      ownerId: item.ownerId // Gửi kèm Id của chủ sở hữu
+      escrowAmount: totalPrice,
+      paymentStatus: 'pending',
+      note,
+      status: 'pending_payment'
     });
 
     res.status(201).json(rental);
   } catch (error) {
     res.status(400).json({ message: 'Bad request', error: error.message });
+  }
+};
+
+// POST /api/rentals/:id/create-vnpay-url
+exports.createVNPayUrl = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Rental ID' });
+    }
+
+    const rental = await Rental.findById(id);
+    if (!rental) {
+      return res.status(404).json({ message: 'Rental not found' });
+    }
+
+    if (!rental.renterId.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Forbidden (not the renter of this rental)' });
+    }
+
+    if (rental.status !== 'pending_payment' || rental.paymentStatus !== 'pending') {
+      return res.status(400).json({ message: 'Rental is not waiting for payment' });
+    }
+
+    const requiredEnv = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
+    const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+    if (missingEnv.length > 0) {
+      return res.status(500).json({
+        message: 'VNPay config is missing',
+        missing: missingEnv
+      });
+    }
+
+    const amount = Math.round(rental.escrowAmount * 100);
+    let vnpParams = {
+      vnp_Version: '2.1.0',
+      vnp_Command: 'pay',
+      vnp_TmnCode: process.env.VNP_TMN_CODE,
+      vnp_Locale: 'vn',
+      vnp_CurrCode: 'VND',
+      vnp_TxnRef: rental._id.toString(),
+      vnp_OrderInfo: 'Thanh toan ky quy don thue ' + rental._id,
+      vnp_OrderType: 'other',
+      vnp_Amount: amount,
+      vnp_ReturnUrl: process.env.VNP_RETURN_URL,
+      vnp_IpAddr: getClientIp(req),
+      vnp_CreateDate: formatDateForVNPay(new Date())
+    };
+
+    vnpParams = sortObject(vnpParams);
+
+    const signData = qs.stringify(vnpParams, { encode: false });
+    const secureHash = crypto
+      .createHmac('sha512', process.env.VNP_HASH_SECRET)
+      .update(Buffer.from(signData, 'utf-8'))
+      .digest('hex');
+
+    vnpParams.vnp_SecureHash = secureHash;
+
+    const paymentUrl = process.env.VNP_URL + '?' + qs.stringify(vnpParams, { encode: false });
+
+    res.status(200).json({ paymentUrl });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/rentals/vnpay-return
+exports.handleVNPayReturn = async (req, res) => {
+  try {
+    if (!process.env.VNP_HASH_SECRET) {
+      return res.status(500).json({ message: 'VNPay config is missing', missing: ['VNP_HASH_SECRET'] });
+    }
+
+    let vnpParams = { ...req.query };
+    const secureHash = vnpParams.vnp_SecureHash;
+
+    delete vnpParams.vnp_SecureHash;
+    delete vnpParams.vnp_SecureHashType;
+
+    vnpParams = sortObject(vnpParams);
+
+    const signData = qs.stringify(vnpParams, { encode: false });
+    const signed = crypto
+      .createHmac('sha512', process.env.VNP_HASH_SECRET)
+      .update(Buffer.from(signData, 'utf-8'))
+      .digest('hex');
+
+    if (!secureHash || secureHash.toLowerCase() !== signed.toLowerCase()) {
+      return res.redirect(buildFrontendVNPayReturnUrl({
+        status: 'failed',
+        message: 'Invalid VNPay signature'
+      }));
+    }
+
+    const rentalId = vnpParams.vnp_TxnRef;
+    if (!mongoose.Types.ObjectId.isValid(rentalId)) {
+      return res.redirect(buildFrontendVNPayReturnUrl({
+        status: 'failed',
+        message: 'Invalid VNPay transaction reference'
+      }));
+    }
+
+    const rental = await Rental.findById(rentalId);
+    if (!rental) {
+      return res.redirect(buildFrontendVNPayReturnUrl({
+        status: 'failed',
+        message: 'Rental not found'
+      }));
+    }
+
+    if (vnpParams.vnp_ResponseCode === '00') {
+      if (rental.paymentStatus !== 'escrowed') {
+        rental.paymentStatus = 'escrowed';
+        rental.status = 'pending_confirmation';
+        await rental.save();
+
+        publishToQueue({
+          task: 'new_rental_request',
+          rentalId: rental._id,
+          ownerId: rental.ownerId
+        });
+      }
+
+      return res.redirect(buildFrontendVNPayReturnUrl({
+        status: 'success',
+        rentalId: rental._id.toString()
+      }));
+    }
+
+    return res.redirect(buildFrontendVNPayReturnUrl({
+      status: 'failed',
+      rentalId: rental._id.toString(),
+      responseCode: vnpParams.vnp_ResponseCode,
+      message: 'VNPay payment failed'
+    }));
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
