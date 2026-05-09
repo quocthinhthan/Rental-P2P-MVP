@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
@@ -11,19 +13,13 @@ dotenv.config();
 const { connectRabbitMQ } = require('./config/rabbitmq'); // >>> THÊM: Import hàm kết nối RabbitMQ
 
 const app = express();
+const swaggerDocument = YAML.load(path.join(__dirname, '..', 'swagger.yaml'));
 
 // --- Middleware ---
-const allowedOrigins = ['http://localhost', 'http://localhost:3000'];
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-};
-app.use(cors(corsOptions));
+// Swagger UI và frontend local đều cần gọi API thoải mái trong môi trường dev.
+// Nếu cần siết lại sau, ta có thể giới hạn bằng env var riêng.
+app.use(cors());
+app.options('*', cors());
 app.use(express.json());
 
 // --- Hàm kết nối DB ---
@@ -50,6 +46,7 @@ app.use('/api/rentals', rentalRoutes);
 app.use('/api/views', viewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get('/', (req, res) => {
   res.send('Backend API is running...');

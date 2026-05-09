@@ -20,6 +20,7 @@ const app = express();
 
 // Kích hoạt CORS
 app.use(cors());
+app.options('*', cors());
 
 // Middleware để parse JSON bodies
 app.use(express.json());
