@@ -1,5 +1,72 @@
+# =========================
+# Dependencies
+# =========================
 node_modules/
-.vscode/
-.42c/
+**/node_modules/
+
+# PNPM
+.pnpm-store/
+.pnp/
+.pnp.js
+
+# =========================
+# Environment variables
+# =========================
 .env
+.env.*
+!.env.example
+
+# =========================
+# Build / Cache
+# =========================
 dist/
+build/
+coverage/
+.cache/
+.parcel-cache/
+.eslintcache
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Runtime / Crash dumps
+# =========================
+erl_crash.dump
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+.42c/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+*.tmp
+
+# =========================
+# Local docs / personal notes
+# =========================
+DEMO_SCRIPT.md
+QUICK_START.md
+SETUP_LOCAL.md

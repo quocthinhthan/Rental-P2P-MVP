@@ -1,4 +1,6 @@
 // notification-worker/worker.js
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();
 const amqp = require('amqplib');
 const mongoose = require('mongoose');

@@ -57,6 +57,9 @@ docker stack deploy -c docker-compose.swarm.yml p2p_rental_stack
 # (Đợi vài phút cho cột REPLICAS hiển thị đúng số lượng: 3/3, 1/1)
 docker service ls
 
+# Scale lên 5 backend
+docker service scale p2p_rental_stack_backend=5
+
 
 # 5. Dọn dẹp môi trường Swarm sau khi demo xong.
 docker stack rm p2p_rental_stack

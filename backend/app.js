@@ -1,10 +1,13 @@
 // backend/app.js
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const { connectRabbitMQ } = require('./config/rabbitmq'); // Import RabbitMQ
 
 // Tải biến môi trường
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();
 
 // Kết nối CSDL

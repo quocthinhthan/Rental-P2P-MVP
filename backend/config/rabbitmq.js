@@ -2,7 +2,6 @@
 const amqp = require('amqplib');
 
 const QUEUE_NAME = 'notification_queue';
-const RABBITMQ_URI = process.env.RABBITMQ_URI || 'amqp://rabbitmq';
 
 let channel = null; // Biến để giữ channel kết nối
 
@@ -15,7 +14,8 @@ const connectRabbitMQ = async () => {
   while (attempt < maxAttempts) {
     try {
       console.log('[BACKEND] Attempting to connect to RabbitMQ...');
-      const connection = await amqp.connect(RABBITMQ_URI);
+      const rabbitmqUri = process.env.RABBITMQ_URI || 'amqp://rabbitmq';
+      const connection = await amqp.connect(rabbitmqUri);
       channel = await connection.createChannel(); // Gán vào biến channel toàn cục
       
       await channel.assertQueue(QUEUE_NAME, { durable: true });
@@ -48,10 +48,17 @@ const connectRabbitMQ = async () => {
 // Hàm publish, bây giờ sẽ kiểm tra channel trước khi gửi
 const publishToQueue = (data) => {
   if (channel) {
-    channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(data)), { persistent: true });
+    try {
+      channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(data)), { persistent: true });
+      return true;
+    } catch (err) {
+      console.error('[BACKEND] Failed to publish to RabbitMQ:', err.message);
+      return false;
+    }
   } else {
-    // Ném lỗi để controller có thể log lại
-    throw new Error('RabbitMQ channel is not available.');
+    // Không ném lỗi để API không bị crash khi RabbitMQ tạm thời không có
+    console.warn('[BACKEND] RabbitMQ channel is not available. Skipping publish.');
+    return false;
   }
 };
 

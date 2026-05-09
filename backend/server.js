@@ -1,11 +1,14 @@
 // backend/server.js
 const express = require('express');
 const dotenv = require('dotenv');
+const path = require('path');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { connectRabbitMQ } = require('./config/rabbitmq'); // >>> THÊM: Import hàm kết nối RabbitMQ
 
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
+
+const { connectRabbitMQ } = require('./config/rabbitmq'); // >>> THÊM: Import hàm kết nối RabbitMQ
 
 const app = express();
 
@@ -58,8 +61,12 @@ const startServer = async () => {
     // 1. Kết nối đến DB và chờ hoàn tất
     await connectDB();
     
-    // 2. Kết nối đến RabbitMQ và chờ hoàn tất
-    await connectRabbitMQ();
+    // 2. Kết nối đến RabbitMQ nhưng không chặn server khởi động nếu không có
+    try {
+      await connectRabbitMQ();
+    } catch (err) {
+      console.warn('[BACKEND] RabbitMQ not available at startup, continuing without it.');
+    }
 
     // 3. SAU KHI tất cả kết nối đã sẵn sàng, MỚI khởi động Express server
     const PORT = process.env.PORT || 5000;
