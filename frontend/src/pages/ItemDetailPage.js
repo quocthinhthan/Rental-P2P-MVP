@@ -44,24 +44,22 @@ function ItemDetailPage() {
   const handleRentalSubmit = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      alert('Vui lòng đăng nhập để thực hiện thuê.');
+      alert('Vui long dang nhap de thuc hien thue.');
       navigate('/login');
       return;
     }
     setRentalError('');
     setRentalSuccess('');
-    setIsSubmitting(true); // >>> THÊM: Vô hiệu hóa nút
+    setIsSubmitting(true);
 
     try {
-      await apiService.createRentalRequest(itemId, startDate, endDate, note);
-      setRentalSuccess('Yêu cầu thuê đã được gửi thành công! Vui lòng chờ chủ sở hữu xác nhận.');
-      // Xóa ngày đã chọn để tránh submit lại
-      setStartDate(null);
-      setEndDate(null);
+      const rentalResponse = await apiService.createRentalRequest(itemId, startDate, endDate, note);
+      const paymentResponse = await apiService.createVNPayUrl(rentalResponse.data._id);
+
+      window.location.href = paymentResponse.data.paymentUrl;
     } catch (err) {
-      setRentalError(err.response?.data?.message || 'Gửi yêu cầu thuê thất bại. Vui lòng thử lại.');
-    } finally {
-      setIsSubmitting(false); // >>> THÊM: Kích hoạt lại nút
+      setRentalError(err.response?.data?.message || 'Khong the tao thanh toan VNPay. Vui long thu lai.');
+      setIsSubmitting(false);
     }
   };
   

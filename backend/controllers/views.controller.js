@@ -59,7 +59,10 @@ exports.getMyRentalsView = async (req, res) => {
       });
 
     // 2. Lấy các đơn tôi là chủ (asOwner)
-    const asOwner = await Rental.find({ ownerId: userId })
+    const asOwner = await Rental.find({
+      ownerId: userId,
+      status: { $ne: 'pending_payment' }
+    })
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
           path: 'itemId',
@@ -85,6 +88,8 @@ exports.getMyRentalsView = async (req, res) => {
             startDate: rental.startDate,
             endDate: rental.endDate,
             totalPrice: rental.totalPrice,
+            escrowAmount: rental.escrowAmount,
+            paymentStatus: rental.paymentStatus,
             status: rental.status,
             note: rental.note, // >>> SỬA: Thêm trường note vào đây
             item: itemSummary,
