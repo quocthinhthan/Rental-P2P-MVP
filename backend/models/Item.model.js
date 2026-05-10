@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const ItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
+  category: { type: String, default: 'Khác' },
   images: [{ type: String }],
   ownerId: { 
     type: mongoose.Schema.Types.ObjectId, 
