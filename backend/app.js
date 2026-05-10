@@ -42,6 +42,8 @@ app.use('/api/admin', require('./routes/admin.routes')); // (Mới)
 // THÊM DÒNG MỚI NÀY
 app.use('/api/upload', require('./routes/upload.routes'));
 
+app.use('/api/reviews', require('./routes/reviews.routes'));
+
 // ===============================================================
 // Xử lý lỗi (Thêm vào cuối file)
 // ===============================================================

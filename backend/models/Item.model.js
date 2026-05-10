@@ -5,6 +5,7 @@ const { ItemStatus } = require('../enums/item.enum');
 const ItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
+  category: { type: String, default: 'Khác' },
   images: [{ type: String }],
   ownerId: { 
     type: mongoose.Schema.Types.ObjectId, 
