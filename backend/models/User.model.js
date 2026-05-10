@@ -7,11 +7,19 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   avatarUrl: { type: String, default: '' },
   phoneNumber: { type: String },
+  address: { type: String, default: '' }, 
   address: { type: String },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   isBanned: { type: Boolean, default: false },
   trustScore: { type: Number, default: 0 },
-  totalReviews: { type: Number, default: 0 }
+  totalReviews: { type: Number, default: 0 },
+  ekycStatus: { 
+    type: String, 
+    enum: ['unverified', 'pending', 'verified', 'rejected'], 
+    default: 'unverified' 
+  },
+  idCardNumber: { type: String, default: '' }, // Số CCCD
+  idCardImages: [{ type: String }],
 }, { timestamps: true }); // timestamps thêm createdAt và updatedAt
 
 // Middleware để hash mật khẩu TRƯỚC KHI lưu
