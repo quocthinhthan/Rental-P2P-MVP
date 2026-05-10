@@ -5,7 +5,8 @@ const RentalStatus = Object.freeze({
   REJECTED: 'rejected',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  DISPUTED: 'disputed'
 });
 
 const PaymentStatus = Object.freeze({
