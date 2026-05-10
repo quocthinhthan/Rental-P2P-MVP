@@ -1,0 +1,249 @@
+{
+  "common": {
+    "appName": "RentalP2P",
+    "loading": "Đang tải...",
+    "save": "Lưu",
+    "create": "Tạo mới",
+    "update": "Cập nhật",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "remove": "Gỡ bỏ",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "back": "Quay lại",
+    "next": "Tiếp tục",
+    "submit": "Gửi",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "reset": "Đặt lại",
+    "viewDetail": "Xem chi tiết",
+    "viewMore": "Xem thêm",
+    "yes": "Có",
+    "no": "Không",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "unknown": "Không xác định",
+    "notUpdated": "Chưa cập nhật",
+    "noData": "Chưa có dữ liệu",
+    "pricePerDay": "Giá thuê/ngày",
+    "currencyPerDay": "{{value}} đ/ngày",
+    "currency": "{{value}} đ",
+    "date": "Ngày",
+    "fromDate": "Từ ngày",
+    "toDate": "Đến ngày",
+    "note": "Ghi chú",
+    "description": "Mô tả",
+    "address": "Địa chỉ",
+    "image": "Hình ảnh",
+    "placeholderImage": "Chưa có hình ảnh"
+  },
+  "navbar": {
+    "home": "Trang chủ",
+    "shop": "Cửa hàng",
+    "myRentals": "Quản lý đơn thuê",
+    "postItem": "Đăng vật phẩm",
+    "postNewItem": "Đăng vật phẩm mới",
+    "allCategories": "Tất cả danh mục",
+    "help": "Trợ giúp",
+    "support": "Hỗ trợ",
+    "contact": "Liên hệ",
+    "callUs": "Gọi cho chúng tôi:",
+    "myAccount": "Tài khoản của tôi",
+    "helloUser": "Xin chào, {{name}}",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất"
+  },
+  "category": {
+    "electronics": "Đồ điện tử",
+    "household": "Dụng cụ gia đình",
+    "camping": "Đồ cắm trại",
+    "camera": "Máy ảnh",
+    "sports": "Thể thao",
+    "tools": "Dụng cụ sửa chữa",
+    "fashion": "Thời trang",
+    "vehicle": "Phương tiện",
+    "other": "Khác"
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "subtitle": "Đăng nhập để thuê và quản lý vật phẩm của bạn.",
+      "submit": "Đăng nhập",
+      "success": "Đăng nhập thành công."
+    },
+    "register": {
+      "title": "Đăng ký",
+      "subtitle": "Tạo tài khoản để bắt đầu cho thuê và thuê vật phẩm.",
+      "submit": "Tạo tài khoản",
+      "success": "Đăng ký tài khoản thành công."
+    },
+    "field": {
+      "fullName": "Họ và tên",
+      "email": "Email",
+      "password": "Mật khẩu",
+      "confirmPassword": "Xác nhận mật khẩu",
+      "phone": "Số điện thoại",
+      "address": "Địa chỉ"
+    },
+    "placeholder": {
+      "fullName": "Nhập họ và tên",
+      "email": "Nhập email",
+      "password": "Nhập mật khẩu",
+      "confirmPassword": "Nhập lại mật khẩu",
+      "phone": "Nhập số điện thoại",
+      "address": "Nhập địa chỉ"
+    },
+    "validation": {
+      "emailRequired": "Vui lòng nhập email.",
+      "emailInvalid": "Email không hợp lệ.",
+      "passwordRequired": "Vui lòng nhập mật khẩu.",
+      "passwordMin": "Mật khẩu phải có ít nhất {{count}} ký tự.",
+      "confirmPasswordRequired": "Vui lòng nhập lại mật khẩu.",
+      "passwordNotMatch": "Mật khẩu xác nhận không khớp.",
+      "fullNameRequired": "Vui lòng nhập họ và tên."
+    },
+    "error": {
+      "invalidCredentials": "Email hoặc mật khẩu không đúng.",
+      "wrongPassword": "Mật khẩu không đúng.",
+      "userNotFound": "Tài khoản không tồn tại.",
+      "emailExists": "Email đã được sử dụng.",
+      "unauthorized": "Bạn cần đăng nhập để tiếp tục.",
+      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+    },
+    "link": {
+      "noAccount": "Chưa có tài khoản?",
+      "hasAccount": "Đã có tài khoản?",
+      "goLogin": "Đăng nhập ngay",
+      "goRegister": "Đăng ký ngay"
+    }
+  },
+  "item": {
+    "title": "Vật phẩm",
+    "listTitle": "Danh sách vật phẩm",
+    "detailTitle": "Chi tiết vật phẩm",
+    "createTitle": "Đăng vật phẩm mới",
+    "editTitle": "Chỉnh sửa vật phẩm",
+    "name": "Tên vật phẩm",
+    "owner": "Chủ sở hữu",
+    "pricePerDay": "Giá thuê mỗi ngày",
+    "description": "Mô tả vật phẩm",
+    "address": "Địa chỉ nhận/trả",
+    "images": "Hình ảnh vật phẩm",
+    "mainImage": "Ảnh đại diện",
+    "rentNow": "Thuê ngay",
+    "postItem": "Đăng vật phẩm",
+    "updateItem": "Cập nhật vật phẩm",
+    "deleteItem": "Xóa vật phẩm",
+    "empty": "Chưa có vật phẩm nào.",
+    "notFound": "Không tìm thấy vật phẩm.",
+    "created": "Tạo vật phẩm thành công.",
+    "updated": "Cập nhật vật phẩm thành công.",
+    "deleted": "Xóa vật phẩm thành công.",
+    "noPermissionUpdate": "Bạn không có quyền chỉnh sửa vật phẩm này.",
+    "noPermissionDelete": "Bạn không có quyền xóa vật phẩm này.",
+    "placeholder": {
+      "name": "Ví dụ: Máy khoan pin Bosch",
+      "description": "Mô tả tình trạng, phụ kiện đi kèm và lưu ý khi sử dụng",
+      "pricePerDay": "Nhập giá thuê mỗi ngày",
+      "address": "Nhập địa chỉ nhận/trả vật phẩm",
+      "search": "Tìm vật phẩm bạn muốn thuê"
+    },
+    "validation": {
+      "nameRequired": "Vui lòng nhập tên vật phẩm.",
+      "priceRequired": "Vui lòng nhập giá thuê.",
+      "pricePositive": "Giá thuê phải lớn hơn 0.",
+      "addressRequired": "Vui lòng nhập địa chỉ.",
+      "descriptionRequired": "Vui lòng nhập mô tả vật phẩm."
+    },
+    "status": {
+      "label": "Trạng thái vật phẩm",
+      "available": "Còn trống",
+      "rented": "Đang được thuê",
+      "delisted": "Đã gỡ khỏi danh sách",
+      "unknown": "Không xác định"
+    }
+  },
+  "rental": {
+    "title": "Đơn thuê",
+    "myRentals": "Đơn thuê của tôi",
+    "requestTitle": "Yêu cầu thuê",
+    "createRequest": "Gửi yêu cầu thuê",
+    "rentNow": "Đặt thuê ngay",
+    "chooseDate": "Chọn ngày thuê",
+    "confirmOrder": "Xác nhận đơn thuê",
+    "cancelOrder": "Hủy đơn thuê",
+    "completeOrder": "Hoàn tất đơn thuê",
+    "rejectOrder": "Từ chối đơn thuê",
+    "payNow": "Thanh toán ngay",
+    "startDate": "Ngày bắt đầu",
+    "endDate": "Ngày kết thúc",
+    "totalDays": "Số ngày thuê",
+    "totalPrice": "Tổng tiền",
+    "escrowAmount": "Số tiền ký quỹ",
+    "renter": "Người thuê",
+    "owner": "Chủ vật phẩm",
+    "item": "Vật phẩm thuê",
+    "notePlaceholder": "Nhập ghi chú cho chủ vật phẩm nếu cần",
+    "empty": "Bạn chưa có đơn thuê nào.",
+    "notFound": "Không tìm thấy đơn thuê.",
+    "created": "Tạo yêu cầu thuê thành công.",
+    "ownItemNotAllowed": "Bạn không thể thuê vật phẩm của chính mình.",
+    "itemNotAvailable": "Vật phẩm hiện không còn trống để thuê.",
+    "invalidDateRange": "Ngày kết thúc phải sau ngày bắt đầu.",
+    "status": {
+      "label": "Trạng thái đơn thuê",
+      "pending_payment": "Chờ thanh toán",
+      "pending_confirmation": "Chờ chủ vật phẩm xác nhận",
+      "confirmed": "Đã xác nhận",
+      "rejected": "Đã từ chối",
+      "in_progress": "Đang thuê",
+      "completed": "Đã hoàn tất",
+      "cancelled": "Đã hủy",
+      "unknown": "Không xác định"
+    },
+    "paymentStatus": {
+      "label": "Trạng thái thanh toán",
+      "pending": "Chờ thanh toán",
+      "escrowed": "Đã ký quỹ",
+      "refunded": "Đã hoàn tiền",
+      "unknown": "Không xác định"
+    }
+  },
+  "payment": {
+    "title": "Thanh toán",
+    "method": "Phương thức thanh toán",
+    "vnpay": "VNPay",
+    "createPaymentUrl": "Tạo liên kết thanh toán",
+    "paymentSuccess": "Thanh toán thành công.",
+    "paymentFailed": "Thanh toán thất bại.",
+    "paymentCancelled": "Giao dịch đã bị hủy.",
+    "returning": "Đang xử lý kết quả thanh toán..."
+  },
+  "page": {
+    "home": {
+      "title": "Thuê đồ dùng cá nhân dễ dàng",
+      "subtitle": "Tìm và thuê vật phẩm từ cộng đồng xung quanh bạn."
+    },
+    "shop": {
+      "title": "Cửa hàng vật phẩm",
+      "subtitle": "Khám phá các vật phẩm đang sẵn sàng cho thuê."
+    },
+    "notFound": {
+      "title": "Không tìm thấy trang",
+      "description": "Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển.",
+      "goHome": "Về trang chủ"
+    }
+  },
+  "alert": {
+    "success": "Thành công",
+    "error": "Lỗi",
+    "warning": "Cảnh báo",
+    "info": "Thông tin",
+    "serverError": "Đã xảy ra lỗi máy chủ.",
+    "badRequest": "Yêu cầu không hợp lệ.",
+    "networkError": "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.",
+    "validationError": "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại."
+  }
+}
