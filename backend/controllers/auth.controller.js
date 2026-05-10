@@ -1,5 +1,7 @@
 const User = require('../models/User.model');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const FormData = require('form-data');
 
 // Hàm trợ giúp để tạo token
 const generateToken = (id) => {
@@ -8,34 +10,70 @@ const generateToken = (id) => {
   });
 };
 
-// POST /api/auth/register
+// 2. [PUBLIC] POST /api/auth/register (Cập nhật để lưu luôn data eKYC và SĐT)
 exports.registerUser = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  // Thêm phoneNumber, idCardNumber, idCardImages vào payload
+  const { fullName, email, password, phoneNumber, idCardNumber, idCardImages } = req.body;
 
   try {
     const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'Email already exists' });
-    }
+    if (userExists) return res.status(400).json({ message: 'Email đã tồn tại' });
+
+    // Nếu lúc đăng ký có gửi kèm idCardNumber thì đánh dấu là Verified luôn
+    const ekycStatus = idCardNumber ? 'verified' : 'unverified';
 
     const user = await User.create({
       fullName,
       email,
       password,
-      // Các trường khác như sđt, địa chỉ sẽ được cập nhật ở profile
+      phoneNumber,       // Lưu SĐT
+      idCardNumber,      // Lưu CCCD
+      idCardImages,      // Lưu mảng ảnh
+      ekycStatus         // Lưu trạng thái eKYC
     });
 
-    // Chúng ta không trả về token ở đây theo spec (chỉ 201)
-    // Nếu muốn user tự động login sau khi đăng ký, bạn có thể trả về token
     res.status(201).json({
-      message: 'User registered successfully',
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
+      message: 'Đăng ký tài khoản thành công',
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        ekycStatus: user.ekycStatus
+      }
     });
 
   } catch (error) {
-    res.status(400).json({ message: 'Bad request', error: error.message });
+    res.status(400).json({ message: 'Lỗi đăng ký', error: error.message });
+  }
+};
+
+// 3. [USER] PUT /api/auth/profile (API Update thông tin User mới tinh)
+exports.updateProfile = async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.fullName = req.body.fullName || user.fullName;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    user.address = req.body.address || user.address;
+    user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
+    
+    // Lưu ý: Thường không cho phép update CCCD ở đây, muốn đổi CCCD phải làm luồng khác
+    // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      fullName: updatedUser.fullName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      address: updatedUser.address,
+      avatarUrl: updatedUser.avatarUrl,
+      ekycStatus: updatedUser.ekycStatus
+    });
+  } else {
+    res.status(404).json({ message: 'Không tìm thấy User' });
   }
 };
 
@@ -88,3 +126,48 @@ exports.logoutUser = (req, res) => {
 };
 // Cách 2 (Phức tạp - Blacklist token): Cần dùng Redis để lưu token đã logout.
 // Với MVP, chúng ta chọn cách 1.
+
+// 1. [PUBLIC] POST /api/auth/verify-ekyc (Chỉ dùng để mớm data cho form Đăng ký)
+exports.verifyEKYC = async (req, res) => {
+  const { idCardFrontUrl } = req.body; 
+
+  try {
+    if (!idCardFrontUrl) return res.status(400).json({ message: 'Vui lòng cung cấp URL ảnh mặt trước CCCD' });
+
+    console.log('\n[DEBUG - eKYC] 1. Tải ảnh từ URL...');
+    const imageResponse = await axios.get(idCardFrontUrl, { responseType: 'stream' });
+
+    console.log('[DEBUG - eKYC] 2. Gửi ảnh sang FPT.AI...');
+    const form = new FormData();
+    form.append('image', imageResponse.data);
+
+    const fptResponse = await axios.post('https://api.fpt.ai/vision/idr/vnm', form, {
+      headers: {
+        'api-key': process.env.FPT_AI_API_KEY, 
+        ...form.getHeaders()
+      }
+    });
+
+    const fptData = fptResponse.data;
+    if (fptData.errorCode !== 0) {
+      return res.status(400).json({ message: 'AI không đọc được ảnh!', fptError: fptData.errorMessage });
+    }
+
+    const extractedData = fptData.data[0];
+    console.log(`[DEBUG - eKYC] ✔️ Đọc xong! Trả data về cho Frontend tự fill form.`);
+
+    // CHỈ TRẢ DATA VỀ CHO FRONTEND, KHÔNG LƯU DB LÚC NÀY
+    res.status(200).json({ 
+      message: 'Quét eKYC thành công!',
+      extractedData: {
+        idNumber: extractedData.id,
+        fullName: extractedData.name,
+        dob: extractedData.dob, 
+        address: extractedData.address 
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi hệ thống eKYC', error: error.message });
+  }
+};

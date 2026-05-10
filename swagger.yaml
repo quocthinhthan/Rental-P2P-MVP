@@ -137,6 +137,50 @@ paths:
                 type: object
         '401':
           description: Unauthorized
+  /auth/verify-ekyc:
+    post:
+      tags:
+        - Auth
+      summary: Xác thực eKYC (AI Đọc CCCD)
+      description: Gửi URL ảnh Căn cước công dân để FPT.AI tự động nhận diện và cập nhật thông tin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idCardFrontUrl:
+                  type: string
+                  description: URL ảnh mặt trước CCCD (Link ảnh trực tiếp có đuôi .jpg, .png)
+      responses:
+        '200':
+          description: eKYC Thành công  
+  /auth/profile:
+    put:
+      tags:
+        - Auth
+      summary: Cập nhật thông tin cá nhân (Profile)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                phoneNumber:
+                  type: string
+                address:
+                  type: string
+                avatarUrl:
+                  type: string
+      responses:
+        '200':
+          description: Đã cập nhật thành công
 
   # ===============================================================
   # General Purpose Endpoints (Actions)
@@ -823,6 +867,14 @@ components:
                 type: string
               password:
                 type: string
+              phoneNumber:
+                type: string
+              idCardNumber:
+                type: string
+              idCardImages:
+                type: array
+                items:
+                  type: string
     LoginInput:
       required: true
       content:
