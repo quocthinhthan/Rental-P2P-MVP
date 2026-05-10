@@ -16,10 +16,10 @@ exports.getItemDetailView = async (req, res) => {
       return res.status(404).json({ message: 'Item not found' });
     }
     
-    // Tìm các đơn thuê đã được xác nhận của vật phẩm này trong tương lai
+    // Tìm các đơn thuê đã được xác nhận/đang thuê/chờ xác nhận của vật phẩm này trong tương lai
     const confirmedRentals = await Rental.find({ 
         itemId: req.params.id, 
-        status: 'confirmed',
+        status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
         endDate: { $gte: new Date() } 
     }).select('startDate endDate');
 

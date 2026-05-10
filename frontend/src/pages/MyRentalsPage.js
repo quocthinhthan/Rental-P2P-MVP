@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/api';
 
 function MyRentalsPage() {
+  const navigate = useNavigate();
   const [rentals, setRentals] = useState({ asRenter: [], asOwner: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,8 +65,36 @@ function MyRentalsPage() {
     }
   };
 
+  // Map backend status -> Vietnamese label
+  const renderStatusLabel = (status) => {
+    switch (status) {
+      case 'pending_payment':
+        return 'Chờ thanh toán';
+      case 'pending_confirmation':
+        return 'Chờ xác nhận của chủ';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'completed':
+        return 'Đã hoàn thành';
+      case 'rejected':
+        return 'Đã bị từ chối';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  };
+
+  // Refetch when location changes (useful after returning from VNPay)
+  const location = useLocation();
+  useEffect(() => {
+    fetchMyRentals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   // Component con để render một thẻ rental
   const RentalCard = ({ rental, type }) => {
+    const reviewTargetLabel = type === 'asRenter' ? 'chủ sở hữu' : 'người thuê';
     
     if (!rental.item) {
       return (
@@ -106,7 +135,7 @@ function MyRentalsPage() {
               <p className="card-text mb-1">Tổng tiền: {rental.totalPrice}đ</p>
               <p className="card-text mb-2">
                 Trạng thái: <span className={`fw-bold ${rental.status === 'confirmed' ? 'text-success' : rental.status === 'pending_confirmation' ? 'text-warning' : 'text-danger'}`}>
-                  {rental.status}
+                  {renderStatusLabel(rental.status)}
                 </span>
               </p>
               <p className="card-text mb-2">
@@ -159,6 +188,18 @@ function MyRentalsPage() {
                 </div>
               )}
 
+              {rental.status === 'completed' && rental.item?._id && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/items/${rental.item._id}#nav-review`, { state: { openReviewTab: true } })}
+                    className="btn btn-outline-primary"
+                  >
+                    Xem chi tiết và đánh giá {reviewTargetLabel}
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
@@ -170,10 +211,10 @@ function MyRentalsPage() {
     <>
       {/* Single Page Header start */}
       <div className="container-fluid page-header py-5">
-        <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">My Rentals</h1>
+        <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">Đơn thuê của tôi</h1>
         <ol className="breadcrumb justify-content-center mb-0 wow fadeInUp" data-wow-delay="0.3s">
-          <li className="breadcrumb-item"><Link to="/">Home</Link></li>
-          <li className="breadcrumb-item active text-white">My Rentals</li>
+          <li className="breadcrumb-item"><Link to="/">Trang chủ</Link></li>
+          <li className="breadcrumb-item active text-white">Đơn thuê của tôi</li>
         </ol>
       </div>
       {/* Single Page Header End */}

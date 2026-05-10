@@ -110,8 +110,12 @@ function PostItemPage() {
     <>
       <div className="container-fluid page-header py-5">
          <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">
-            {isEditMode ? 'Edit Item' : 'Post New Item'}
+            {isEditMode ? 'Chỉnh sửa vật phẩm' : 'Đăng vật phẩm mới'}
         </h1>
+        <ol className="breadcrumb justify-content-center mb-0 wow fadeInUp" data-wow-delay="0.3s">
+          <li className="breadcrumb-item"><a href="/">Trang chủ</a></li>
+          <li className="breadcrumb-item active text-white">{isEditMode ? 'Chỉnh sửa' : 'Đăng vật phẩm'}</li>
+        </ol>
       </div>
 
       <div className="container-fluid bg-light overflow-hidden py-5">
@@ -124,50 +128,53 @@ function PostItemPage() {
                   <div className="alert alert-danger" role="alert">{apiError}</div>
                 )}
 
-                 <div className="form-item mb-3">
-                  <label className="form-label my-3">Item Name<sup>*</sup></label>
-                  <input type="text" className={`form-control ${errors.name ? 'is-invalid' : ''}`} {...register('name', { required: 'Item name is required' })} />
-                  {errors.name && <div className="invalid-feedback">{errors.name.message}</div>}
-                </div>
-                <div className="form-item mb-3">
-                  <label className="form-label my-3">Description</label>
-                  <textarea className="form-control" rows="5" {...register('description')}></textarea>
-                </div>
-                <div className="form-item mb-3">
-                  <label className="form-label my-3">Price per Day (VND)<sup>*</sup></label>
-                  <input type="number" className={`form-control ${errors.pricePerDay ? 'is-invalid' : ''}`} {...register('pricePerDay', { required: 'Price is required', valueAsNumber: true, min: { value: 1000, message: "Price must be at least 1000 VND"} })} />
-                  {errors.pricePerDay && <div className="invalid-feedback">{errors.pricePerDay.message}</div>}
-                </div>
-                <div className="form-item mb-3">
-                  <label className="form-label my-3">Address (Pickup Location)<sup>*</sup></label>
-                  <input type="text" className={`form-control ${errors.address ? 'is-invalid' : ''}`} {...register('address', { required: 'Address is required' })} />
-                  {errors.address && <div className="invalid-feedback">{errors.address.message}</div>}
-                </div>
+                <div className="card shadow-sm p-4 mb-4">
+                  <div className="mb-3">
+                    <label className="form-label">Tên vật phẩm <sup>*</sup></label>
+                    <input type="text" className={`form-control ${errors.name ? 'is-invalid' : ''}`} {...register('name', { required: 'Vui lòng nhập tên vật phẩm' })} />
+                    {errors.name && <div className="invalid-feedback">{errors.name.message}</div>}
+                  </div>
 
-                <div className="form-item mb-3">
-                  <label className="form-label my-3">Image<sup>*</sup></label>
-                  <input 
-                    type="file" 
-                    className="form-control" 
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
-                  {imageUrl && (
-                    <div className="mt-3">
-                      <img src={imageUrl} alt="Preview" style={{ width: '200px', height: '200px', objectFit: 'cover' }} />
+                  <div className="mb-3">
+                    <label className="form-label">Mô tả</label>
+                    <textarea className="form-control" rows="5" {...register('description')} placeholder="Mô tả ngắn gọn về tình trạng, phụ kiện, lưu ý..." />
+                  </div>
+
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Giá thuê /ngày (VND) <sup>*</sup></label>
+                      <input type="number" className={`form-control ${errors.pricePerDay ? 'is-invalid' : ''}`} {...register('pricePerDay', { required: 'Vui lòng nhập giá thuê', valueAsNumber: true, min: { value: 1000, message: 'Giá tối thiểu là 1000 VND' } })} />
+                      {errors.pricePerDay && <div className="invalid-feedback">{errors.pricePerDay.message}</div>}
                     </div>
-                  )}
-                  {uploading && <div className="text-muted mt-2">Uploading image...</div>}
-                </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Địa điểm nhận/trả <sup>*</sup></label>
+                      <input type="text" className={`form-control ${errors.address ? 'is-invalid' : ''}`} {...register('address', { required: 'Vui lòng nhập địa điểm' })} />
+                      {errors.address && <div className="invalid-feedback">{errors.address.message}</div>}
+                    </div>
+                  </div>
 
-                <div className="row g-4 text-center align-items-center justify-content-center pt-4">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary border-secondary py-3 px-4 text-uppercase w-100"
-                    disabled={loading || uploading}
-                  >
-                    {loading ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Post Item')}
-                  </button>
+                  <div className="mb-3 mt-3">
+                    <label className="form-label">Ảnh đại diện <sup>*</sup></label>
+                    <input type="file" className="form-control" accept="image/*" onChange={handleFileChange} />
+                    {uploading && <div className="text-muted mt-2">Đang tải ảnh...</div>}
+                    {imageUrl && (
+                      <div className="mt-3">
+                        <div className="border rounded" style={{ width: 220, height: 220, overflow: 'hidden' }}>
+                          <img src={imageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center mt-4">
+                    <small className="text-muted">Các trường có dấu * là bắt buộc.</small>
+                    <div>
+                      <button type="button" className="btn btn-outline-secondary me-2" onClick={() => navigate(-1)} disabled={loading || uploading}>Hủy</button>
+                      <button type="submit" className="btn btn-primary" disabled={loading || uploading}>
+                        {loading ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Đăng vật phẩm')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </form>
             </div>

@@ -45,8 +45,24 @@ export const register = (fullName, email, password) =>
 // export const getMe = () => api.get('/auth/me'); // Cần backend hỗ trợ
 
 // === Items ===
-export const getItems = (searchQuery = '') => 
-  api.get(`/items?search=${searchQuery}`);
+export const getItems = (params = {}) => {
+  if (typeof params === 'string') {
+    return api.get(`/items?search=${encodeURIComponent(params)}`);
+  }
+
+  const query = new URLSearchParams();
+
+  if (params.search) query.set('search', params.search);
+  if (params.category) query.set('category', params.category);
+  if (params.address) query.set('address', params.address);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+
+  const queryString = query.toString();
+  return api.get(`/items${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getCategories = () => api.get('/items/categories');
 
 export const createItem = (itemData) => 
   api.post('/items', itemData); // Cần formData nếu có upload ảnh
@@ -63,6 +79,13 @@ export const getItemDetails = (itemId) =>
 
 export const getMyRentals = () => 
   api.get('/views/my-rentals'); // Đã tự động đính kèm token
+
+// === Reviews ===
+export const createReview = ({ rentalId, rating, comment }) =>
+  api.post('/reviews', { rentalId, rating, comment });
+
+export const getUserReviews = (userId, page = 1, limit = 5) =>
+  api.get(`/reviews/users/${userId}?page=${page}&limit=${limit}`);
 
 // === Rentals (Actions) ===
 export const createRentalRequest = (itemId, startDate, endDate, note) =>
@@ -100,11 +123,14 @@ const apiService = {
   uploadImage,
   getMe,
   getItems,
+  getCategories,
   createItem,
   updateItem,
   deleteItem,
   getItemDetails,
   getMyRentals,
+  createReview,
+  getUserReviews,
   createRentalRequest,
   createVNPayUrl,
   confirmRental,

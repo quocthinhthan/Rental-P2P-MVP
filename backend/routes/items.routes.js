@@ -5,8 +5,13 @@ const {
   createItem, 
   updateItem, 
   deleteItem, 
-  checkOwner // Import middleware
+  checkOwner, // Import middleware
+  getCategories
 } = require('../controllers/items.controller');
+
+// ĐẶT TRÊN CÙNG ĐỂ KHÔNG BỊ NHẦM VỚI CÁC ROUTE KHÁC
+router.get('/categories', getCategories);
+
 const { protect } = require('../middleware/auth.middleware');
 
 // /api/items
