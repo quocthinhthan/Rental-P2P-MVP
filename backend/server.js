@@ -60,7 +60,7 @@ const startServer = async () => {
   try {
     // 1. Kết nối đến DB và chờ hoàn tất
     await connectDB();
-    
+
     // 2. Kết nối đến RabbitMQ nhưng không chặn server khởi động nếu không có
     try {
       await connectRabbitMQ();
@@ -73,7 +73,7 @@ const startServer = async () => {
     if (!process.env.JWT_SECRET) {
       throw new Error('FATAL ERROR: JWT_SECRET is not defined.');
     }
-    
+
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });

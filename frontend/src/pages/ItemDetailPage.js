@@ -19,10 +19,17 @@ function ItemDetailPage() {
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [relatedItems, setRelatedItems] = useState([]);
-  const [reviewName, setReviewName] = useState('');
-  const [reviewEmail, setReviewEmail] = useState('');
-  const [reviewContent, setReviewContent] = useState('');
+  const [ownerReviews, setOwnerReviews] = useState([]);
+  const [ownerTrustScore, setOwnerTrustScore] = useState(null);
+  const [ownerTotalReviews, setOwnerTotalReviews] = useState(0);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+  const [eligibleRental, setEligibleRental] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitMessage, setReviewSubmitMessage] = useState('');
+  const [reviewSubmitError, setReviewSubmitError] = useState('');
 
   // CUSTOM DATEPICKER INPUT
   const CustomDateInput = forwardRef(({ value, onClick }, ref) => (
@@ -60,6 +67,72 @@ function ItemDetailPage() {
     }
   }, [itemId]);
 
+  useEffect(() => {
+    const ownerId = item?.owner?._id;
+
+    if (!ownerId) {
+      return;
+    }
+
+    const fetchOwnerReviews = async () => {
+      setReviewLoading(true);
+      setReviewError(null);
+
+      try {
+        const response = await apiService.getUserReviews(ownerId, 1, 5);
+        setOwnerTrustScore(response.data.trustScore);
+        setOwnerTotalReviews(response.data.totalReviews || 0);
+        setOwnerReviews(response.data.reviews || []);
+      } catch (err) {
+        setReviewError('Không thể tải đánh giá của chủ vật dụng.');
+      } finally {
+        setReviewLoading(false);
+      }
+    };
+
+    fetchOwnerReviews();
+  }, [item?.owner?._id]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !item?._id) {
+      setEligibleRental(null);
+      return;
+    }
+
+    const fetchEligibleRental = async () => {
+      try {
+        const response = await apiService.getMyRentals();
+        const rentals = [
+          ...(response.data?.asRenter || []),
+          ...(response.data?.asOwner || [])
+        ];
+
+        const matchedRental = rentals.find((rental) =>
+          String(rental.item?._id) === String(item._id) && rental.status === 'completed'
+        );
+
+        setEligibleRental(matchedRental || null);
+      } catch (err) {
+        setEligibleRental(null);
+      }
+    };
+
+    fetchEligibleRental();
+  }, [isLoggedIn, item?._id]);
+
+  useEffect(() => {
+    const activateReviewTab = () => {
+      if (window.location.hash === '#nav-review') {
+        document.querySelector('button[data-bs-target="#nav-review"]')?.click();
+      }
+    };
+
+    activateReviewTab();
+    window.addEventListener('hashchange', activateReviewTab);
+
+    return () => window.removeEventListener('hashchange', activateReviewTab);
+  }, [itemId]);
+
   const handleRentalSubmit = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) { navigate('/login'); return; }
@@ -79,7 +152,53 @@ function ItemDetailPage() {
       end: new Date(range.endDate)
   })) || [];
 
+  const renderStars = (rating) => [1, 2, 3, 4, 5].map((star) => (
+    <i key={star} className={`fa fa-star ${star <= rating ? 'text-warning' : 'text-muted'}`}></i>
+  ));
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!eligibleRental?._id) {
+      setReviewSubmitError('Bạn chỉ có thể đánh giá sau khi có đơn thuê hoàn thành cho sản phẩm này.');
+      return;
+    }
+
+    try {
+      setReviewSubmitting(true);
+      setReviewSubmitError('');
+      setReviewSubmitMessage('');
+
+      await apiService.createReview({
+        rentalId: eligibleRental._id,
+        rating: Number(reviewRating),
+        comment: reviewComment.trim(),
+      });
+
+      setReviewSubmitMessage('Đánh giá đã được gửi thành công.');
+      setReviewComment('');
+      setReviewRating(5);
+
+      // Refetch owner reviews to show the newly submitted review
+      if (item?.owner?._id) {
+        try {
+          const response = await apiService.getUserReviews(item.owner._id, 1, 5);
+          setOwnerTrustScore(response.data.trustScore);
+          setOwnerTotalReviews(response.data.totalReviews || 0);
+          setOwnerReviews(response.data.reviews || []);
+        } catch (err) {
+          console.error('Không thể cập nhật danh sách đánh giá:', err);
+        }
+      }
+    } catch (err) {
+      setReviewSubmitError(err.response?.data?.message || 'Không thể gửi đánh giá.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   if (loading) return <div className="text-center p-5">Đang tải...</div>;
+  if (error) return <div className="alert alert-danger m-4">{error}</div>;
   if (!item) return <div className="alert alert-warning">Vật phẩm không tồn tại.</div>;
 
   const isOwner = isLoggedIn && user?._id === item.owner._id;
@@ -233,7 +352,7 @@ function ItemDetailPage() {
                         {isLoggedIn ? (
                           <span className="fw-medium text-dark">{item.owner?.phoneNumber || 'Chưa cập nhật SĐT'}</span>
                         ) : (
-                          <span className="fst-italic text-warning bg-warning bg-opacity-10 px-2 py-1 rounded">
+                          <span className="fst-italic text-white bg-warning bg-opacity-10 px-2 py-1 rounded">
                             <i className="fas fa-lock me-1"></i>Đăng nhập để xem
                           </span>
                         )}
@@ -261,75 +380,151 @@ function ItemDetailPage() {
                         <p style={{lineHeight: '1.8'}}>{item.description || "Chưa có mô tả chi tiết cho sản phẩm này."}</p>
                     </div>
                     <div className="tab-pane fade" id="nav-review">
-                        <div className="mb-5">
-                          <h5 className="mb-4 fw-bold">Đánh giá từ khách hàng</h5>
-                          <div className="d-flex mb-4 pb-4 border-bottom">
-                            <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style={{ width: '60px', height: '60px', minWidth: '60px' }}>
-                              <i className="fas fa-user"></i>
-                            </div>
-                            <div>
-                              <p className="mb-1 text-muted small">10/05/2026</p>
-                              <h6 className="mb-2">Nguyễn Văn A</h6>
-                              <div className="d-flex mb-2">
-                                {[1,2,3,4,5].map(i => (
-                                  <i key={i} className={`fa fa-star ${i <= 4 ? 'text-warning' : 'text-muted'}`}></i>
-                                ))}
+                        <div className="row g-4">
+                          <div className="col-lg-4">
+                            <div className="bg-white border rounded-4 p-4 shadow-sm h-100">
+                              <h5 className="fw-bold mb-3">Tổng quan đánh giá</h5>
+                              <div className="display-6 fw-bold text-primary mb-2">
+                                {ownerTrustScore !== null ? ownerTrustScore.toFixed(1) : '--'}
                               </div>
-                              <p className="mb-0">Vật phẩm đúng mô tả, chủ sở hữu phản hồi nhanh và giao nhận thuận tiện.</p>
+                              <div className="d-flex align-items-center mb-2">
+                                {ownerTrustScore !== null ? renderStars(Math.round(ownerTrustScore)) : renderStars(0)}
+                              </div>
+                              <p className="text-muted mb-0">
+                                {ownerTotalReviews} đánh giá công khai từ cộng đồng thuê.
+                              </p>
+                              {!isLoggedIn && (
+                                <div className="alert alert-light border mt-3 mb-0 small">
+                                  Đăng nhập để thuê và gửi đánh giá cho đơn hàng đã hoàn thành.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="col-lg-8">
+                            <div className="bg-white border rounded-4 p-4 shadow-sm">
+                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                <h5 className="fw-bold mb-0">Đánh giá từ người thuê</h5>
+                                <span className="text-muted small">Chỉ hiển thị đánh giá công khai của chủ vật dụng.</span>
+                              </div>
+
+                              {reviewLoading && (
+                                <div className="text-center py-4">
+                                  <div className="spinner-border text-primary" role="status"></div>
+                                </div>
+                              )}
+
+                              {!reviewLoading && reviewError && (
+                                <div className="alert alert-warning mb-0">{reviewError}</div>
+                              )}
+
+                              {!reviewLoading && !reviewError && ownerReviews.length === 0 && (
+                                <div className="alert alert-light border mb-0">
+                                  Chưa có đánh giá nào cho chủ vật dụng này.
+                                </div>
+                              )}
+
+                              {!reviewLoading && !reviewError && ownerReviews.length > 0 && (
+                                <div className="d-flex flex-column gap-4">
+                                  {ownerReviews.map((review) => (
+                                    <div key={review._id} className="d-flex pb-4 border-bottom">
+                                      <img
+                                        src={review.reviewerId?.avatarUrl || 'https://via.placeholder.com/64'}
+                                        alt={review.reviewerId?.fullName || 'Người đánh giá'}
+                                        className="rounded-circle me-3"
+                                        style={{ width: '56px', height: '56px', objectFit: 'cover' }}
+                                      />
+                                      <div className="flex-grow-1">
+                                        <div className="d-flex justify-content-between flex-wrap gap-2">
+                                          <h6 className="mb-1">{review.reviewerId?.fullName || 'Người dùng ẩn danh'}</h6>
+                                          <span className="text-muted small">
+                                            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                                          </span>
+                                        </div>
+
+                                        <div className="d-flex mb-2">{renderStars(review.rating)}</div>
+
+                                        {review.comment ? (
+                                          <p className="mb-0">{review.comment}</p>
+                                        ) : (
+                                          <p className="mb-0 text-muted fst-italic">Không có nội dung đánh giá.</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                                  <div className="mt-4 pt-4 border-top">
+                                    <h5 className="fw-bold mb-3">Viết đánh giá của bạn</h5>
+
+                                    {!isLoggedIn && (
+                                      <div className="alert alert-light border mb-0">
+                                        Đăng nhập để gửi đánh giá.
+                                      </div>
+                                    )}
+
+                                    {isLoggedIn && !eligibleRental && (
+                                      <div className="alert alert-light border mb-3">
+                                        Chỉ có thể đánh giá khi bạn đã có đơn thuê hoàn thành cho sản phẩm này.
+                                      </div>
+                                    )}
+
+                                    {isLoggedIn && eligibleRental && (
+                                      <form onSubmit={handleReviewSubmit}>
+                                        <div className="mb-3">
+                                          <label className="form-label fw-bold small text-uppercase text-muted mb-2 d-block">
+                                            Đánh giá
+                                          </label>
+                                          <div className="d-flex gap-2 flex-wrap">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                              <button
+                                                key={star}
+                                                type="button"
+                                                className="btn btn-link p-0 text-decoration-none"
+                                                onClick={() => setReviewRating(star)}
+                                                aria-label={`Đánh giá ${star} sao`}
+                                              >
+                                                <i className={`fa fa-star fa-lg ${star <= reviewRating ? 'text-warning' : 'text-muted'}`}></i>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+
+                                        <div className="mb-3">
+                                          <label className="form-label fw-bold small text-uppercase text-muted mb-2 d-block">
+                                            Nội dung đánh giá
+                                          </label>
+                                          <textarea
+                                            className="form-control border-0 shadow-sm rounded-3 p-3"
+                                            rows="4"
+                                            placeholder="Chia sẻ trải nghiệm thuê của bạn..."
+                                            value={reviewComment}
+                                            onChange={(e) => setReviewComment(e.target.value)}
+                                          ></textarea>
+                                        </div>
+
+                                        {reviewSubmitError && (
+                                          <div className="alert alert-danger py-2">{reviewSubmitError}</div>
+                                        )}
+
+                                        {reviewSubmitMessage && (
+                                          <div className="alert alert-success py-2">{reviewSubmitMessage}</div>
+                                        )}
+
+                                        <button
+                                          type="submit"
+                                          className="btn btn-primary rounded-pill px-5 py-2"
+                                          disabled={reviewSubmitting}
+                                        >
+                                          {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                                        </button>
+                                      </form>
+                                    )}
+                                  </div>
                             </div>
                           </div>
                         </div>
-
-                        <form className="mt-4">
-                          <h5 className="mb-4 fw-bold">Viết đánh giá của bạn</h5>
-                          <div className="row g-3 mb-4">
-                            <div className="col-lg-6">
-                              <input
-                                type="text"
-                                className="form-control border-0 border-bottom shadow-sm"
-                                placeholder="Họ tên *"
-                                value={reviewName}
-                                onChange={(e) => setReviewName(e.target.value)}
-                              />
-                            </div>
-                            <div className="col-lg-6">
-                              <input
-                                type="email"
-                                className="form-control border-0 border-bottom shadow-sm"
-                                placeholder="Email *"
-                                value={reviewEmail}
-                                onChange={(e) => setReviewEmail(e.target.value)}
-                              />
-                            </div>
-                            <div className="col-lg-12">
-                              <label className="form-label fw-bold small mb-2">Đánh giá</label>
-                              <div className="d-flex gap-2 mb-3">
-                                {[1,2,3,4,5].map(i => (
-                                  <i
-                                    key={i}
-                                    className={`fa fa-star fa-2x ${i <= reviewRating ? 'text-warning' : 'text-muted'}`}
-                                    onClick={() => setReviewRating(i)}
-                                    style={{ cursor: 'pointer' }}
-                                  ></i>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="col-lg-12">
-                              <textarea
-                                className="form-control border-0 border-bottom shadow-sm"
-                                rows="5"
-                                placeholder="Nội dung đánh giá *"
-                                value={reviewContent}
-                                onChange={(e) => setReviewContent(e.target.value)}
-                              ></textarea>
-                            </div>
-                            <div className="col-lg-12">
-                              <button type="button" className="btn btn-primary rounded-pill px-5 py-2">
-                                <i className="fas fa-send me-2"></i>Gửi đánh giá
-                              </button>
-                            </div>
-                          </div>
-                        </form>
                     </div>
                 </div>
             </div>

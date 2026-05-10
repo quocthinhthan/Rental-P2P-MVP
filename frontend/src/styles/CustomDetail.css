@@ -35,3 +35,16 @@
     position: sticky;
     top: 20px;
 }
+
+/* Style cho ngày bị vô hiệu hóa (đã có người đặt) */
+.react-datepicker__day--disabled {
+    color: #ccc !important;
+    text-decoration: line-through;
+    cursor: not-allowed !important;
+    background-color: #f8f9fa !important;
+}
+
+.react-datepicker__day--disabled:hover {
+    background-color: #f8f9fa !important;
+    border-radius: 0 !important;
+}

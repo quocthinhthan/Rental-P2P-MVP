@@ -37,7 +37,7 @@ const searchItems = async (req, res) => {
 
       // Tìm những món đồ ĐANG KẸT LỊCH
       const overlappingRentals = await Rental.find({
-        status: { $in: ['confirmed', 'in_progress'] },
+        status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
         startDate: { $lte: reqEnd },
         endDate: { $gte: reqStart }
       }).select('itemId');
@@ -50,7 +50,7 @@ const searchItems = async (req, res) => {
 
     // Chạy Query
     const items = await Item.find(query)
-      .select('_id name category address pricePerDay images')
+      .select('_id name category address pricePerDay images status')
       .sort({ createdAt: -1 })
       .limit(20);
 
@@ -60,6 +60,7 @@ const searchItems = async (req, res) => {
       category: item.category,
       address: item.address,
       pricePerDay: item.pricePerDay,
+      status: item.status,
       mainImage: (item.images && item.images.length > 0) ? item.images[0] : ''
     }));
 
@@ -174,10 +175,24 @@ const createViFuzzyRegex = (keyword) => {
   return regexStr;
 };
 
+// GET /api/items/categories
+const getCategories = async (req, res) => {
+  console.log('[DEBUG] GET /api/items/categories HIT');
+  try {
+    // Lấy danh sách danh mục duy nhất từ các sản phẩm đang có
+    const categories = await Item.distinct('category', { status: { $ne: 'delisted' } });
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('[DEBUG] LỖI GET CATEGORIES:', error);
+    res.status(500).json({ message: 'Server error while fetching categories' });
+  }
+};
+
 module.exports = {
   searchItems,
   createItem,
   updateItem,
   deleteItem,
-  checkOwner
+  checkOwner,
+  getCategories
 };

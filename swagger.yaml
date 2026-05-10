@@ -17,6 +17,8 @@ tags:
     description: Specialized endpoints providing aggregated data for specific UI screens.
   - name: Auth
     description: User Authentication (Register, Login, Logout).
+  - name: Upload
+    description: Upload media assets for items.
   - name: Items
     description: CUD (Create, Update, Delete) operations for rental items.
   - name: Rentals
@@ -119,9 +121,63 @@ paths:
         '401':
           description: Unauthorized
 
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get the current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+
   # ===============================================================
   # General Purpose Endpoints (Actions)
   # ===============================================================
+
+  # --- Upload ---
+  /upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload an image to Cloudinary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imageUrl:
+                    type: string
+        '400':
+          description: No file uploaded
+        '401':
+          description: Unauthorized
+        '500':
+          description: Upload failed
   
   # --- Items ---
   /items:

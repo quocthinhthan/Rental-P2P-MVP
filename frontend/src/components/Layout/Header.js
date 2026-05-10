@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext'; 
+import apiService from '../../services/api';
 
 function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // State quản lý từ khóa tìm kiếm
+  // State quản lý từ khóa tìm kiếm và danh mục
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState([]);
+
+  // Fetch danh mục từ API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await apiService.getCategories();
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Lỗi khi tải danh mục:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -17,12 +33,17 @@ function Header() {
   // Hàm xử lý khi bấm nút Tìm kiếm
   const handleSearch = (e) => {
     e.preventDefault();
+    
+    const params = new URLSearchParams();
     if (searchQuery.trim()) {
-      // Chuyển hướng sang trang Shop kèm query param
-      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      navigate('/shop');
+      params.append('search', searchQuery.trim());
     }
+    if (selectedCategory) {
+      params.append('category', selectedCategory);
+    }
+
+    const queryString = params.toString();
+    navigate(`/shop${queryString ? `?${queryString}` : ''}`);
   };
 
   return (
@@ -46,9 +67,9 @@ function Header() {
           <div className="col-lg-4 text-center text-lg-end">
             <div className="d-inline-flex align-items-center" style={{ height: '45px' }}>
               <div className="dropdown">
-                <a href="#!" onClick={(e) => e.preventDefault()} className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown" role="button" aria-expanded="false" style={{ cursor: 'pointer' }}>
+                <button type="button" className="dropdown-toggle text-muted ms-2 btn btn-link p-0 text-decoration-none" data-bs-toggle="dropdown" aria-expanded="false" style={{ cursor: 'pointer' }}>
                   <small><i className="fa fa-user me-2"></i> {isLoggedIn && user ? user.fullName : 'Tài khoản'}</small>
-                </a>
+                </button>
 
                 <div className="dropdown-menu rounded">
                   {isLoggedIn && user ? (
@@ -99,11 +120,16 @@ function Header() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <select className="form-select text-dark border-0 border-start rounded-0 p-3" style={{ width: '300px' }}>
-                            <option value="All Category">Danh mục</option>
-                            <option value="Electronics">Đồ điện tử</option>
-                            <option value="Tools">Dụng cụ gia đình</option>
-                            <option value="Camping">Đồ dã ngoại</option>
+                        <select 
+                            className="form-select text-dark border-0 border-start rounded-0 p-3" 
+                            style={{ width: '300px' }}
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                        >
+                            <option value="">Tất cả danh mục</option>
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
                         </select>
                         <button type="submit" className="btn btn-primary rounded-pill py-3 px-5" style={{ border: 0 }}>
                             <i className="fas fa-search"></i>
@@ -115,12 +141,7 @@ function Header() {
             {/* Các icon bên phải */}
             <div className="col-md-4 col-lg-3 text-center text-lg-end">
                 <div className="d-inline-flex align-items-center">
-                    <a href="#!" onClick={(e) => e.preventDefault()} className="text-muted d-flex align-items-center justify-content-center me-3">
-                        <span className="rounded-circle btn-md-square border"><i className="fas fa-random"></i></span>
-                    </a>
-                    <a href="#!" onClick={(e) => e.preventDefault()} className="text-muted d-flex align-items-center justify-content-center me-3">
-                        <span className="rounded-circle btn-md-square border"><i className="fas fa-heart"></i></span>
-                    </a>
+                    
                     <Link to="/my-rentals" className="text-muted d-flex align-items-center justify-content-center">
                         <span className="rounded-circle btn-md-square border"><i className="fas fa-shopping-cart"></i></span>
                         <span className="text-dark ms-2">Đơn thuê</span>
@@ -143,9 +164,17 @@ function Header() {
                         <div className="collapse navbar-collapse rounded-bottom" id="allCat">
                             <div className="navbar-nav ms-auto py-0">
                                 <ul className="list-unstyled categories-bars">
-                                    <li><div className="categories-bars-item"><span className="text-dark">Đồ điện tử</span><span>(0)</span></div></li>
-                                    <li><div className="categories-bars-item"><span className="text-dark">Dụng cụ gia đình</span><span>(0)</span></div></li>
-                                    <li><div className="categories-bars-item"><span className="text-dark">Đồ cắm trại</span><span>(0)</span></div></li>
+                                    {categories.length > 0 ? (
+                                      categories.map((cat) => (
+                                        <li key={cat}>
+                                            <Link to={`/shop?category=${encodeURIComponent(cat)}`} className="categories-bars-item text-decoration-none">
+                                                <span className="text-dark">{cat}</span>
+                                            </Link>
+                                        </li>
+                                      ))
+                                    ) : (
+                                      <li><div className="categories-bars-item"><span className="text-muted">Chưa có danh mục</span></div></li>
+                                    )}
                                 </ul>
                             </div>
                         </div>

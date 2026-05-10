@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import apiService from '../../services/api'; // Import API service
 import ItemCard from './ItemCard';
 
-// Nhận props là "searchQuery" từ trang ShopPage (nếu có)
-function ItemList({ searchQuery }) {
+// Nhận props là bộ lọc từ trang ShopPage/HomePage (nếu có)
+function ItemList({ filters, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +14,7 @@ function ItemList({ searchQuery }) {
       setError(null);
       try {
         // Gọi API getItems với query (nếu có)
-        const response = await apiService.getItems(searchQuery || '');
+        const response = await apiService.getItems(filters || searchQuery || {});
         setItems(response.data);
       } catch (err) {
         setError('Failed to fetch items. Please try again later.');
@@ -24,7 +24,7 @@ function ItemList({ searchQuery }) {
     };
 
     fetchItems();
-  }, [searchQuery]); // Chạy lại khi searchQuery thay đổi
+  }, [filters, searchQuery]); // Chạy lại khi bộ lọc thay đổi
 
   if (loading) {
     return <div className="text-center py-5">Loading items...</div>;
