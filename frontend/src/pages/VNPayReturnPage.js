@@ -14,11 +14,16 @@ function VNPayReturnPage() {
     <>
       <div className="container-fluid page-header py-5">
         <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">
-          Ket qua thanh toan
+          Kết quả thanh toán
         </h1>
+
         <ol className="breadcrumb justify-content-center mb-0 wow fadeInUp" data-wow-delay="0.3s">
-          <li className="breadcrumb-item"><Link to="/">Home</Link></li>
-          <li className="breadcrumb-item active text-white">VNPay</li>
+          <li className="breadcrumb-item">
+            <Link to="/">Trang chủ</Link>
+          </li>
+          <li className="breadcrumb-item active text-white">
+            VNPay
+          </li>
         </ol>
       </div>
 
@@ -27,27 +32,35 @@ function VNPayReturnPage() {
           <div className="row justify-content-center">
             <div className="col-lg-7 wow fadeInUp" data-wow-delay="0.1s">
               <div className="bg-white rounded p-5 shadow-sm">
-                <i className={`bi ${isSuccess ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'} display-1`}></i>
+                <i
+                  className={`bi ${
+                    isSuccess
+                      ? 'bi-check-circle text-success'
+                      : 'bi-x-circle text-danger'
+                  } display-1`}
+                ></i>
 
                 <h2 className="mt-4 mb-3">
-                  {isSuccess ? 'Thanh toan ky quy thanh cong' : 'Thanh toan chua thanh cong'}
+                  {isSuccess
+                    ? 'Thanh toán ký quỹ thành công'
+                    : 'Thanh toán chưa thành công'}
                 </h2>
 
                 <p className="mb-4 text-muted">
                   {isSuccess
-                    ? 'Don thue cua ban da duoc chuyen sang trang thai cho Owner xac nhan.'
-                    : 'Giao dich VNPay khong thanh cong hoac khong the xac thuc. Ban co the thu thanh toan lai trong My Rentals.'}
+                    ? 'Đơn thuê của bạn đã được chuyển sang trạng thái chờ chủ cửa hàng xác nhận.'
+                    : 'Giao dịch VNPay không thành công hoặc không thể xác thực. Bạn có thể thử thanh toán lại trong mục Đơn thuê của tôi.'}
                 </p>
 
                 {rentalId && (
                   <p className="mb-2">
-                    <strong>Ma don thue:</strong> {rentalId}
+                    <strong>Mã đơn thuê:</strong> {rentalId}
                   </p>
                 )}
 
                 {!isSuccess && responseCode && (
                   <p className="mb-2">
-                    <strong>Ma phan hoi VNPay:</strong> {responseCode}
+                    <strong>Mã phản hồi VNPay:</strong> {responseCode}
                   </p>
                 )}
 
@@ -58,11 +71,18 @@ function VNPayReturnPage() {
                 )}
 
                 <div className="d-flex flex-wrap gap-3 justify-content-center mt-4">
-                  <Link to="/my-rentals" className="btn btn-primary rounded-pill py-3 px-5">
-                    Xem don thue cua toi
+                  <Link
+                    to="/my-rentals"
+                    className="btn btn-primary rounded-pill py-3 px-5"
+                  >
+                    Xem đơn thuê của tôi
                   </Link>
-                  <Link to="/shop" className="btn btn-outline-primary rounded-pill py-3 px-5">
-                    Tiep tuc xem do thue
+
+                  <Link
+                    to="/shop"
+                    className="btn btn-outline-primary rounded-pill py-3 px-5"
+                  >
+                    Tiếp tục xem đồ thuê
                   </Link>
                 </div>
               </div>
