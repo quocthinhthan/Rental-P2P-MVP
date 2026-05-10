@@ -10,6 +10,8 @@ const UserSchema = new mongoose.Schema({
   address: { type: String },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   isBanned: { type: Boolean, default: false },
+  trustScore: { type: Number, default: 0 },
+  totalReviews: { type: Number, default: 0 }
 }, { timestamps: true }); // timestamps thêm createdAt và updatedAt
 
 // Middleware để hash mật khẩu TRƯỚC KHI lưu
