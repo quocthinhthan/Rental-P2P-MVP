@@ -1,0 +1,37 @@
+/* Custom styling cho DatePicker */
+.custom-date-input {
+    cursor: pointer;
+    background: #fff !important;
+    border: 1px solid #ced4da !important;
+    padding: 12px 20px !important;
+    border-radius: 50px !important;
+    transition: all 0.3s;
+}
+
+.custom-date-input:hover {
+    border-color: #ffb524 !important; /* Màu vàng theme Electro */
+}
+
+.react-datepicker-popper {
+    z-index: 9999 !important;
+}
+
+.react-datepicker {
+    font-family: 'Open Sans', sans-serif;
+    border-radius: 15px !important;
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.react-datepicker__header {
+    background-color: #ffb524 !important;
+    border-bottom: none !important;
+    border-radius: 15px 15px 0 0 !important;
+    padding-top: 15px !important;
+}
+
+/* Fix khoảng trống dưới ảnh */
+.product-image-container {
+    position: sticky;
+    top: 20px;
+}
