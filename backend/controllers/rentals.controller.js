@@ -2,6 +2,9 @@
 const Rental = require('../models/Rental.model');
 const Item = require('../models/Item.model');
 const { publishToQueue } = require('../config/rabbitmq');
+const MESSAGES = require('../constants/messages.constant');
+const { ItemStatus } = require('../enums/item.enum');
+const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const qs = require('qs');
@@ -56,25 +59,25 @@ exports.createRentalRequest = async (req, res) => {
 
   try {
     if (!mongoose.Types.ObjectId.isValid(itemId)) {
-      return res.status(400).json({ message: 'Invalid Item ID' });
+      return res.status(400).json({ message: MESSAGES.COMMON.INVALID_ITEM_ID });
     }
 
     const item = await Item.findById(itemId);
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
+      return res.status(404).json({ message: MESSAGES.ITEM.NOT_FOUND });
     }
     if (item.ownerId.equals(renterId)) {
-      return res.status(400).json({ message: 'You cannot rent your own item' });
+      return res.status(400).json({ message: MESSAGES.RENTAL.OWN_ITEM_NOT_ALLOWED });
     }
-    if (item.status !== 'available') {
-      return res.status(400).json({ message: 'Item is not available for rent' });
+    if (item.status !== ItemStatus.AVAILABLE) {
+      return res.status(400).json({ message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE });
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     if (days <= 0) {
-      return res.status(400).json({ message: 'End date must be after start date' });
+      return res.status(400).json({ message: MESSAGES.RENTAL.INVALID_DATE_RANGE });
     }
     const totalPrice = days * item.pricePerDay;
 
@@ -86,14 +89,14 @@ exports.createRentalRequest = async (req, res) => {
       endDate: end,
       totalPrice,
       escrowAmount: totalPrice,
-      paymentStatus: 'pending',
+      paymentStatus: PaymentStatus.PENDING,
       note,
-      status: 'pending_payment'
+      status: RentalStatus.PENDING_PAYMENT
     });
 
     res.status(201).json(rental);
   } catch (error) {
-    res.status(400).json({ message: 'Bad request', error: error.message });
+    res.status(400).json({ message: MESSAGES.COMMON.BAD_REQUEST, error: error.message });
   }
 };
 

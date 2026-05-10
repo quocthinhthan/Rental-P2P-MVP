@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 
 const RentalSchema = new mongoose.Schema({
   itemId: { 
@@ -23,14 +24,14 @@ const RentalSchema = new mongoose.Schema({
   escrowAmount: { type: Number, default: 0 },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'escrowed', 'refunded'],
-    default: 'pending'
+    enum: Object.values(PaymentStatus),
+    default: PaymentStatus.PENDING
   },
   note: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['pending_payment', 'pending_confirmation', 'confirmed', 'rejected', 'in_progress', 'completed', 'cancelled'],
-    default: 'pending_payment'
+    enum: Object.values(RentalStatus),
+    default: RentalStatus.PENDING_PAYMENT
   }
 }, { timestamps: true });
 

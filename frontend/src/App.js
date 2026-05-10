@@ -44,7 +44,14 @@ function App() {
       <Footer />
 
       {/* Back to Top button (từ template) */}
-      <a href="#!" className="btn btn-primary btn-lg-square back-to-top"><i className="fa fa-arrow-up"></i></a>
+      <button
+        type="button"
+        className="btn btn-primary btn-lg-square back-to-top"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Back to top"
+      >
+        <i className="fa fa-arrow-up"></i>
+      </button>
     </>
   );
 }
