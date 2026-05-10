@@ -1,5 +1,6 @@
 // backend/models/Item.model.js
 const mongoose = require('mongoose');
+const { ItemStatus } = require('../enums/item.enum');
 
 const ItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -14,8 +15,8 @@ const ItemSchema = new mongoose.Schema({
   address: { type: String },
   status: { 
     type: String, 
-    enum: ['available', 'rented', 'delisted'], 
-    default: 'available' 
+    enum: Object.values(ItemStatus), 
+    default: ItemStatus.AVAILABLE 
   },
 }, { timestamps: true });
 
