@@ -461,6 +461,78 @@ paths:
         '403':
           description: Forbidden (Admin role required)
 
+  # ===============================================================
+  # Disputes Endpoints (Báo cáo sự cố)
+  # ===============================================================
+  /disputes:
+    post:
+      tags:
+        - Rentals
+      summary: User Báo cáo sự cố (Đóng băng đơn thuê)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rentalId:
+                  type: string
+                reason:
+                  type: string
+                evidenceImages:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Đã báo cáo thành công
+    get:
+      tags:
+        - Admin
+      summary: Admin xem danh sách sự cố
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách disputes
+
+  /disputes/{id}/resolve:
+    patch:
+      tags:
+        - Admin
+      summary: Admin phán xử tranh chấp
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminDecision:
+                  type: string
+                  description: Lời giải thích của admin
+                winner:
+                  type: string
+                  enum: [renter, owner]
+                  description: Ai là người đúng? (renter = hoàn tiền, owner = trả tiền cho chủ)
+                penalizeUserId:
+                  type: string
+                  description: (Tùy chọn) ID của kẻ gian bị phạt Banned
+      responses:
+        '200':
+          description: Giải quyết thành công
+
 # ===============================================================
   # Review Endpoints
   # ===============================================================
