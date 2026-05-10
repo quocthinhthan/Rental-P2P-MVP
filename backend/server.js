@@ -42,6 +42,8 @@ const uploadRoutes = require('./routes/upload.routes');
 
 const reviewRoutes = require('./routes/reviews.routes');
 
+const disputeRoutes = require('./routes/disputes.routes'); 
+
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/rentals', rentalRoutes);
@@ -49,6 +51,9 @@ app.use('/api/views', viewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
+
+app.use('/api/disputes', disputeRoutes);
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get('/', (req, res) => {

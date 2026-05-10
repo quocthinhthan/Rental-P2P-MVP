@@ -95,10 +95,42 @@ exports.getUserReviews = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) return res.status(400).json({ message: 'User ID không hợp lệ' });
 
   try {
-    const user = await User.findById(userId).select('trustScore totalReviews');
+    let user = await User.findById(userId).select('trustScore totalReviews');
     if (!user) return res.status(404).json({ message: 'User không tồn tại' });
 
-    // CHỈ LẤY NHỮNG BÀI ĐÃ ĐƯỢC CÔNG KHAI (isPublic: true)
+    // =======================================================================
+    // THUẬT TOÁN "LAZY EVALUATION": TỰ ĐỘNG CÔNG KHAI ĐÁNH GIÁ QUÁ HẠN 7 NGÀY
+    // =======================================================================
+    // 1. Tính mốc thời gian 7 ngày trước so với hiện tại
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // 2. Tìm những bài đánh giá nhắm vào user này, ĐANG BỊ ẨN, và ĐÃ VIẾT QUÁ 7 NGÀY
+    const expiredHiddenReviews = await Review.find({
+      revieweeId: userId,
+      isPublic: false,
+      createdAt: { $lte: sevenDaysAgo }
+    });
+
+    // 3. Nếu phát hiện thằng này có bài đánh giá ẩn quá hạn -> ÉP CÔNG KHAI!
+    if (expiredHiddenReviews.length > 0) {
+      console.log(`[DEBUG] ⏰ Phát hiện ${expiredHiddenReviews.length} đánh giá quá 7 ngày chưa được phản hồi. TIẾN HÀNH ÉP CÔNG KHAI!`);
+      
+      // Update tất cả các bài đó thành isPublic = true
+      const expiredIds = expiredHiddenReviews.map(r => r._id);
+      await Review.updateMany(
+        { _id: { $in: expiredIds } },
+        { $set: { isPublic: true } }
+      );
+
+      // Gọi lại hàm tính điểm để cập nhật điểm mới cho thằng chủ đồ
+      await updateTrustScore(userId);
+
+      // Truy vấn lại thông tin user để lấy điểm số vừa mới rớt
+      user = await User.findById(userId).select('trustScore totalReviews');
+    }
+    // =======================================================================
+
+    // LẤY DANH SÁCH BÀI ĐÁNH GIÁ ĐÃ CÔNG KHAI (Bao gồm cả những bài vừa bị ép công khai ở trên)
     const reviews = await Review.find({ revieweeId: userId, isPublic: true })
       .populate('reviewerId', 'fullName avatarUrl')
       .populate('rentalId', 'startDate endDate')
@@ -114,6 +146,7 @@ exports.getUserReviews = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('[DEBUG] ❌ LỖI:', error);
     res.status(500).json({ message: 'Lỗi hệ thống', error: error.message });
   }
 };
