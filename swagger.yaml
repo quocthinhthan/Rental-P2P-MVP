@@ -23,6 +23,8 @@ tags:
     description: CUD operations for booking and managing rental transactions.
   - name: Admin
     description: Administrative operations (Requires Admin Role).
+  - name: Reviews
+    description: Đánh giá và tính điểm uy tín (Trust-building)
 
 paths:
   # ===============================================================
@@ -126,21 +128,39 @@ paths:
     get:
       tags:
         - Items
-      summary: Search or get a list of items
+      summary: Lọc và tìm kiếm nâng cao (Advanced Search)
       parameters:
         - in: query
           name: search
           schema:
             type: string
+          description: Tìm theo tên vật phẩm
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Lọc theo danh mục (VD. Công nghệ, Xe cộ)
+        - in: query
+          name: address
+          schema:
+            type: string
+          description: Lọc theo vị trí/quận huyện
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: Ngày bắt đầu cần thuê (YYYY-MM-DD)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: Ngày kết thúc cần thuê (YYYY-MM-DD)
       responses:
         '200':
-          description: A list of items
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ItemSummary'
+          description: Danh sách vật phẩm tìm được
+
     post:
       tags:
         - Items
@@ -442,6 +462,41 @@ paths:
           description: Forbidden (Admin role required)
 
 # ===============================================================
+  # Review Endpoints
+  # ===============================================================
+  /reviews:
+    post:
+      tags:
+        - Reviews
+      summary: Đánh giá một đơn thuê đã hoàn thành
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ReviewInput'
+      responses:
+        '201':
+          description: Đánh giá thành công
+        '400':
+          description: Đơn thuê chưa completed hoặc đã đánh giá rồi
+        '403':
+          description: Bạn không thuộc đơn thuê này
+
+  /reviews/users/{userId}:
+    get:
+      tags:
+        - Reviews
+      summary: Lấy điểm uy tín và danh sách đánh giá của 1 User
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trả về trustScore và mảng reviews
+
+# ===============================================================
 # Component Schemas (Data Models)
 # ===============================================================
 components:
@@ -469,6 +524,10 @@ components:
         _id:
           type: string
         name:
+          type: string
+        category:       
+          type: string
+        address:        
           type: string
         pricePerDay:
           type: integer
@@ -660,6 +719,8 @@ components:
                 type: string
               description:
                 type: string
+              category:        
+                type: string
               pricePerDay:
                 type: integer
               address:
@@ -684,3 +745,22 @@ components:
               endDate:
                 type: string
                 format: date
+    ReviewInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [rentalId, rating]
+            properties:
+              rentalId:
+                type: string
+                description: ID của đơn thuê đã Completed
+              rating:
+                type: integer
+                minimum: 1
+                maximum: 5
+                description: Số sao (từ 1 đến 5)
+              comment:
+                type: string
+                description: Nhận xét chi tiết
