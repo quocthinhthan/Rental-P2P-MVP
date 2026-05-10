@@ -70,3 +70,5 @@ temp/
 DEMO_SCRIPT.md
 QUICK_START.md
 SETUP_LOCAL.md
+yarn.lock
+package-lock.json
