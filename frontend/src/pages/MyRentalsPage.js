@@ -1,259 +1,334 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/api';
+import '../styles/MyRentalsPage.css';
 
+/* ─────── helpers ─────── */
+const statusConfig = {
+  pending_payment:      { label: 'Chờ thanh toán',  cls: 'status-pending-payment' },
+  pending_confirmation: { label: 'Chờ xác nhận',    cls: 'status-pending-confirm' },
+  confirmed:            { label: 'Đã xác nhận',     cls: 'status-confirmed'       },
+  completed:            { label: 'Đã hoàn thành',   cls: 'status-completed'       },
+  rejected:             { label: 'Đã từ chối',      cls: 'status-rejected'        },
+  cancelled:            { label: 'Đã hủy',          cls: 'status-cancelled'       },
+};
+
+function StatusBadge({ status }) {
+  const cfg = statusConfig[status] || { label: status, cls: '' };
+  return <span className={`status-badge ${cfg.cls}`}>{cfg.label}</span>;
+}
+
+/* ─────── RentalCard ─────── */
+function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, navigate }) {
+  if (!rental.item) {
+    return (
+      <div className="rental-card rental-card-deleted">
+        <p style={{ fontWeight: 600, color: '#b91c1c', margin: '0 0 4px' }}>Vật phẩm không còn tồn tại</p>
+        <p style={{ fontSize: '.8rem', color: '#6b7280', margin: 0 }}>Đơn thuê ID: {rental._id}</p>
+      </div>
+    );
+  }
+
+  const isOwner = type === 'asOwner';
+  const reviewTargetLabel = isOwner ? 'người thuê' : 'chủ sở hữu';
+
+  return (
+    <div className="rental-card">
+      <img
+        src={rental.item.mainImage || 'https://via.placeholder.com/230x160'}
+        alt={rental.item.name}
+        className="rental-card-img"
+      />
+      <div className="rental-card-body">
+        <h4 className="rental-card-title">{rental.item.name}</h4>
+        <StatusBadge status={rental.status} />
+        <p className="rental-card-meta">
+          📅 {new Date(rental.startDate).toLocaleDateString('vi-VN')} →{' '}
+          {new Date(rental.endDate).toLocaleDateString('vi-VN')}
+        </p>
+        <p className="rental-card-price">
+          {Number(rental.totalPrice).toLocaleString('vi-VN')}đ
+        </p>
+        <p className="rental-card-party">
+          {isOwner ? '👤 Người thuê:' : '🏠 Chủ sở hữu:'}{' '}
+          <strong>{rental.counterparty?.fullName}</strong>{' '}
+          ({rental.counterparty?.email})
+        </p>
+
+        {rental.note && (
+          <div className="rental-card-note">
+            <strong>Ghi chú:</strong> {rental.note}
+          </div>
+        )}
+
+        <div className="rental-card-actions">
+          {/* Người thuê — chờ thanh toán */}
+          {!isOwner && rental.status === 'pending_payment' && (
+            <button className="btn-xs btn-primary-xs" onClick={() => onPayEscrow(rental._id)}>
+              💳 Thanh toán VNPay
+            </button>
+          )}
+
+          {/* Chủ sở hữu — chờ xác nhận */}
+          {isOwner && rental.status === 'pending_confirmation' && (
+            <>
+              <button className="btn-xs btn-success-xs" onClick={() => onOwnerAction(rental._id, 'confirm')}>
+                ✔ Chấp nhận
+              </button>
+              <button className="btn-xs btn-danger-xs" onClick={() => onOwnerAction(rental._id, 'reject')}>
+                ✕ Từ chối
+              </button>
+            </>
+          )}
+
+          {/* Đánh dấu hoàn thành */}
+          {rental.status === 'confirmed' && (
+            <button className="btn-xs btn-info-xs" onClick={() => onComplete(rental._id)}>
+              ✅ Hoàn thành
+            </button>
+          )}
+
+          {/* Đánh giá */}
+          {rental.status === 'completed' && rental.item?._id && (
+            <button
+              className="btn-xs btn-outline-xs"
+              onClick={() => navigate(`/items/${rental.item._id}#nav-review`, { state: { openReviewTab: true } })}
+            >
+              ⭐ Đánh giá {reviewTargetLabel}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────── ItemCard ─────── */
+function ItemCard({ item, onEdit, onDelete }) {
+  return (
+    <div className="item-card">
+      {/* Bấm vào ảnh → xem chi tiết */}
+      <Link to={`/items/${item._id}`} className="item-card-link">
+        <img
+          src={item.mainImage || 'https://via.placeholder.com/300x175'}
+          alt={item.name}
+          className="item-card-img"
+        />
+      </Link>
+      <div className="item-card-body">
+        {/* Bấm vào tên → xem chi tiết */}
+        <Link to={`/items/${item._id}`} className="item-card-title">
+          {item.name}
+        </Link>
+        <p className="item-card-price">
+          {Number(item.pricePerDay).toLocaleString('vi-VN')}đ
+          <span className="item-card-price-unit"> / ngày</span>
+        </p>
+        <p className="item-card-cat">🏷 {item.category}</p>
+        <div className="item-card-actions">
+          <button className="btn-xs btn-ghost-xs" onClick={() => onEdit(item._id)}>✏️ Sửa</button>
+          <button className="btn-xs btn-danger-xs" onClick={() => onDelete(item._id)}>🗑 Xóa</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────── Main page ─────── */
 function MyRentalsPage() {
   const navigate = useNavigate();
-  const [rentals, setRentals] = useState({ asRenter: [], asOwner: [] });
+  const location = useLocation();
+
+  const [rentals, setRentals] = useState({ asRenter: [], asOwner: [], myItems: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('asRenter');
 
-  // Hàm để fetch dữ liệu rentals
   const fetchMyRentals = async () => {
     try {
       setLoading(true);
       const response = await apiService.getMyRentals();
       setRentals(response.data);
     } catch (err) {
-      setError('Failed to fetch rental data.');
+      setError('Không thể tải dữ liệu. Vui lòng thử lại.');
       console.error(err);
     }
     setLoading(false);
   };
 
-  // Gọi API khi component được load
-  useEffect(() => {
-    fetchMyRentals();
-  }, []);
+  useEffect(() => { fetchMyRentals(); }, []);
+  useEffect(() => { fetchMyRentals(); }, [location.key]); // eslint-disable-line
 
-  // Hàm xử lý khi chủ sở hữu bấm nút (Confirm / Reject)
   const handleOwnerAction = async (rentalId, action) => {
     try {
-      if (action === 'confirm') {
-        await apiService.confirmRental(rentalId);
-      } else if (action === 'reject') {
-        await apiService.rejectRental(rentalId);
-      }
-      // Tải lại danh sách sau khi hành động
-      fetchMyRentals(); 
+      if (action === 'confirm') await apiService.confirmRental(rentalId);
+      else if (action === 'reject') await apiService.rejectRental(rentalId);
+      fetchMyRentals();
     } catch (err) {
-      alert(`Failed to ${action} rental.`);
+      alert('Thao tác thất bại.');
       console.error(err);
     }
   };
 
-  // Hàm xử lý khi người thuê/chủ sở hữu bấm "Complete"
   const handleCompleteRental = async (rentalId) => {
-    if (!window.confirm('Are you sure this rental is complete?')) return;
+    if (!window.confirm('Xác nhận đánh dấu đơn thuê này là hoàn thành?')) return;
     try {
       await apiService.completeRental(rentalId);
-      fetchMyRentals(); // Tải lại danh sách
+      fetchMyRentals();
     } catch (err) {
-      alert('Failed to mark rental as complete.');
+      alert('Không thể hoàn thành đơn thuê.');
       console.error(err);
     }
   };
-
 
   const handlePayEscrow = async (rentalId) => {
     try {
       const response = await apiService.createVNPayUrl(rentalId);
       window.location.href = response.data.paymentUrl;
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create VNPay payment URL.');
+      alert(err.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay.');
       console.error(err);
     }
   };
 
-  // Map backend status -> Vietnamese label
-  const renderStatusLabel = (status) => {
-    switch (status) {
-      case 'pending_payment':
-        return 'Chờ thanh toán';
-      case 'pending_confirmation':
-        return 'Chờ xác nhận của chủ';
-      case 'confirmed':
-        return 'Đã xác nhận';
-      case 'completed':
-        return 'Đã hoàn thành';
-      case 'rejected':
-        return 'Đã bị từ chối';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return status;
+  const handleDeleteItem = async (itemId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vật phẩm này?')) return;
+    try {
+      await apiService.deleteItem(itemId);
+      fetchMyRentals();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Không thể xóa vật phẩm.');
+      console.error(err);
     }
   };
 
-  // Refetch when location changes (useful after returning from VNPay)
-  const location = useLocation();
-  useEffect(() => {
-    fetchMyRentals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]);
-
-  // Component con để render một thẻ rental
-  const RentalCard = ({ rental, type }) => {
-    const reviewTargetLabel = type === 'asRenter' ? 'chủ sở hữu' : 'người thuê';
-    
-    if (!rental.item) {
-      return (
-        <div className="card mb-3 wow fadeInUp" data-wow-delay="0.1s">
-          <div className="card-body">
-            <h5 className="card-title text-danger">Vật phẩm không còn tồn tại</h5>
-            <p className="card-text mb-1">
-              <small className="text-muted">
-                Đơn thuê này (ID: {rental._id}) liên quan đến một vật phẩm đã bị xóa.
-              </small>
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // Nếu rental.item tồn tại, render như bình thường
-    return (
-      <div className="card mb-3 wow fadeInUp" data-wow-delay="0.1s">
-        <div className="row g-0">
-          <div className="col-md-3">
-            <img 
-              src={rental.item.mainImage || 'https://via.placeholder.com/150'} 
-              className="img-fluid rounded-start" 
-              alt={rental.item.name}
-              style={{height: '100%', objectFit: 'cover'}}
-            />
-          </div>
-          <div className="col-md-9">
-            <div className="card-body">
-              <h5 className="card-title">{rental.item.name}</h5>
-              <p className="card-text mb-1">
-                <small className="text-muted">
-                  Từ: {new Date(rental.startDate).toLocaleDateString()} - 
-                  Đến: {new Date(rental.endDate).toLocaleDateString()}
-                </small>
-              </p>
-              <p className="card-text mb-1">Tổng tiền: {rental.totalPrice}đ</p>
-              <p className="card-text mb-2">
-                Trạng thái: <span className={`fw-bold ${rental.status === 'confirmed' ? 'text-success' : rental.status === 'pending_confirmation' ? 'text-warning' : 'text-danger'}`}>
-                  {renderStatusLabel(rental.status)}
-                </span>
-              </p>
-              <p className="card-text mb-2">
-                {type === 'asRenter' ? 'Chủ sở hữu:' : 'Người thuê:'} {rental.counterparty.fullName} ({rental.counterparty.email})
-              </p>
-              {rental.note && (
-                <p className="card-text text-info fst-italic">
-                  <strong>Ghi chú:</strong> {rental.note}
-                </p>
-              )}
-              
-              {type === 'asRenter' && rental.status === 'pending_payment' && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => handlePayEscrow(rental._id)}
-                    className="btn btn-primary"
-                  >
-                    Thanh toan ky quy qua VNPay
-                  </button>
-                </div>
-              )}
-
-              {/* Hiển thị nút cho Chủ sở hữu (asOwner) */}
-              {type === 'asOwner' && rental.status === 'pending_confirmation' && (
-                <div className="mt-3">
-                  <button 
-                    onClick={() => handleOwnerAction(rental._id, 'confirm')} 
-                    className="btn btn-success me-2"
-                  >
-                    Chấp nhận
-                  </button>
-                  <button 
-                    onClick={() => handleOwnerAction(rental._id, 'reject')} 
-                    className="btn btn-danger"
-                  >
-                    Từ chối
-                  </button>
-                </div>
-              )}
-
-              {/* Nút Hoàn thành (cho cả hai bên) */}
-              {rental.status === 'confirmed' && (
-                  <div className="mt-3">
-                  <button 
-                    onClick={() => handleCompleteRental(rental._id)} 
-                    className="btn btn-info"
-                  >
-                    Đánh dấu Hoàn thành
-                  </button>
-                </div>
-              )}
-
-              {rental.status === 'completed' && rental.item?._id && (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/items/${rental.item._id}#nav-review`, { state: { openReviewTab: true } })}
-                    className="btn btn-outline-primary"
-                  >
-                    Xem chi tiết và đánh giá {reviewTargetLabel}
-                  </button>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const tabs = [
+    { key: 'asRenter', icon: '📦', label: 'Tôi đang thuê',     count: rentals.asRenter.length },
+    { key: 'asOwner',  icon: '🔑', label: 'Yêu cầu thuê đồ',  count: rentals.asOwner.length  },
+    { key: 'myItems',  icon: '🏷',  label: 'Sản phẩm của tôi', count: rentals.myItems.length  },
+  ];
 
   return (
-    <>
-      {/* Single Page Header start */}
-      <div className="container-fluid page-header py-5">
-        <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">Đơn thuê của tôi</h1>
-        <ol className="breadcrumb justify-content-center mb-0 wow fadeInUp" data-wow-delay="0.3s">
-          <li className="breadcrumb-item"><Link to="/">Trang chủ</Link></li>
-          <li className="breadcrumb-item active text-white">Đơn thuê của tôi</li>
-        </ol>
-      </div>
-      {/* Single Page Header End */}
-
-      <div className="container-fluid py-5">
-        <div className="container py-5">
-          {loading && <div className="text-center">Loading rentals...</div>}
-          {error && <div className="alert alert-danger">{error}</div>}
-          
-          {!loading && !error && (
-            <div className="row g-5">
-              {/* Cột: Đồ tôi thuê (asRenter) */}
-              <div className="col-lg-6">
-                <h2 className="mb-4">Vật phẩm tôi thuê</h2>
-                {rentals.asRenter.length === 0 ? (
-                  <p>Bạn chưa thuê vật phẩm nào.</p>
-                ) : (
-                  rentals.asRenter.map(rental => (
-                    <RentalCard key={rental._id} rental={rental} type="asRenter" />
-                  ))
-                )}
-              </div>
-
-              {/* Cột: Đồ của tôi (asOwner) */}
-              <div className="col-lg-6">
-                <h2 className="mb-4">Vật phẩm của tôi</h2>
-                {rentals.asOwner.length === 0 ? (
-                  <p>Bạn chưa có yêu cầu thuê nào.</p>
-                ) : (
-                  rentals.asOwner.map(rental => (
-                    <RentalCard key={rental._id} rental={rental} type="asOwner" />
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+    <div className="myrp">
+      {/* Header */}
+      <div className="myrp-header">
+        <h1>Quản lý đơn thuê</h1>
+        <div className="myrp-header-breadcrumb">
+          <Link to="/">Trang chủ</Link>
+          <span>/</span>
+          <span>Đơn thuê của tôi</span>
         </div>
       </div>
-    </>
+
+      {/* Body */}
+      <div className="myrp-body">
+        <div className="myrp-container">
+
+          {/* Tabs */}
+          <div className="myrp-tabs">
+            {tabs.map(t => (
+              <button
+                key={t.key}
+                className={`myrp-tab${activeTab === t.key ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.key)}
+              >
+                <span className="myrp-tab-icon">{t.icon}</span>
+                {t.label}
+                <span className="myrp-tab-badge">{t.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="myrp-loading">
+              <div className="myrp-spinner" />
+              <p>Đang tải dữ liệu…</p>
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="myrp-error">{error}</div>
+          )}
+
+          {/* Tab: Tôi đang thuê */}
+          {!loading && !error && activeTab === 'asRenter' && (
+            <>
+              <h2 className="section-title">Vật phẩm tôi đang thuê</h2>
+              {rentals.asRenter.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📭</div>
+                  <p>Bạn chưa thuê vật phẩm nào.</p>
+                </div>
+              ) : (
+                rentals.asRenter.map(rental => (
+                  <RentalCard
+                    key={rental._id}
+                    rental={rental}
+                    type="asRenter"
+                    onOwnerAction={handleOwnerAction}
+                    onComplete={handleCompleteRental}
+                    onPayEscrow={handlePayEscrow}
+                    navigate={navigate}
+                  />
+                ))
+              )}
+            </>
+          )}
+
+          {/* Tab: Yêu cầu thuê đồ */}
+          {!loading && !error && activeTab === 'asOwner' && (
+            <>
+              <h2 className="section-title">Yêu cầu thuê đồ của tôi</h2>
+              {rentals.asOwner.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">🔔</div>
+                  <p>Chưa có yêu cầu thuê nào.</p>
+                </div>
+              ) : (
+                rentals.asOwner.map(rental => (
+                  <RentalCard
+                    key={rental._id}
+                    rental={rental}
+                    type="asOwner"
+                    onOwnerAction={handleOwnerAction}
+                    onComplete={handleCompleteRental}
+                    onPayEscrow={handlePayEscrow}
+                    navigate={navigate}
+                  />
+                ))
+              )}
+            </>
+          )}
+
+          {/* Tab: Sản phẩm của tôi */}
+          {!loading && !error && activeTab === 'myItems' && (
+            <>
+              <h2 className="section-title">Sản phẩm tôi đã đăng</h2>
+              {rentals.myItems.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">🏷</div>
+                  <p>Bạn chưa đăng sản phẩm nào. <Link to="/post-item">Đăng ngay!</Link></p>
+                </div>
+              ) : (
+                <div className="items-grid">
+                  {rentals.myItems.map(item => (
+                    <ItemCard
+                      key={item._id}
+                      item={item}
+                      onEdit={(id) => navigate(`/edit-item/${id}`)}
+                      onDelete={handleDeleteItem}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+        </div>
+      </div>
+    </div>
   );
 }
 

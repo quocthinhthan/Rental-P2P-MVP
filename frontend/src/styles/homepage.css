@@ -1,0 +1,56 @@
+/* ===== Homepage Carousel ===== */
+
+.homepage-carousel .header-carousel-item {
+    position: relative;
+    min-height: 650px;
+    overflow: hidden;
+}
+
+/* Ảnh nền */
+.homepage-carousel-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.homepage-carousel-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(55%);
+}
+
+/* Content nằm trên ảnh */
+.homepage-carousel-content {
+    position: relative;
+    z-index: 2;
+    min-height: 650px;
+    display: flex;
+    align-items: center;
+    padding: 80px;
+}
+
+/* Chữ */
+.homepage-carousel-content h1,
+.homepage-carousel-content h4,
+.homepage-carousel-content p {
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .homepage-carousel-content {
+        padding: 40px 25px;
+        text-align: center;
+    }
+
+    .homepage-carousel .header-carousel-item {
+        min-height: 500px;
+    }
+
+    .homepage-carousel-content h1 {
+        font-size: 2.2rem;
+    }
+}

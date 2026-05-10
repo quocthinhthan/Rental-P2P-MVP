@@ -1,0 +1,683 @@
+/* ══════════════════════════════════════════════════════
+   ItemDetailPage.css
+   Tham khảo style từ single.html (Electro template)
+   ══════════════════════════════════════════════════════ */
+
+/* ── Variables ── */
+:root {
+  --idp-brand:        #1a6b4a;
+  --idp-brand-light:  #e6f4ee;
+  --idp-accent:       #ffb524;
+  --idp-danger:       #e03e3e;
+  --idp-surface:      #ffffff;
+  --idp-surface-2:    #f7f8fa;
+  --idp-border:       #e8eaed;
+  --idp-text:         #1a1f2e;
+  --idp-muted:        #6b7280;
+  --idp-shadow-sm:    0 1px 4px rgba(0,0,0,.06);
+  --idp-shadow-md:    0 4px 20px rgba(0,0,0,.09);
+  --idp-shadow-lg:    0 12px 40px rgba(0,0,0,.13);
+  --idp-radius:       14px;
+  --idp-radius-sm:    8px;
+}
+
+/* ── Page wrapper ── */
+.idp-page {
+  background: var(--idp-surface-2);
+}
+
+/* ═══════════════════════════════════════
+   MAIN PRODUCT SECTION
+   ═══════════════════════════════════════ */
+
+/* ── Gallery ── */
+.idp-main-img {
+  border-radius: var(--idp-radius);
+  overflow: hidden;
+  box-shadow: var(--idp-shadow-md);
+  background: #fff;
+}
+
+.idp-main-img img {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  display: block;
+}
+
+.idp-thumb-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.idp-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--idp-radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color .2s, opacity .2s;
+}
+
+.idp-thumb:hover,
+.idp-thumb.active {
+  border-color: var(--idp-brand);
+  opacity: .9;
+}
+
+/* ── Product meta ── */
+.idp-product-title {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 700;
+  color: var(--idp-text);
+  margin-bottom: 8px;
+}
+
+.idp-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--idp-brand-light);
+  color: var(--idp-brand);
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 4px;
+}
+
+.idp-code {
+  font-size: .78rem;
+  color: var(--idp-muted);
+}
+
+.idp-price {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--idp-brand);
+  line-height: 1;
+}
+
+.idp-price-unit {
+  font-size: .9rem;
+  font-weight: 400;
+  color: var(--idp-muted);
+}
+
+/* ── Booking card ── */
+.idp-booking-card {
+  border-radius: var(--idp-radius);
+  box-shadow: var(--idp-shadow-md);
+  overflow: hidden;
+  background: #fff;
+}
+
+.idp-booking-form-area {
+  background: var(--idp-surface-2);
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--idp-border);
+}
+
+.idp-booking-form-area h5 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.idp-booking-card .btn-submit {
+  background: var(--idp-brand);
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: .3px;
+  padding: 14px 0;
+  width: 100%;
+  transition: background .2s, box-shadow .2s;
+}
+
+.idp-booking-card .btn-submit:hover:not(:disabled) {
+  background: #155a3d;
+  box-shadow: 0 6px 20px rgba(26,107,74,.3);
+}
+
+.idp-booking-card .btn-submit:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* ── Owner card ── */
+.idp-owner-area {
+  padding: 24px 32px;
+}
+
+.idp-owner-section-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--idp-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.idp-owner-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--idp-border);
+}
+
+.idp-owner-avatar-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.idp-owner-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: var(--idp-shadow-sm);
+}
+
+.idp-owner-verified {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  background: #22c55e;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.idp-owner-verified i {
+  font-size: 9px;
+  color: #fff;
+}
+
+.idp-owner-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--idp-text);
+  margin: 0 0 8px;
+}
+
+.idp-owner-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.idp-owner-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  color: var(--idp-muted);
+}
+
+.idp-owner-meta-row i {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.idp-phone-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef9c3;
+  color: #854d0e;
+  font-style: italic;
+  font-size: .78rem;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+/* ═══════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════ */
+.idp-tabs-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--idp-border);
+  margin-bottom: 0;
+}
+
+.idp-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 12px 24px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--idp-muted);
+  cursor: pointer;
+  position: relative;
+  transition: color .2s;
+}
+
+.idp-tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--idp-brand);
+  transform: scaleX(0);
+  transition: transform .2s;
+}
+
+.idp-tab-btn.active {
+  color: var(--idp-brand);
+}
+
+.idp-tab-btn.active::after {
+  transform: scaleX(1);
+}
+
+.idp-tab-content {
+  background: #fff;
+  border: 1px solid var(--idp-border);
+  border-top: none;
+  border-radius: 0 0 var(--idp-radius) var(--idp-radius);
+  padding: 28px;
+  margin-bottom: 40px;
+  box-shadow: var(--idp-shadow-sm);
+}
+
+.idp-desc-text {
+  line-height: 1.85;
+  color: var(--idp-text);
+  font-size: .95rem;
+}
+
+/* ── Review panel ── */
+.idp-review-score-box {
+  background: var(--idp-surface-2);
+  border: 1px solid var(--idp-border);
+  border-radius: var(--idp-radius);
+  padding: 24px;
+  text-align: center;
+}
+
+.idp-review-score-num {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--idp-brand);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.idp-review-stars {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.idp-review-stars i {
+  font-size: 1.1rem;
+}
+
+.idp-review-count {
+  font-size: .82rem;
+  color: var(--idp-muted);
+  margin: 0;
+}
+
+.idp-review-item {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--idp-border);
+}
+
+.idp-review-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.idp-reviewer-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.idp-review-author {
+  font-size: .9rem;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.idp-review-date {
+  font-size: .76rem;
+  color: var(--idp-muted);
+}
+
+.idp-review-comment {
+  font-size: .87rem;
+  margin: 6px 0 0;
+  color: var(--idp-text);
+  line-height: 1.6;
+}
+
+.idp-review-form-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.idp-star-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform .15s;
+}
+
+.idp-star-btn:hover {
+  transform: scale(1.2);
+}
+
+/* ═══════════════════════════════════════
+   RELATED PRODUCTS ROWS
+   (Inspired by single.html related-product section)
+   ═══════════════════════════════════════ */
+
+/* shared section shell */
+.idp-related-section {
+  padding: 40px 0 0;
+}
+
+.idp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.idp-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--idp-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.idp-section-title .idp-title-pill {
+  display: inline-block;
+  background: var(--idp-brand-light);
+  color: var(--idp-brand);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.idp-section-link {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--idp-brand);
+  text-decoration: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.idp-section-link:hover {
+  color: #155a3d;
+}
+
+.idp-section-divider {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--idp-brand) 0%, var(--idp-brand-light) 60%, transparent 100%);
+  border: none;
+  margin-bottom: 24px;
+}
+
+/* ── Product card (related rows) ── */
+.idp-prod-card {
+  background: var(--idp-surface);
+  border: 1px solid var(--idp-border);
+  border-radius: var(--idp-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .2s, transform .2s;
+  height: 100%;
+}
+
+.idp-prod-card:hover {
+  box-shadow: var(--idp-shadow-md);
+  transform: translateY(-4px);
+}
+
+.idp-prod-img-wrap {
+  position: relative;
+  overflow: hidden;
+  background: var(--idp-surface-2);
+}
+
+.idp-prod-img-wrap img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  display: block;
+  transition: transform .35s ease;
+}
+
+.idp-prod-card:hover .idp-prod-img-wrap img {
+  transform: scale(1.05);
+}
+
+/* Eye overlay on hover — nod to single.html .related-details */
+.idp-prod-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,107,74,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .25s;
+}
+
+.idp-prod-card:hover .idp-prod-overlay {
+  opacity: 1;
+}
+
+.idp-prod-overlay-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--idp-brand);
+  font-size: 1rem;
+  box-shadow: var(--idp-shadow-sm);
+  text-decoration: none;
+  transition: background .15s;
+}
+
+.idp-prod-overlay-btn:hover {
+  background: var(--idp-brand);
+  color: #fff;
+}
+
+.idp-prod-body {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.idp-prod-name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--idp-text);
+  margin: 0 0 6px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color .15s;
+}
+
+.idp-prod-name:hover {
+  color: var(--idp-brand);
+}
+
+.idp-prod-price {
+  font-size: .95rem;
+  font-weight: 800;
+  color: var(--idp-brand);
+  margin: auto 0 0;
+}
+
+.idp-prod-price-unit {
+  font-size: .72rem;
+  font-weight: 400;
+  color: var(--idp-muted);
+}
+
+/* ── Owner info on related card ── */
+.idp-prod-owner-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: .76rem;
+  color: var(--idp-muted);
+}
+
+.idp-prod-owner-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--idp-border);
+}
+
+/* ── Loading skeleton cards ── */
+.idp-skel-card {
+  background: #fff;
+  border: 1px solid var(--idp-border);
+  border-radius: var(--idp-radius);
+  overflow: hidden;
+}
+
+.idp-skel-img {
+  height: 190px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: idp-shimmer 1.4s infinite;
+}
+
+.idp-skel-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: idp-shimmer 1.4s infinite;
+  margin: 12px 16px 8px;
+}
+
+.idp-skel-line.short {
+  width: 60%;
+  margin-bottom: 16px;
+}
+
+@keyframes idp-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Empty state ── */
+.idp-empty {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--idp-muted);
+  background: #fff;
+  border: 1px dashed var(--idp-border);
+  border-radius: var(--idp-radius);
+}
+
+.idp-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  opacity: .45;
+}
+
+.idp-empty p {
+  font-size: .88rem;
+  margin: 0;
+}
+
+/* ── Loading spinner (page-level) ── */
+.idp-page-loading {
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--idp-muted);
+}
+
+.idp-page-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--idp-border);
+  border-top-color: var(--idp-brand);
+  border-radius: 50%;
+  animation: idp-spin .7s linear infinite;
+}
+
+@keyframes idp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .idp-booking-form-area,
+  .idp-owner-area {
+    padding: 20px;
+  }
+
+  .idp-tab-content {
+    padding: 20px 16px;
+  }
+
+  .idp-price {
+    font-size: 1.5rem;
+  }
+
+  .idp-prod-img-wrap img {
+    height: 150px;
+  }
+}

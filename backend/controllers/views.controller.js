@@ -27,11 +27,13 @@ exports.getItemDetailView = async (req, res) => {
         _id: item._id,
         name: item.name,
         description: item.description,
+        category: item.category, // Bổ sung category
+        status: item.status,     // Bổ sung status
         images: item.images,
         pricePerDay: item.pricePerDay,
         address: item.address,
         owner: item.ownerId,
-        bookedDates: confirmedRentals // Thêm mảng này vào response
+        bookedDates: confirmedRentals 
     };
 
     res.status(200).json(viewData);
@@ -73,7 +75,11 @@ exports.getMyRentalsView = async (req, res) => {
           select: '_id fullName email'
       });
     
-    // 3. Hàm helper để định dạng lại
+    // 3. Lấy các vật phẩm tôi đã đăng (myItems)
+    const myItems = await Item.find({ ownerId: userId, status: { $ne: 'delisted' } })
+      .sort({ createdAt: -1 });
+
+    // 4. Hàm helper để định dạng lại rental
     const formatRentalDetail = (rental, counterparty) => {
         // Rào chắn nếu item bị null (do đã bị xóa)
         const itemSummary = rental.itemId ? {
@@ -91,16 +97,24 @@ exports.getMyRentalsView = async (req, res) => {
             escrowAmount: rental.escrowAmount,
             paymentStatus: rental.paymentStatus,
             status: rental.status,
-            note: rental.note, // >>> SỬA: Thêm trường note vào đây
+            note: rental.note, 
             item: itemSummary,
             counterparty: counterparty
         };
     };
 
-    // 4. Trả về kết quả
+    // 5. Trả về kết quả
     res.status(200).json({
       asRenter: asRenter.map(r => formatRentalDetail(r, r.ownerId)),
       asOwner: asOwner.map(r => formatRentalDetail(r, r.renterId)),
+      myItems: myItems.map(item => ({
+          _id: item._id,
+          name: item.name,
+          pricePerDay: item.pricePerDay,
+          category: item.category,
+          status: item.status,
+          mainImage: (item.images && item.images.length > 0) ? item.images[0] : ''
+      }))
     });
 
   } catch (error) {
