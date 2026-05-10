@@ -52,11 +52,12 @@ export const getItems = (params = {}) => {
 
   const query = new URLSearchParams();
 
-  if (params.search) query.set('search', params.search);
-  if (params.category) query.set('category', params.category);
-  if (params.address) query.set('address', params.address);
-  if (params.startDate) query.set('startDate', params.startDate);
-  if (params.endDate) query.set('endDate', params.endDate);
+  // Duyệt qua tất cả các key trong params để tự động thêm vào query string
+  Object.keys(params).forEach(key => {
+    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+      query.set(key, params[key]);
+    }
+  });
 
   const queryString = query.toString();
   return api.get(`/items${queryString ? `?${queryString}` : ''}`);

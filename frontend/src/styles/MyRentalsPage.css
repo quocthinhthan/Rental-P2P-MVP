@@ -1,0 +1,454 @@
+/* ══════════════════════════════════════════
+   MyRentalsPage.css
+   ══════════════════════════════════════════ */
+
+:root {
+  --brand: #1a6b4a;
+  --brand-light: #e6f4ee;
+  --brand-mid: #2d9b6a;
+  --accent: #f0a500;
+  --danger: #e03e3e;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --border: #e8eaed;
+  --text-primary: #1a1f2e;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+.myrp * {
+  box-sizing: border-box;
+}
+
+/* ── Page header ── */
+.myrp-header {
+  background: linear-gradient(135deg, #0f3d26 0%, #1a6b4a 55%, #2d9b6a 100%);
+  padding: 64px 24px 56px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.myrp-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.myrp-header h1 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  color: #fff;
+  margin: 0 0 12px;
+  position: relative;
+}
+
+.myrp-header-breadcrumb {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  font-size: .85rem;
+  color: rgba(255,255,255,.65);
+  position: relative;
+}
+
+.myrp-header-breadcrumb a {
+  color: rgba(255,255,255,.85);
+  text-decoration: none;
+}
+
+.myrp-header-breadcrumb span {
+  color: rgba(255,255,255,.4);
+}
+
+/* ── Layout ── */
+.myrp-body {
+  background: var(--surface-2);
+  min-height: 60vh;
+  padding: 48px 0 80px;
+}
+
+.myrp-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── Tabs ── */
+.myrp-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 36px;
+  overflow-x: auto;
+}
+
+.myrp-tab {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all .2s ease;
+  white-space: nowrap;
+}
+
+.myrp-tab:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.myrp-tab.active {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26,107,74,.25);
+}
+
+.myrp-tab-icon {
+  font-size: 1rem;
+}
+
+.myrp-tab-badge {
+  background: rgba(255,255,255,.25);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  line-height: 1.6;
+}
+
+.myrp-tab:not(.active) .myrp-tab-badge {
+  background: var(--brand-light);
+  color: var(--brand);
+}
+
+/* ── Rental Card ── */
+.rental-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  transition: box-shadow .2s, transform .2s;
+  margin-bottom: 16px;
+}
+
+.rental-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.rental-card-img {
+  width: 230px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.rental-card-body {
+  padding: 18px 20px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rental-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rental-card-meta {
+  font-size: .8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.rental-card-price {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 6px;
+}
+
+.rental-card-party {
+  font-size: .8rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.rental-card-note {
+  font-size: .8rem;
+  color: #0369a1;
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  padding: 6px 10px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 10px;
+}
+
+.rental-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Deleted item rental card ── */
+.rental-card-deleted {
+  background: #fff8f8;
+  border-color: #fecaca;
+  flex-direction: column;
+  padding: 16px 20px;
+}
+
+/* ── Status Badge ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 8px;
+}
+
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pending-payment { background: #fef9c3; color: #854d0e; }
+.status-pending-confirm  { background: #fef3c7; color: #92400e; }
+.status-confirmed        { background: #dcfce7; color: #166534; }
+.status-completed        { background: #dbeafe; color: #1e40af; }
+.status-rejected         { background: #fee2e2; color: #991b1b; }
+.status-cancelled        { background: #f3f4f6; color: #374151; }
+
+/* ── Buttons ── */
+.btn-xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary-xs             { background: var(--brand); color: #fff; }
+.btn-primary-xs:hover       { background: #155a3d; }
+.btn-success-xs             { background: #16a34a; color: #fff; }
+.btn-success-xs:hover       { background: #15803d; }
+.btn-danger-xs              { background: var(--danger); color: #fff; }
+.btn-danger-xs:hover        { background: #b91c1c; }
+.btn-info-xs                { background: #0284c7; color: #fff; }
+.btn-info-xs:hover          { background: #0369a1; }
+.btn-outline-xs             { background: transparent; color: var(--brand); border: 1.5px solid var(--brand); }
+.btn-outline-xs:hover       { background: var(--brand-light); }
+.btn-ghost-xs               { background: var(--surface-2); color: var(--text-secondary); border: 1.5px solid var(--border); }
+.btn-ghost-xs:hover         { border-color: var(--brand); color: var(--brand); }
+
+/* ── Item Grid Card ── */
+.item-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .2s, transform .2s;
+}
+
+.item-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+}
+
+.item-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.item-card-link:hover .item-card-img {
+  opacity: .88;
+}
+
+.item-card-img {
+  width: 100%;
+  height: 175px;
+  object-fit: cover;
+  display: block;
+  transition: opacity .2s;
+}
+
+.item-card-body {
+  padding: 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card-title {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-decoration: none;
+}
+
+.item-card-title:hover {
+  color: var(--brand);
+}
+
+.item-card-price {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin: 2px 0 4px;
+}
+
+.item-card-price-unit {
+  font-size: .72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.item-card-cat {
+  font-size: .75rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.item-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.item-card-actions .btn-xs {
+  flex: 1;
+  justify-content: center;
+}
+
+/* ── Items grid ── */
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--text-muted);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  font-size: .9rem;
+  margin: 0;
+}
+
+.empty-state a {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* ── Section title ── */
+.section-title {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+}
+
+/* ── Loading / Error ── */
+.myrp-loading {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.myrp-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: myrp-spin .7s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes myrp-spin {
+  to { transform: rotate(360deg); }
+}
+
+.myrp-loading p {
+  color: var(--text-muted);
+  font-size: .9rem;
+}
+
+.myrp-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 16px 20px;
+  color: #991b1b;
+  margin-bottom: 24px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .rental-card {
+    flex-direction: column;
+  }
+
+  .rental-card-img {
+    width: 100%;
+    height: 180px;
+  }
+
+  .myrp-tab {
+    font-size: .78rem;
+    padding: 10px 12px;
+  }
+}

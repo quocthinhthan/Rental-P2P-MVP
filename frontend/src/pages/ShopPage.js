@@ -11,6 +11,7 @@ function ShopPage() {
   const [address, setAddress] = useState(searchParams.get('address') || '');
   const [startDate, setStartDate] = useState(searchParams.get('startDate') || '');
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
+  const [ownerId, setOwnerId] = useState(searchParams.get('ownerId') || '');
   const [categories, setCategories] = useState([]);
 
   // Fetch danh mục từ API
@@ -33,6 +34,7 @@ function ShopPage() {
     setAddress(searchParams.get('address') || '');
     setStartDate(searchParams.get('startDate') || '');
     setEndDate(searchParams.get('endDate') || '');
+    setOwnerId(searchParams.get('ownerId') || '');
   }, [searchParams]);
 
   const filters = useMemo(() => ({
@@ -41,7 +43,8 @@ function ShopPage() {
     address: address.trim(),
     startDate,
     endDate,
-  }), [searchInput, category, address, startDate, endDate]);
+    ownerId,
+  }), [searchInput, category, address, startDate, endDate, ownerId]);
 
   const handleReset = () => {
     setSearchInput('');
@@ -49,9 +52,10 @@ function ShopPage() {
     setAddress('');
     setStartDate('');
     setEndDate('');
+    setOwnerId('');
   };
 
-  const hasActiveFilters = Boolean(filters.search || filters.category || filters.address || filters.startDate || filters.endDate);
+  const hasActiveFilters = Boolean(filters.search || filters.category || filters.address || filters.startDate || filters.endDate || filters.ownerId);
 
   return (
     <>

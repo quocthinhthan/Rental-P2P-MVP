@@ -5,9 +5,19 @@ const Rental = require('../models/Rental.model');
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
-    const { search, category, address, startDate, endDate } = req.query;
+    const { search, category, address, startDate, endDate, ownerId, exclude } = req.query;
 
     let query = { status: { $ne: 'delisted' } };
+
+    // Lọc theo Chủ sở hữu
+    if (ownerId) {
+      query.ownerId = ownerId;
+    }
+
+    // Loại trừ vật phẩm cụ thể (Ví dụ: loại trừ chính nó khi lấy "Sản phẩm liên quan")
+    if (exclude) {
+      query._id = { ...query._id, $ne: exclude };
+    }
 
     // Lọc theo Tên (Tìm gần đúng, không dấu, không hoa thường)
     if (search) {
@@ -15,13 +25,11 @@ const searchItems = async (req, res) => {
     }
 
     // Lọc theo Danh mục (Tìm gần đúng, không dấu, không hoa thường)
-    // VD: DB lưu "Công nghệ", gõ "cong nghe" vẫn ra
     if (category) {
       query.category = { $regex: createViFuzzyRegex(category), $options: 'i' };
     }
 
     // Lọc theo Địa chỉ (Tìm gần đúng, không dấu, không hoa thường)
-    // VD: DB lưu "Quận Gò Vấp", gõ "go vap" vẫn ra
     if (address) {
       query.address = { $regex: createViFuzzyRegex(address), $options: 'i' };
     }
@@ -45,7 +53,7 @@ const searchItems = async (req, res) => {
       const unavailableItemIds = overlappingRentals.map(rental => rental.itemId);
 
       // Loại những món đồ đó ra
-      query._id = { $nin: unavailableItemIds };
+      query._id = { ...query._id, $nin: unavailableItemIds };
     }
 
     // Chạy Query

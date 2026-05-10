@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ItemList from '../components/Items/ItemList';
+import '../styles/homepage.css';
 
 function HomePage() {
   const [searchInput, setSearchInput] = useState('');
@@ -47,66 +48,157 @@ function HomePage() {
       {/* Carousel Start */}
       <div className="container-fluid carousel bg-light px-0">
         <div className="row g-0 justify-content-end">
+
+          {/* LEFT CAROUSEL */}
           <div className="col-12 col-lg-7 col-xl-9">
-            <div className="header-carousel owl-carousel bg-light py-5">
-              <div className="row g-0 header-carousel-item align-items-center">
-                <div className="col-xl-6 carousel-img wow fadeInLeft" data-wow-delay="0.1s">
-                  <img src="/img/carousel-1.png" className="img-fluid w-100" alt="Carousel 1" />
+            <div className="header-carousel owl-carousel homepage-carousel">
+
+              {/* Slide 1 */}
+              <div className="header-carousel-item">
+
+                {/* Background Image */}
+                <div className="homepage-carousel-bg">
+                  <img src="/img/cam-trai.jpg" alt="Carousel 1" />
                 </div>
-                <div className="col-xl-6 carousel-content p-4">
-                  <h4 className="text-uppercase fw-bold mb-4 wow fadeInRight" data-wow-delay="0.1s" style={{ letterSpacing: '3px' }}>
-                    Cho thuê mọi thứ
-                  </h4>
-                  <h1 className="display-3 text-capitalize mb-4 wow fadeInRight" data-wow-delay="0.3s">
-                    Nền tảng cho thuê P2P
-                  </h1>
-                  <p className="text-dark wow fadeInRight" data-wow-delay="0.5s">
-                    Vật dụng bạn không dùng, là thứ người khác đang cần!
-                  </p>
-                  <Link className="btn btn-primary rounded-pill py-3 px-5 wow fadeInRight" data-wow-delay="0.7s" to="/shop">
-                    Xem ngay
-                  </Link>
+
+                {/* Content */}
+                <div className="homepage-carousel-content">
+                  <div className="container">
+                    <div className="col-lg-8">
+                      <h4
+                        className="text-uppercase fw-bold mb-4 wow fadeInUp"
+                        data-wow-delay="0.1s"
+                        style={{ letterSpacing: '3px' }}
+                      >
+                        Cho thuê mọi thứ
+                      </h4>
+
+                      <h1
+                        className="display-3 text-capitalize mb-4 wow fadeInUp"
+                        data-wow-delay="0.3s"
+                      >
+                        Nền tảng cho thuê P2P
+                      </h1>
+
+                      <p
+                        className="fs-5 mb-4 wow fadeInUp"
+                        data-wow-delay="0.5s"
+                      >
+                        Vật dụng bạn không dùng, là thứ người khác đang cần!
+                      </p>
+
+                      <Link
+                        className="btn btn-primary rounded-pill py-3 px-5 wow fadeInUp"
+                        data-wow-delay="0.7s"
+                        to="/shop"
+                      >
+                        Xem ngay
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="row g-0 header-carousel-item align-items-center">
-                <div className="col-xl-6 carousel-img wow fadeInLeft" data-wow-delay="0.1s">
-                  <img src="/img/carousel-2.png" className="img-fluid w-100" alt="Carousel 2" />
+
+              {/* Slide 2 */}
+              <div className="header-carousel-item">
+
+                {/* Background Image */}
+                <div className="homepage-carousel-bg">
+                  <img src="/img/carou-2.webp" alt="Carousel 2" />
                 </div>
-                <div className="col-xl-6 carousel-content p-4">
-                  <h4 className="text-uppercase fw-bold mb-4 wow fadeInRight" data-wow-delay="0.1s" style={{ letterSpacing: '3px' }}>
-                    Tiết kiệm chi phí
-                  </h4>
-                  <h1 className="display-3 text-capitalize mb-4 wow fadeInRight" data-wow-delay="0.3s">
-                    Thuê thay vì mua
-                  </h1>
-                  <p className="text-dark wow fadeInRight" data-wow-delay="0.5s">
-                    Sử dụng các vật dụng chất lượng với giá chỉ bằng một phần nhỏ.
-                  </p>
-                  <Link className="btn btn-primary rounded-pill py-3 px-5 wow fadeInRight" data-wow-delay="0.7s" to="/shop">
-                    Khám phá
-                  </Link>
+
+                {/* Content */}
+                <div className="homepage-carousel-content">
+                  <div className="container">
+                    <div className="col-lg-8">
+                      <h4
+                        className="text-uppercase fw-bold mb-4 wow fadeInUp"
+                        data-wow-delay="0.1s"
+                        style={{ letterSpacing: '3px' }}
+                      >
+                        Tiết kiệm chi phí
+                      </h4>
+
+                      <h1
+                        className="display-3 text-capitalize mb-4 wow fadeInUp"
+                        data-wow-delay="0.3s"
+                      >
+                        Thuê thay vì mua
+                      </h1>
+
+                      <p
+                        className="fs-5 mb-4 wow fadeInUp"
+                        data-wow-delay="0.5s"
+                      >
+                        Sử dụng các vật dụng chất lượng với giá chỉ bằng một phần nhỏ.
+                      </p>
+
+                      <Link
+                        className="btn btn-primary rounded-pill py-3 px-5 wow fadeInUp"
+                        data-wow-delay="0.7s"
+                        to="/shop"
+                      >
+                        Khám phá
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
-          <div className="col-12 col-lg-5 col-xl-3 wow fadeInRight" data-wow-delay="0.1s">
+
+          {/* RIGHT BANNER - GIỮ NGUYÊN */}
+          <div
+            className="col-12 col-lg-5 col-xl-3 wow fadeInRight"
+            data-wow-delay="0.1s"
+          >
             <div className="carousel-header-banner h-100">
-              <img src="/img/header-img.jpg" className="img-fluid w-100 h-100" style={{ objectFit: 'cover' }} alt="Header Banner" />
+              <img
+                src="/img/chupanhcanon.png"
+                className="img-fluid w-100 h-100"
+                style={{ objectFit: 'cover' }}
+                alt="Header Banner"
+              />
+
               <div className="carousel-banner-offer">
-                <p className="bg-primary text-white rounded fs-5 py-2 px-4 mb-0 me-3">Giảm 20%</p>
-                <p className="text-primary fs-5 fw-bold mb-0">Ưu đãi Đặc biệt</p>
+                <p className="bg-primary text-white rounded fs-5 py-2 px-4 mb-0 me-3">
+                  Giảm 20%
+                </p>
+
+                <p className="text-primary fs-5 fw-bold mb-0">
+                  Ưu đãi Đặc biệt
+                </p>
               </div>
+
               <div className="carousel-banner">
                 <div className="carousel-banner-content text-center p-4">
                   <span className="d-block mb-2">Máy Ảnh</span>
-                  <span className="d-block text-white fs-3">Canon EOS 70D</span>
-                  <del className="me-2 text-white fs-5">500.000đ/ngày</del>
-                  <span className="text-primary fs-5">400.000đ/ngày</span>
+
+                  <span className="d-block text-white fs-3">
+                    Canon EOS 70D
+                  </span>
+
+                  <del className="me-2 text-white fs-5">
+                    500.000đ/ngày
+                  </del>
+
+                  <span className="text-primary fs-5">
+                    400.000đ/ngày
+                  </span>
                 </div>
-                <Link to="/items/1" className="btn btn-primary rounded-pill py-2 px-4"><i className="fas fa-shopping-cart me-2"></i> Thuê ngay</Link>
+
+                <Link
+                  to="/items/1"
+                  className="btn btn-primary rounded-pill py-2 px-4"
+                >
+                  <i className="fas fa-shopping-cart me-2"></i>
+                  Thuê ngay
+                </Link>
               </div>
             </div>
           </div>
+
         </div>
       </div>
       {/* Carousel End */}
