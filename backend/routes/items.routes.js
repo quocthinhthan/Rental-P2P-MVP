@@ -12,12 +12,12 @@ const {
 // ĐẶT TRÊN CÙNG ĐỂ KHÔNG BỊ NHẦM VỚI CÁC ROUTE KHÁC
 router.get('/categories', getCategories);
 
-const { protect } = require('../middleware/auth.middleware');
+const { protect, checkVerified } = require('../middleware/auth.middleware');
 
 // /api/items
 router.route('/')
-  .get(searchItems) // GET /api/items?search=...
-  .post(protect, createItem); // POST /api/items (cần login)
+  .get(searchItems) 
+  .post(protect, checkVerified, createItem);
 
 // /api/items/:id
 router.route('/:id')
@@ -27,4 +27,4 @@ router.route('/:id')
   .put(protect, checkOwner, updateItem)
   .delete(protect, checkOwner, deleteItem);
 
-module.exports = router;
+module.exports = router; 

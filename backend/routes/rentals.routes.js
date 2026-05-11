@@ -10,10 +10,10 @@ const {
   completeRental,
   checkRentalOwner
 } = require('../controllers/rentals.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, checkVerified } = require('../middleware/auth.middleware');
 
 // POST /api/rentals - (Renter) Tạo yêu cầu
-router.post('/', protect, createRentalRequest);
+router.post('/', protect, checkVerified, createRentalRequest);
 
 // GET /api/rentals/vnpay-return - VNPay redirect callback
 router.get('/vnpay-return', handleVNPayReturn);

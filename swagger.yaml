@@ -143,6 +143,8 @@ paths:
         - Auth
       summary: Xác thực eKYC (AI Đọc CCCD)
       description: Gửi URL ảnh Căn cước công dân để FPT.AI tự động nhận diện và cập nhật thông tin.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -869,12 +871,7 @@ components:
                 type: string
               phoneNumber:
                 type: string
-              idCardNumber:
-                type: string
-              idCardImages:
-                type: array
-                items:
-                  type: string
+
     LoginInput:
       required: true
       content:
