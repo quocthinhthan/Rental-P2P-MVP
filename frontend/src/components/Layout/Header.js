@@ -116,8 +116,8 @@ function Header() {
                         <>
                           <li><hr className="dropdown-divider" /></li>
                           <li>
-                            <Link to="/admin/disputes" className="dropdown-item">
-                              <i className="bi bi-shield-exclamation-fill me-2 text-danger"></i>
+                            <Link to="/admin/disputes" className="custom-dropdown-item">
+                              <i className="fas fa-gavel me-2 item-icon"></i>
                               Xử lý tranh chấp
                             </Link>
                           </li>

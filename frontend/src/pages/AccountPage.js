@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import apiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
 import '../styles/AccountPage.css';
 
 function AccountPage() {
@@ -15,8 +16,6 @@ function AccountPage() {
   } = useForm();
 
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [saveError, setSaveError] = useState('');
 
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -28,8 +27,6 @@ function AccountPage() {
   const [ekycError, setEkycError] = useState('');
   const [ekycData, setEkycData] = useState(null);
 
-  // Controls success modal
-  const [showEkycModal, setShowEkycModal] = useState(false);
   // Controls whether to show eKYC form (hidden when already verified)
   const [ekycFormOpen, setEkycFormOpen] = useState(false);
 
@@ -100,7 +97,13 @@ function AccountPage() {
       setEkycData(extracted);
       if (extracted.fullName) setValue('fullName', extracted.fullName);
       if (extracted.address) setValue('address', extracted.address);
-      setShowEkycModal(true);
+      
+      await Swal.fire({
+        title: 'Xác thực thành công! 🎉',
+        html: `Thông tin CCCD của <b>${extracted.fullName || ''}</b> đã được đọc thành công.<br/><br/>Nhấn <b>"Lưu thay đổi"</b> bên dưới để hoàn tất xác thực.`,
+        icon: 'success',
+        confirmButtonText: 'Đã hiểu, tiếp tục'
+      });
     } catch (error) {
       if (uploadedPublicId) {
         try {
@@ -117,8 +120,6 @@ function AccountPage() {
 
   const onSubmit = async (data) => {
     setSaving(true);
-    setSaveMessage('');
-    setSaveError('');
 
     try {
       let avatarUrl = data.avatarUrl;
@@ -150,9 +151,9 @@ function AccountPage() {
 
       const response = await apiService.updateProfile(payload);
       updateUser(response.data);
-      setSaveMessage('Cập nhật thông tin thành công!');
+      Swal.fire('Thành công!', 'Cập nhật thông tin thành công!', 'success');
     } catch (error) {
-      setSaveError(error.response?.data?.message || 'Không thể cập nhật thông tin.');
+      Swal.fire('Thất bại', error.response?.data?.message || 'Không thể cập nhật thông tin.', 'error');
     } finally {
       setSaving(false);
     }
@@ -160,28 +161,6 @@ function AccountPage() {
 
   return (
     <>
-      {/* ── eKYC Success Modal ── */}
-      {showEkycModal && (
-        <div className="acc-toast-overlay" onClick={() => setShowEkycModal(false)}>
-          <div className="acc-toast-box" onClick={(e) => e.stopPropagation()}>
-            <div className="acc-toast-icon">
-              <i className="fas fa-check-circle" />
-            </div>
-            <div className="acc-toast-title">Xác thực thành công! 🎉</div>
-            <div className="acc-toast-sub">
-              Thông tin CCCD đã được đọc thành công.<br />
-              Nhấn <strong>"Lưu thay đổi"</strong> bên dưới để hoàn tất xác thực.
-            </div>
-            <button
-              className="btn btn-success w-100 rounded-pill fw-bold py-2"
-              onClick={() => setShowEkycModal(false)}
-            >
-              <i className="fas fa-check me-2" />Đã hiểu, tiếp tục
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Page Header ── */}
       <div className="container-fluid page-header py-5">
         <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">
@@ -257,19 +236,6 @@ function AccountPage() {
             {/* ── RIGHT: Form ── */}
             <div className="col-lg-8">
               <div className="acc-form-card">
-
-                {/* Save messages */}
-                {saveMessage && (
-                  <div className="acc-alert-success mb-4">
-                    <i className="fas fa-check-circle" /> {saveMessage}
-                  </div>
-                )}
-                {saveError && (
-                  <div className="acc-alert-danger mb-4">
-                    <i className="fas fa-exclamation-circle" /> {saveError}
-                  </div>
-                )}
-
                 <form onSubmit={handleSubmit(onSubmit)}>
 
                   {/* ── Section: Thông tin cơ bản ── */}

@@ -5,12 +5,14 @@ const {
   createItem, 
   updateItem, 
   deleteItem, 
-  checkOwner, // Import middleware
-  getCategories
+  checkOwner,
+  getCategories,
+  getBestsellerItems
 } = require('../controllers/items.controller');
 
 // ĐẶT TRÊN CÙNG ĐỂ KHÔNG BỊ NHẦM VỚI CÁC ROUTE KHÁC
 router.get('/categories', getCategories);
+router.get('/bestsellers', getBestsellerItems);
 
 const { protect, checkVerified } = require('../middleware/auth.middleware');
 

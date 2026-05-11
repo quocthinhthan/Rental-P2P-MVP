@@ -70,6 +70,7 @@ export const getItems = (params = {}) => {
 };
 
 export const getCategories = () => api.get('/items/categories');
+export const getBestsellers = (limit = 3) => api.get(`/items/bestsellers?limit=${limit}`);
 
 export const createItem = (itemData) => 
   api.post('/items', itemData); // Cần formData nếu có upload ảnh
@@ -132,6 +133,10 @@ export const resolveDispute = async (id, resolveData) => {
     const response = await api.patch(`/disputes/${id}/resolve`, resolveData);
     return response.data;
 };
+
+export const createDispute = (rentalId, reason, evidenceImages = []) =>
+  api.post('/disputes', { rentalId, reason, evidenceImages });
+
 export const deleteImage = (publicId) =>
   api.post('/upload/delete', { publicId });
 
@@ -158,6 +163,8 @@ const apiService = {
   confirmRental,
   rejectRental,
   completeRental,
+  createDispute,
+  getBestsellers,
 };
 
 export default apiService;
