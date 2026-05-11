@@ -2,17 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext'; 
 import apiService from '../../services/api';
+// Import file layout.css
+import '../../styles/layout.css'; 
 
 function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // State quản lý từ khóa tìm kiếm và danh mục
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
 
-  // Fetch danh mục từ API
+  // Thêm useState này vào phần đầu component Header
+    const [isCatOpen, setIsCatOpen] = useState(false);
+
+  // Hàm chọn danh mục
+  const selectCategory = (catName) => {
+  setSelectedCategory(catName);
+  setIsCatOpen(false);
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -30,18 +39,11 @@ function Header() {
     navigate('/login'); 
   };
 
-  // Hàm xử lý khi bấm nút Tìm kiếm
   const handleSearch = (e) => {
     e.preventDefault();
-    
     const params = new URLSearchParams();
-    if (searchQuery.trim()) {
-      params.append('search', searchQuery.trim());
-    }
-    if (selectedCategory) {
-      params.append('category', selectedCategory);
-    }
-
+    if (searchQuery.trim()) params.append('search', searchQuery.trim());
+    if (selectedCategory) params.append('category', selectedCategory);
     const queryString = params.toString();
     navigate(`/shop${queryString ? `?${queryString}` : ''}`);
   };
@@ -49,42 +51,69 @@ function Header() {
   return (
     <>
       {/* Topbar Start */}
-      <div className="container-fluid px-5 d-none border-bottom d-lg-block">
+      <div className="container-fluid px-5 d-none border-bottom d-lg-block topbar-wrapper">
         <div className="row gx-0 align-items-center">
           
           <div className="col-lg-4 text-center text-lg-start mb-lg-0">
-            <div className="d-inline-flex align-items-center" style={{height: '45px'}}>
-                <span className="text-muted me-2">Help</span><small> / </small>
-                <span className="text-muted mx-2">Support</span><small> / </small>
-                <span className="text-muted ms-2">Contact</span>
+            <div className="d-inline-flex align-items-center topbar-text" style={{height: '45px'}}>
+                <span className="text-muted me-2">Trợ giúp</span><small> / </small>
+                <span className="text-muted mx-2">Hỗ trợ</span><small> / </small>
+                <span className="text-muted ms-2">Liên hệ</span>
             </div>
           </div>
-          <div className="col-lg-4 text-center d-flex align-items-center justify-content-center">
-              <small className="text-dark">Call Us:</small>
-              <span className="text-muted ms-2">(+84) 1234 567 890</span>
+          <div className="col-lg-4 text-center d-flex align-items-center justify-content-center topbar-text">
+              <small className="text-dark">Gọi tới:</small>
+              <span className="text-muted ms-2 fw-medium">(+84) 1234 567 890</span>
           </div>
 
           <div className="col-lg-4 text-center text-lg-end">
             <div className="d-inline-flex align-items-center" style={{ height: '45px' }}>
-              <div className="dropdown">
-                <button type="button" className="dropdown-toggle text-muted ms-2 btn btn-link p-0 text-decoration-none" data-bs-toggle="dropdown" aria-expanded="false" style={{ cursor: 'pointer' }}>
-                  <small><i className="fa fa-user me-2"></i> {isLoggedIn && user ? user.fullName : 'Tài khoản'}</small>
+              <div className="dropdown custom-dropdown">
+                {/* Nút nhấn Dropdown hiện đại */}
+                <button 
+                  type="button" 
+                  className="btn user-dropdown-toggle text-decoration-none" 
+                  data-bs-toggle="dropdown" 
+                  aria-expanded="false"
+                  
+                >
+                  <div className="user-avatar">
+                    <i className="fa fa-user"></i>
+                  </div>
+                  <span className="user-name">
+                    {isLoggedIn && user ? user.fullName : 'Tài khoản'}
+                  </span>
+                  <i className="fa fa-chevron-down dropdown-icon"></i>
                 </button>
 
-                <div className="dropdown-menu rounded">
+                {/* Dropdown Menu */}
+                <div className="dropdown-menu dropdown-menu-end custom-dropdown-menu mt-2">
                   {isLoggedIn && user ? (
                     <>
-                      <span className="dropdown-item-text">Xin chào, {user.fullName}</span>
-                      <hr className="dropdown-divider" />
-                      <Link to="/my-rentals" className="dropdown-item">Quản lý đơn thuê</Link>
-                      <Link to="/post-item" className="dropdown-item">Đăng đồ cho thuê</Link>
-                      <hr className="dropdown-divider" />
-                      <button onClick={handleLogout} className="dropdown-item">Đăng xuất</button>
+                      <div className="dropdown-header">
+                        <p className="mb-0 text-muted fs-7">Xin chào,</p>
+                        <h6 className="mb-0 text-dark fw-bold">{user.fullName}</h6>
+                      </div>
+                      <hr className="dropdown-divider mx-3 my-2" />
+                      <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
+                      </Link>
+                      <Link to="/post-item" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-plus-circle me-2 item-icon"></i>Đăng đồ cho thuê
+                      </Link>
+                      <hr className="dropdown-divider mx-3 my-2" />
+                      <button onClick={handleLogout} className="dropdown-item custom-dropdown-item text-danger logout-btn">
+                        <i className="fas fa-sign-out-alt me-2 item-icon"></i>Đăng xuất
+                      </button>
                     </>
                   ) : (
                     <>
-                      <Link to="/login" className="dropdown-item">Đăng nhập</Link>
-                      <Link to="/register" className="dropdown-item">Đăng ký</Link>
+                      <Link to="/login" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-sign-in-alt me-2 item-icon"></i>Đăng nhập
+                      </Link>
+                      <Link to="/register" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-user-plus me-2 item-icon"></i>Đăng ký
+                      </Link>
                     </>
                   )}
                 </div>
@@ -96,110 +125,184 @@ function Header() {
       {/* Topbar End */}
       
       {/* Search Header Start */}
-      <div className="container-fluid px-5 py-4 d-none d-lg-block">
-         <div className="row gx-0 align-items-center text-center">
+      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm mb-3">
+         <div className="row gx-0 align-items-center">
+            
             {/* Logo */}
-            <div className="col-md-4 col-lg-3 text-center text-lg-start">
-                <div className="d-inline-flex align-items-center">
-                    <Link to="/" className="navbar-brand p-0">
-                        <h1 className="display-5 text-primary m-0">
-                            <i className="fas fa-sync-alt text-secondary me-2"></i>RentalP2P
-                        </h1>
-                    </Link>
-                </div>
+            <div className="col-md-3 text-start">
+                <Link to="/" className="navbar-brand p-0 text-decoration-none d-inline-block">
+                    <h1 className="display-6 text-primary m-0 fw-bold d-flex align-items-center">
+                        <i className="fas fa-sync-alt text-secondary me-2 brand-icon-spin"></i>RentalP2P
+                    </h1>
+                </Link>
             </div>
             
-            {/* Thanh Tìm Kiếm */}
-            <div className="col-md-4 col-lg-6 text-center">
-                <div className="position-relative ps-4">
-                    <form className="d-flex border rounded-pill" onSubmit={handleSearch}>
-                        <input 
-                            className="form-control border-0 rounded-pill w-100 py-3" 
-                            type="text"
-                            placeholder="Bạn đang tìm thuê gì?"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        <select 
-                            className="form-select text-dark border-0 border-start rounded-0 p-3" 
-                            style={{ width: '300px' }}
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                        >
-                            <option value="">Tất cả danh mục</option>
+            {/* Thanh Tìm Kiếm Hiện Đại */}
+            <div className="col-md-6 text-center">
+            <form className="d-flex custom-search-bar" onSubmit={handleSearch}>
+                <input 
+                    className="form-control border-0 bg-transparent py-2 px-4 shadow-none" 
+                    type="text"
+                    placeholder="Bạn đang tìm thuê gì hôm nay?"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                
+                <div className="search-divider"></div>
+                
+                {/* Custom Category Dropdown trong Search Bar */}
+                <div className="position-relative d-flex align-items-center">
+                    <div 
+                        className="custom-inner-select d-flex align-items-center justify-content-between px-3"
+                        onClick={() => setIsCatOpen(!isCatOpen)}
+                    >
+                        <span className="text-truncate" style={{ maxWidth: '120px' }}>
+                            {selectedCategory || 'Tất cả'}
+                        </span>
+                        <i className={`fas fa-chevron-down ms-2 transition-icon ${isCatOpen ? 'rotate-180' : ''}`}></i>
+                    </div>
+
+                    {/* Menu danh sách hiện ra khi click */}
+                    {isCatOpen && (
+                        <div className="custom-inner-dropdown-menu shadow-lg">
+                            <div 
+                                className="inner-dropdown-item" 
+                                onClick={() => selectCategory('')}
+                            >
+                                Tất cả danh mục
+                            </div>
                             {categories.map((cat) => (
-                              <option key={cat} value={cat}>{cat}</option>
+                                <div 
+                                    key={cat} 
+                                    className="inner-dropdown-item" 
+                                    onClick={() => selectCategory(cat)}
+                                >
+                                    {cat}
+                                </div>
                             ))}
-                        </select>
-                        <button type="submit" className="btn btn-primary rounded-pill py-3 px-5" style={{ border: 0 }}>
-                            <i className="fas fa-search"></i>
-                        </button>
-                    </form>
+                        </div>
+                    )}
                 </div>
+                
+                <button type="submit" className="btn btn-primary search-btn px-4 ms-2">
+                    <i className="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+
+            {/* Giỏ Hàng / Đơn Thuê */}
+            <div className="col-md-3 text-end">
+                <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center">
+                    <div className="position-relative cart-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
+                        <i className="fas fa-shopping-cart text-primary fs-5"></i>
+                        {/* Bạn có thể truyền biến đếm số lượng đơn vào số 0 bên dưới */}
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
+                            0
+                        </span>
+                    </div>
+                    <div className="text-start ms-3">
+                        <small className="text-muted d-block" style={{ fontSize: '12px', marginBottom: '-4px' }}>Quản lý</small>
+                        <span className="text-dark fw-bold cart-text">Đơn thuê</span>
+                    </div>
+                </Link>
             </div>
 
-            {/* Các icon bên phải */}
-            <div className="col-md-4 col-lg-3 text-center text-lg-end">
-                <div className="d-inline-flex align-items-center">
-                    
-                    <Link to="/my-rentals" className="text-muted d-flex align-items-center justify-content-center">
-                        <span className="rounded-circle btn-md-square border"><i className="fas fa-shopping-cart"></i></span>
-                        <span className="text-dark ms-2">Đơn thuê</span>
-                    </Link>
-                </div>
-            </div>
          </div>
       </div>
       {/* Search Header End */}
       
       {/* Navbar Start */}
       <div className="container-fluid nav-bar p-0">
-            <div className="row gx-0 bg-primary px-5 align-items-center">
-                <div className="col-lg-3 d-none d-lg-block">
-                    <nav className="navbar navbar-light position-relative" style={{width: '250px'}}>
-                        <button className="navbar-toggler border-0 fs-4 w-100 px-0 text-start" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#allCat">
-                            <h4 className="m-0"><i className="fa fa-bars me-2"></i>Danh mục</h4>
-                        </button>
-                        <div className="collapse navbar-collapse rounded-bottom" id="allCat">
-                            <div className="navbar-nav ms-auto py-0">
-                                <ul className="list-unstyled categories-bars">
-                                    {categories.length > 0 ? (
-                                      categories.map((cat) => (
-                                        <li key={cat}>
-                                            <Link to={`/shop?category=${encodeURIComponent(cat)}`} className="categories-bars-item text-decoration-none">
-                                                <span className="text-dark">{cat}</span>
-                                            </Link>
-                                        </li>
-                                      ))
-                                    ) : (
-                                      <li><div className="categories-bars-item"><span className="text-muted">Chưa có danh mục</span></div></li>
-                                    )}
-                                </ul>
+        <div className="row gx-0 bg-primary px-5 align-items-center">
+          
+          {/* Cột Danh Mục (Categories) */}
+          <div className="col-lg-3 d-none d-lg-block">
+            <nav className="navbar navbar-light position-relative p-0" style={{ width: '250px' }}>
+              <button 
+                className="navbar-toggler border-0 w-100 text-start d-flex align-items-center rounded-0 p-3" 
+                type="button"
+                data-bs-toggle="collapse" 
+                data-bs-target="#allCat"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }} /* Màu nền làm nổi bật khối danh mục như template */
+              >
+                <h4 className="m-0 text-dark fw-bold" style={{ fontSize: '1.2rem' }}>
+                  <i className="fa fa-bars me-3"></i>Danh mục
+                </h4>
+              </button>
+
+              {/* Danh sách thả xuống của Danh Mục */}
+                <div className="collapse navbar-collapse rounded-bottom position-absolute w-100 bg-white shadow-lg custom-category-dropdown" id="allCat" style={{ top: '100%', left: 0, zIndex: 999 }}>
+                <div className="navbar-nav py-0 w-100">
+                    <div className="categories-list w-100">
+                    {categories.length > 0 ? (
+                        categories.map((cat) => (
+                        <Link 
+                            key={cat} 
+                            to={`/shop?category=${encodeURIComponent(cat)}`} 
+                            className="category-item d-flex align-items-center justify-content-between text-decoration-none"
+                        >
+                            <div className="d-flex align-items-center">
+                            <div className="category-icon-box me-3">
+                                <i className="fas fa-th-large"></i> {/* Bạn có thể thay icon tùy ý */}
                             </div>
-                        </div>
-                    </nav>
-                </div>
-                <div className="col-12 col-lg-9">
-                    <nav className="navbar navbar-expand-lg navbar-light bg-primary ">
-                        <Link to="/" className="navbar-brand d-block d-lg-none">
-                            <h1 className="display-5 text-secondary m-0"><i
-                                    className="fas fa-sync-alt text-white me-2"></i>RentalP2P</h1>
+                            <span className="category-name">{cat}</span>
+                            </div>
+                            <i className="fas fa-chevron-right arrow-icon"></i>
                         </Link>
-                        <button className="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#navbarCollapse">
-                            <span className="fa fa-bars fa-1x"></span>
-                        </button>
-                        <div className="collapse navbar-collapse" id="navbarCollapse">
-                            <div className="navbar-nav ms-auto py-0">
-                                <Link to="/" className="nav-item nav-link">Trang chủ</Link>
-                                <Link to="/shop" className="nav-item nav-link">Cửa hàng</Link>
-                            </div>
+                        ))
+                    ) : (
+                        <div className="p-4 text-center text-muted">
+                        <i className="fas fa-box-open d-block mb-2 fs-3"></i>
+                        <small>Chưa có danh mục</small>
                         </div>
-                    </nav>
+                    )}
+                    </div>
                 </div>
-            </div>
+                </div>
+            </nav>
+          </div>
+
+          {/* Cột Menu Chính */}
+          <div className="col-12 col-lg-9">
+            <nav className="navbar navbar-expand-lg navbar-dark bg-primary py-lg-0 p-3 p-lg-0">
+              <Link to="/" className="navbar-brand d-block d-lg-none">
+                <h1 className="display-5 text-white m-0">
+                  <i className="fas fa-sync-alt text-white me-2"></i>RentalP2P
+                </h1>
+              </Link>
+              
+              <button className="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span className="fa fa-bars fa-1x text-white"></span>
+              </button>
+              
+              <div className="collapse navbar-collapse" id="navbarCollapse">
+                {/* Dùng ms-auto để căn phải như template */}
+                <div className="navbar-nav ms-auto py-0 font-weight-bold">
+                  <Link to="/" className="nav-item nav-link active">Trang chủ</Link>
+                  <Link to="/shop" className="nav-item nav-link">Cửa hàng</Link>
+                  
+                  {/* Dropdown cho các trang phụ (nếu cần giống template) */}
+                  <div className="nav-item dropdown">
+                    <a href="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown">Trang phụ</a>
+                    <div className="dropdown-menu m-0">
+                      <Link to="/about" className="dropdown-item">Giới thiệu</Link>
+                      <Link to="/faq" className="dropdown-item">Câu hỏi thường gặp</Link>
+                    </div>
+                  </div>
+                  
+                  <Link to="/contact" className="nav-item nav-link me-2">Liên hệ</Link>
+                </div>
+                
+                {/* Nút Hotline bên phải */}
+                <a href="tel:+841234567890" className="btn btn-danger text-white rounded-pill py-2 px-4 mb-3 mb-lg-0 fw-bold d-flex align-items-center">
+                  <i className="fa fa-mobile-alt me-2"></i> +84 364 123 957
+                </a>
+              </div>
+            </nav>
+          </div>
+
         </div>
+      </div>
       {/* Navbar End */}
     </>
   );
