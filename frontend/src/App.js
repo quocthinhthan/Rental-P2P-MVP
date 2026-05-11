@@ -11,6 +11,7 @@ import ShopPage from './pages/ShopPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AccountPage from './pages/AccountPage';
 import MyRentalsPage from './pages/MyRentalsPage';
 import PostItemPage from './pages/PostItemPage';
 import ContactPage from './pages/ContactPage';
@@ -38,6 +39,7 @@ function App() {
         {/* 2. Cấu hình Routes cần bảo vệ */}
         <Route element={<ProtectedRoute />}>
           <Route path="/my-rentals" element={<MyRentalsPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
           {/* Thêm bất kỳ route nào cần login vào đây */}

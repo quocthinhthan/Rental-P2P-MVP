@@ -65,7 +65,18 @@ const sendNotification = async (data) => {
       return;
     }
 
-    const { renterId, ownerId, itemId, startDate, endDate, note, totalPrice, status } = rental;
+    const {
+      renterId,
+      ownerId,
+      itemId,
+      startDate,
+      endDate,
+      note,
+      rentalFee,
+      depositAmount,
+      totalAmount,
+      status
+    } = rental;
 
     // ================= EMAIL TEMPLATE =================
 
@@ -88,7 +99,9 @@ const sendNotification = async (data) => {
             <p><strong>Vật phẩm:</strong> ${itemId.name}</p>
             <p><strong>Người thuê:</strong> ${renterId.fullName} (${renterId.email})</p>
             <p><strong>Thời gian:</strong> ${formatDate(startDate)} ➝ ${formatDate(endDate)}</p>
-            <p><strong>Tổng tiền:</strong> ${totalPrice.toLocaleString('vi-VN')} VNĐ</p>
+            <p><strong>Phí thuê:</strong> ${Number(rentalFee || 0).toLocaleString('vi-VN')} VNĐ</p>
+            <p><strong>Tiền cọc:</strong> ${Number(depositAmount || 0).toLocaleString('vi-VN')} VNĐ</p>
+            <p><strong>Tổng thanh toán:</strong> ${Number(totalAmount || 0).toLocaleString('vi-VN')} VNĐ</p>
             <p><strong>Ghi chú:</strong> ${note || '<em>Không có</em>'}</p>
           </div>
 

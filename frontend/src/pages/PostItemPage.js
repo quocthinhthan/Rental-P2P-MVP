@@ -23,7 +23,9 @@ function PostItemPage() {
   // Danh mục
   const [categories, setCategories] = useState([]);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+    defaultValues: { depositPercentage: 100 }
+  });
   const watchedCategory = watch('category');
 
   useEffect(() => {
@@ -54,6 +56,8 @@ function PostItemPage() {
           setValue('name', item.name);
           setValue('description', item.description);
           setValue('pricePerDay', item.pricePerDay);
+          setValue('baseValue', item.baseValue ?? (item.pricePerDay * 10));
+          setValue('depositPercentage', item.depositPercentage ?? 100);
           setValue('address', item.address);
           setValue('category', item.category);
 
@@ -244,6 +248,42 @@ function PostItemPage() {
                       <label className="form-label">Địa điểm nhận/trả <sup>*</sup></label>
                       <input type="text" className={`form-control ${errors.address ? 'is-invalid' : ''}`} {...register('address', { required: 'Vui lòng nhập địa điểm' })} />
                       {errors.address && <div className="invalid-feedback">{errors.address.message}</div>}
+                    </div>
+                  </div>
+
+                  <div className="row g-3 mt-1">
+                    <div className="col-md-6">
+                      <label className="form-label">Giá trị thực tế của vật phẩm (VNĐ) <sup>*</sup></label>
+                      <input
+                        type="number"
+                        className={`form-control ${errors.baseValue ? 'is-invalid' : ''}`}
+                        {...register('baseValue', {
+                          required: 'Vui lòng nhập giá trị thực tế của vật phẩm',
+                          valueAsNumber: true,
+                          min: { value: 1000, message: 'Giá trị tối thiểu là 1000 VNĐ' }
+                        })}
+                      />
+                      {errors.baseValue && <div className="invalid-feedback">{errors.baseValue.message}</div>}
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Tỉ lệ tiền cọc yêu cầu (%) <sup>*</sup></label>
+                      <select
+                        className={`form-select ${errors.depositPercentage ? 'is-invalid' : ''}`}
+                        {...register('depositPercentage', {
+                          required: 'Vui lòng chọn tỉ lệ tiền cọc',
+                          valueAsNumber: true,
+                          min: { value: 0, message: 'Tỉ lệ tối thiểu là 0%' },
+                          max: { value: 120, message: 'Tỉ lệ tối đa là 120%' }
+                        })}
+                      >
+                        <option value={0}>0%</option>
+                        <option value={30}>30%</option>
+                        <option value={50}>50%</option>
+                        <option value={80}>80%</option>
+                        <option value={100}>100%</option>
+                        <option value={120}>120%</option>
+                      </select>
+                      {errors.depositPercentage && <div className="invalid-feedback">{errors.depositPercentage.message}</div>}
                     </div>
                   </div>
 

@@ -38,4 +38,16 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+// Middleware kiểm tra xem user đã eKYC chưa (Có tick xanh chưa)
+const checkVerified = (req, res, next) => {
+  if (req.user && req.user.ekycStatus === 'verified') {
+    next(); // Có tick xanh -> Cho qua
+  } else {
+    res.status(403).json({ 
+      message: 'Forbidden: Vui lòng xác thực danh tính (eKYC) để sử dụng tính năng này!',
+      ekycStatus: req.user ? req.user.ekycStatus : 'unknown'
+    });
+  }
+};
+
+module.exports = { protect, admin, checkVerified };

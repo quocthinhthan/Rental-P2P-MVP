@@ -81,10 +81,26 @@ const searchItems = async (req, res) => {
 
 // POST /api/items
 const createItem = async (req, res) => {
-  const { name, description, category, pricePerDay, address, images } = req.body;
+  const {
+    name,
+    description,
+    category,
+    pricePerDay,
+    address,
+    images,
+    baseValue,
+    depositPercentage
+  } = req.body;
   try {
     const item = new Item({
-      name, description, category, pricePerDay, address, images,
+      name,
+      description,
+      category,
+      pricePerDay,
+      address,
+      images,
+      baseValue,
+      depositPercentage,
       ownerId: req.user.id
     });
     const createdItem = await item.save();
@@ -111,13 +127,25 @@ const checkOwner = async (req, res, next) => {
 
 // PUT /api/items/:id
 const updateItem = async (req, res) => {
-  const { name, description, category, pricePerDay, address, images, status } = req.body;
+  const {
+    name,
+    description,
+    category,
+    pricePerDay,
+    address,
+    images,
+    status,
+    baseValue,
+    depositPercentage
+  } = req.body;
   const item = req.item; 
 
   item.name = name ?? item.name;
   item.description = description ?? item.description;
   item.category = category ?? item.category; // Thêm update category
   item.pricePerDay = pricePerDay ?? item.pricePerDay;
+  item.baseValue = baseValue ?? item.baseValue;
+  item.depositPercentage = depositPercentage ?? item.depositPercentage;
   item.address = address ?? item.address;
   item.images = images ?? item.images;
   

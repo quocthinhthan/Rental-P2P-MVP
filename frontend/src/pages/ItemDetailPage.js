@@ -350,8 +350,11 @@ function ItemDetailPage() {
   if (error)  return <div className="alert alert-danger m-4">{error}</div>;
   if (!item)  return <div className="alert alert-warning m-4">Vật phẩm không tồn tại.</div>;
 
-  const isOwner   = isLoggedIn && user?._id === item.owner._id;
+  const isOwner = isLoggedIn && user?._id === item.owner._id;
   const allImages = item.images?.length ? item.images : [item.mainImage || 'https://via.placeholder.com/600'];
+  const depositPercentage = Number(item.depositPercentage ?? 100);
+  const baseValue = Number(item.baseValue ?? 0);
+  const depositAmount = (baseValue * depositPercentage) / 100;
 
   /* ─────────────────────────────────────
      RENDER
@@ -422,6 +425,11 @@ function ItemDetailPage() {
                 {Number(item.pricePerDay).toLocaleString('vi-VN')}đ
               </span>
               <span className="idp-price-unit"> / ngày</span>
+            </div>
+            <div className="mb-4">
+              <div className="text-muted" style={{ fontSize: '.9rem' }}>
+                Tiền cọc yêu cầu: <strong>{depositAmount.toLocaleString('vi-VN')}đ</strong> ({depositPercentage}%)
+              </div>
             </div>
 
             {/* Booking + Owner card */}

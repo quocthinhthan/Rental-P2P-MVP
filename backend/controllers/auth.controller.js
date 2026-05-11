@@ -10,39 +10,23 @@ const generateToken = (id) => {
   });
 };
 
-// 2. [PUBLIC] POST /api/auth/register (Cập nhật để lưu luôn data eKYC và SĐT)
+// 1. [PUBLIC] POST /api/auth/register (Đăng ký siêu nhanh, ekycStatus mặc định là unverified)
 exports.registerUser = async (req, res) => {
-  // Thêm phoneNumber, idCardNumber, idCardImages vào payload
-  const { fullName, email, password, phoneNumber, idCardNumber, idCardImages } = req.body;
+  const { fullName, email, password, phoneNumber } = req.body; // Bỏ CCCD ra khỏi đây
 
   try {
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'Email đã tồn tại' });
 
-    // Nếu lúc đăng ký có gửi kèm idCardNumber thì đánh dấu là Verified luôn
-    const ekycStatus = idCardNumber ? 'verified' : 'unverified';
-
     const user = await User.create({
-      fullName,
-      email,
-      password,
-      phoneNumber,       // Lưu SĐT
-      idCardNumber,      // Lưu CCCD
-      idCardImages,      // Lưu mảng ảnh
-      ekycStatus         // Lưu trạng thái eKYC
+      fullName, email, password, phoneNumber
+      // ekycStatus sẽ tự động lấy default là 'unverified' từ Model
     });
 
     res.status(201).json({
       message: 'Đăng ký tài khoản thành công',
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        ekycStatus: user.ekycStatus
-      }
+      user: { _id: user._id, fullName: user.fullName, email: user.email, ekycStatus: user.ekycStatus }
     });
-
   } catch (error) {
     res.status(400).json({ message: 'Lỗi đăng ký', error: error.message });
   }
@@ -57,6 +41,13 @@ exports.updateProfile = async (req, res) => {
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     user.address = req.body.address || user.address;
     user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
+    if (req.body.idCardNumber) {
+      user.idCardNumber = req.body.idCardNumber;
+      user.ekycStatus = 'verified';
+    }
+    if (Array.isArray(req.body.idCardImages) && req.body.idCardImages.length > 0) {
+      user.idCardImages = req.body.idCardImages;
+    }
     
     // Lưu ý: Thường không cho phép update CCCD ở đây, muốn đổi CCCD phải làm luồng khác
     // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.
@@ -127,12 +118,16 @@ exports.logoutUser = (req, res) => {
 // Cách 2 (Phức tạp - Blacklist token): Cần dùng Redis để lưu token đã logout.
 // Với MVP, chúng ta chọn cách 1.
 
-// 1. [PUBLIC] POST /api/auth/verify-ekyc (Chỉ dùng để mớm data cho form Đăng ký)
+// 2. [USER] POST /api/auth/verify-ekyc (Upload ảnh -> Gọi FPT -> Lưu vào DB -> Lấy Tick xanh)
 exports.verifyEKYC = async (req, res) => {
   const { idCardFrontUrl } = req.body; 
+  const userId = req.user._id; // BẮT BUỘC ĐÃ LOGIN MỚI LẤY ĐƯỢC ID
 
   try {
     if (!idCardFrontUrl) return res.status(400).json({ message: 'Vui lòng cung cấp URL ảnh mặt trước CCCD' });
+
+    const user = await User.findById(userId);
+    if (user.ekycStatus === 'verified') return res.status(400).json({ message: 'Tài khoản đã được xác thực!' });
 
     console.log('\n[DEBUG - eKYC] 1. Tải ảnh từ URL...');
     const imageResponse = await axios.get(idCardFrontUrl, { responseType: 'stream' });
@@ -142,29 +137,28 @@ exports.verifyEKYC = async (req, res) => {
     form.append('image', imageResponse.data);
 
     const fptResponse = await axios.post('https://api.fpt.ai/vision/idr/vnm', form, {
-      headers: {
-        'api-key': process.env.FPT_AI_API_KEY, 
-        ...form.getHeaders()
-      }
+      headers: { 'api-key': process.env.FPT_AI_API_KEY, ...form.getHeaders() }
     });
 
     const fptData = fptResponse.data;
-    if (fptData.errorCode !== 0) {
-      return res.status(400).json({ message: 'AI không đọc được ảnh!', fptError: fptData.errorMessage });
-    }
+    if (fptData.errorCode !== 0) return res.status(400).json({ message: 'AI không đọc được ảnh!', fptError: fptData.errorMessage });
 
     const extractedData = fptData.data[0];
-    console.log(`[DEBUG - eKYC] ✔️ Đọc xong! Trả data về cho Frontend tự fill form.`);
+    const realIdNumber = extractedData.id; 
+    const realName = extractedData.name;   
 
-    // CHỈ TRẢ DATA VỀ CHO FRONTEND, KHÔNG LƯU DB LÚC NÀY
+    console.log(`[DEBUG - eKYC] ✔️ AI đọc thành công: [${realName}] - [${realIdNumber}]`);
+
+    // GHI NHẬN TICK XANH CHO USER NÀY VÀO DB
+    user.ekycStatus = 'verified';
+    user.idCardNumber = realIdNumber;
+    user.idCardImages = [idCardFrontUrl];
+    await user.save();
+
     res.status(200).json({ 
-      message: 'Quét eKYC thành công!',
-      extractedData: {
-        idNumber: extractedData.id,
-        fullName: extractedData.name,
-        dob: extractedData.dob, 
-        address: extractedData.address 
-      }
+      message: 'Xác thực danh tính thành công! Bạn đã có thể giao dịch.',
+      ekycStatus: user.ekycStatus,
+      extractedData: { idNumber: realIdNumber, fullName: realName }
     });
 
   } catch (error) {
