@@ -13,7 +13,6 @@ router.get('/me', protect, getMe);
 // >>> THÊM ROUTE UPDATE PROFILE <<<
 router.put('/profile', protect, updateProfile);
 
-// >>> SỬA ROUTE EKYC (BỎ CHỮ protect ĐI VÌ CHƯA ĐĂNG NHẬP VẪN QUÉT ĐƯỢC) <<<
-router.post('/verify-ekyc', verifyEKYC);
+router.post('/verify-ekyc', protect, verifyEKYC);
 
 module.exports = router;
