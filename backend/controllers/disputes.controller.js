@@ -19,8 +19,7 @@ exports.createDispute = async (req, res) => {
     }
 
     // Dùng Enum của bạn: Đổi trạng thái thành "Đang tranh chấp"
-    rental.status = RentalStatus.DISPUTED;
-    await rental.save();
+    await Rental.findByIdAndUpdate(rentalId, { status: RentalStatus.DISPUTED });
 
     const dispute = await Dispute.create({ rentalId, reporterId, reason, evidenceImages });
 
@@ -66,13 +65,17 @@ exports.resolveDispute = async (req, res) => {
     await dispute.save();
 
     // Dùng Enum của bạn để xử lý kết quả
+    let updateFields = {};
     if (winner === 'renter') {
-      rental.paymentStatus = PaymentStatus.REFUNDED;
-      rental.status = RentalStatus.CANCELLED;
+      updateFields.paymentStatus = PaymentStatus.REFUNDED;
+      updateFields.status = RentalStatus.CANCELLED;
     } else if (winner === 'owner') {
-      rental.status = RentalStatus.COMPLETED;
+      updateFields.status = RentalStatus.COMPLETED;
     }
-    await rental.save();
+    
+    if (Object.keys(updateFields).length > 0) {
+      await Rental.findByIdAndUpdate(rental._id, updateFields);
+    }
 
     await Item.findByIdAndUpdate(rental.itemId, { status: 'available' });
 

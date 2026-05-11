@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/api';
+import Swal from 'sweetalert2';
 import '../styles/MyRentalsPage.css';
 
 /* ─────── helpers ─────── */
 const statusConfig = {
-  pending_payment:      { label: 'Chờ thanh toán',  cls: 'status-pending-payment' },
+  pending_payment:      { label: 'Chờ thanh toán',   cls: 'status-pending-payment' },
   pending_confirmation: { label: 'Chờ xác nhận',    cls: 'status-pending-confirm' },
   confirmed:            { label: 'Đã xác nhận',     cls: 'status-confirmed'       },
+  in_progress:          { label: 'Đang thuê',        cls: 'status-confirmed'       },
   completed:            { label: 'Đã hoàn thành',   cls: 'status-completed'       },
   rejected:             { label: 'Đã từ chối',      cls: 'status-rejected'        },
   cancelled:            { label: 'Đã hủy',          cls: 'status-cancelled'       },
+  disputed:             { label: 'Đang tranh chấp', cls: 'status-rejected'         },
 };
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -21,7 +24,7 @@ function StatusBadge({ status }) {
 }
 
 /* ─────── RentalCard ─────── */
-function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, navigate }) {
+function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, onDispute, navigate }) {
   if (!rental.item) {
     return (
       <div className="rental-card rental-card-deleted">
@@ -91,10 +94,17 @@ function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, navi
             </>
           )}
 
-          {/* Đánh dấu hoàn thành */}
-          {rental.status === 'confirmed' && (
+          {/* Đánh dấu hoàn thành — cả hai bên đều có thể */}
+          {(rental.status === 'confirmed' || rental.status === 'in_progress') && (
             <button className="btn-xs btn-info-xs" onClick={() => onComplete(rental._id)}>
               ✅ Hoàn thành
+            </button>
+          )}
+
+          {/* Nút giải quyết tranh chấp — chỉ người thuê sau khi đã ký quỹ */}
+          {!isOwner && (rental.status === 'confirmed' || rental.status === 'in_progress') && rental.paymentStatus === 'escrowed' && (
+            <button className="btn-xs btn-danger-xs" onClick={() => onDispute(rental._id)} style={{ background: '#f97316', borderColor: '#f97316' }}>
+              ⚠️ Báo cáo sự cố
             </button>
           )}
 
@@ -174,19 +184,31 @@ function MyRentalsPage() {
       if (action === 'confirm') await apiService.confirmRental(rentalId);
       else if (action === 'reject') await apiService.rejectRental(rentalId);
       fetchMyRentals();
+      Swal.fire('Thành công!', action === 'confirm' ? 'Đã chấp nhận đơn thuê.' : 'Đã từ chối đơn thuê.', 'success');
     } catch (err) {
-      alert('Thao tác thất bại.');
+      Swal.fire('Lỗi!', 'Thao tác thất bại.', 'error');
       console.error(err);
     }
   };
 
   const handleCompleteRental = async (rentalId) => {
-    if (!window.confirm('Xác nhận đánh dấu đơn thuê này là hoàn thành?')) return;
+    const result = await Swal.fire({
+      title: 'Xác nhận?',
+      text: 'Xác nhận đánh dấu đơn thuê này là hoàn thành?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await apiService.completeRental(rentalId);
       fetchMyRentals();
+      Swal.fire('Hoàn thành!', 'Đơn thuê đã kết thúc tốt đẹp.', 'success');
     } catch (err) {
-      alert('Không thể hoàn thành đơn thuê.');
+      Swal.fire('Lỗi!', 'Không thể hoàn thành đơn thuê.', 'error');
       console.error(err);
     }
   };
@@ -196,19 +218,68 @@ function MyRentalsPage() {
       const response = await apiService.createVNPayUrl(rentalId);
       window.location.href = response.data.paymentUrl;
     } catch (err) {
-      alert(err.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay.');
+      Swal.fire('Lỗi thanh toán', err.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay.', 'error');
       console.error(err);
     }
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa vật phẩm này?')) return;
+    const result = await Swal.fire({
+      title: 'Xóa vật phẩm?',
+      text: 'Bạn có chắc chắn muốn xóa vật phẩm này? Thao tác này không thể hoàn tác.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Xóa ngay',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await apiService.deleteItem(itemId);
       fetchMyRentals();
+      Swal.fire('Đã xóa!', 'Vật phẩm của bạn đã được gỡ bỏ.', 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Không thể xóa vật phẩm.');
+      Swal.fire('Thất bại', err.response?.data?.message || 'Không thể xóa vật phẩm.', 'error');
       console.error(err);
+    }
+  };
+
+  const handleDispute = async (rentalId) => {
+    const { value: reason } = await Swal.fire({
+      title: '⚠️ Báo cáo sự cố',
+      html: `
+        <p style="color:#6b7280;margin-bottom:12px">Mô tả rõ sự cố bạn gặp phải. Đơn thuê sẽ bị <b>đóng băng</b> trong khi Admin xử lý.</p>
+        <textarea id="dispute-reason" class="swal2-input" style="height:120px;width:90%;resize:vertical;" placeholder="Ví dụ: Hàng không đúng mô tả, bị hư, chủ không phản hồi..."></textarea>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f97316',
+      confirmButtonText: 'Gửi báo cáo',
+      cancelButtonText: 'Hủy',
+      preConfirm: () => {
+        const val = document.getElementById('dispute-reason').value.trim();
+        if (!val) {
+          Swal.showValidationMessage('Vui lòng mô tả sự cố trước khi gửi');
+          return false;
+        }
+        return val;
+      }
+    });
+
+    if (!reason) return;
+
+    try {
+      await apiService.createDispute(rentalId, reason);
+      fetchMyRentals();
+      Swal.fire(
+        'Đã gửi báo cáo!',
+        'Đơn thuê đã bị đóng băng. Admin sẽ liên hệ và giải quyết trong thời gian sớm nhất.',
+        'success'
+      );
+    } catch (err) {
+      Swal.fire('Lỗi!', err.response?.data?.message || 'Không thể gửi báo cáo.', 'error');
     }
   };
 
@@ -280,6 +351,7 @@ function MyRentalsPage() {
                     onOwnerAction={handleOwnerAction}
                     onComplete={handleCompleteRental}
                     onPayEscrow={handlePayEscrow}
+                    onDispute={handleDispute}
                     navigate={navigate}
                   />
                 ))

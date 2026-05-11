@@ -215,12 +215,66 @@ const createViFuzzyRegex = (keyword) => {
 const getCategories = async (req, res) => {
   console.log('[DEBUG] GET /api/items/categories HIT');
   try {
-    // Lấy danh sách danh mục duy nhất từ các sản phẩm đang có
     const categories = await Item.distinct('category', { status: { $ne: 'delisted' } });
     res.status(200).json(categories);
   } catch (error) {
     console.error('[DEBUG] LỖI GET CATEGORIES:', error);
     res.status(500).json({ message: 'Server error while fetching categories' });
+  }
+};
+
+// GET /api/items/bestsellers?limit=3
+const getBestsellerItems = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 3;
+
+    // Aggregate: đếm số lượng đơn thuê completed hoặc confirmed theo itemId
+    const rentalsAgg = await Rental.aggregate([
+      { $match: { status: { $in: ['completed', 'confirmed', 'in_progress'] } } },
+      { $group: { _id: '$itemId', rentalCount: { $sum: 1 } } },
+      { $sort: { rentalCount: -1 } },
+      { $limit: limit }
+    ]);
+
+    if (rentalsAgg.length === 0) {
+      // Fallback: lấy sản phẩm mới nhất nếu chưa có đơn thuê nào
+      const fallback = await Item.find({ status: { $ne: 'delisted' } })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('_id name category pricePerDay images address');
+      return res.status(200).json(fallback.map(item => ({
+        _id: item._id,
+        name: item.name,
+        category: item.category,
+        pricePerDay: item.pricePerDay,
+        mainImage: item.images?.[0] || '',
+        rentalCount: 0
+      })));
+    }
+
+    const itemIds = rentalsAgg.map(r => r._id);
+    const items = await Item.find({ _id: { $in: itemIds }, status: { $ne: 'delisted' } })
+      .select('_id name category pricePerDay images address');
+
+    // Map rentalCount vào từng item, giữ thứ tự sort
+    const countMap = {};
+    rentalsAgg.forEach(r => { countMap[r._id.toString()] = r.rentalCount; });
+
+    const result = items
+      .map(item => ({
+        _id: item._id,
+        name: item.name,
+        category: item.category,
+        pricePerDay: item.pricePerDay,
+        mainImage: item.images?.[0] || '',
+        rentalCount: countMap[item._id.toString()] || 0
+      }))
+      .sort((a, b) => b.rentalCount - a.rentalCount);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('[DEBUG] LỖI GET BESTSELLERS:', error);
+    res.status(500).json({ message: 'Server error while fetching bestsellers' });
   }
 };
 
@@ -230,5 +284,6 @@ module.exports = {
   updateItem,
   deleteItem,
   checkOwner,
-  getCategories
-};
+  getCategories,
+  getBestsellerItems
+};

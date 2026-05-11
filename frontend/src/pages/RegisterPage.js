@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import apiService from '../services/api'; // Import apiService
+import Swal from 'sweetalert2';
 
 function RegisterPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -16,9 +17,15 @@ function RegisterPage() {
       // 1. Gọi API register
       await apiService.register(data.fullName, data.email, data.password, data.phoneNumber);
 
-      // 2. Đăng ký thành công, chuyển hướng đến trang login
-      // (Bạn cũng có thể tự động login user ở đây nếu muốn)
-      navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
+      // 2. Đăng ký thành công, thông báo và chuyển hướng
+      await Swal.fire({
+        title: 'Đăng ký thành công! 🎉',
+        text: 'Tài khoản của bạn đã được tạo. Vui lòng đăng nhập để bắt đầu.',
+        icon: 'success',
+        confirmButtonText: 'Đăng nhập ngay'
+      });
+      
+      navigate('/login');
 
     } catch (error) {
       console.error('Registration failed:', error);

@@ -74,6 +74,7 @@ function ContactPage() {
               <div className="col-lg-5 wow fadeInUp" data-wow-delay="0.2s">
                 <div className="h-100 rounded shadow-sm overflow-hidden" style={{ minHeight: '400px' }}>
                   <iframe 
+                    title="Google Maps"
                     className="w-100 h-100" 
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.9544103877597!2d106.69789347573617!3d10.735160259897103!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752fbd714c6a53%3A0x99249697dfc4020d!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBUw7RuIMSQ4bupYyBUaOG6r25n!5e0!3m2!1svi!2s!4v1715354000000!5m2!1svi!2s" 
                     style={{ border: 0 }} 

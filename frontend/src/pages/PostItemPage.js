@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import apiService from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
 
 function PostItemPage() {
   const { itemId } = useParams();
@@ -80,7 +81,7 @@ function PostItemPage() {
     if (files.length > 0) {
       // Giới hạn tối đa 5 ảnh chẳng hạn
       if (images.length + files.length > 5) {
-        alert('Bạn chỉ có thể đăng tối đa 5 ảnh.');
+        Swal.fire('Thông báo', 'Bạn chỉ có thể đăng tối đa 5 ảnh.', 'warning');
         return;
       }
 
@@ -94,20 +95,11 @@ function PostItemPage() {
 
   const removeImage = (index) => {
     const newImages = [...images];
-    const removedImageUrl = newImages.splice(index, 1)[0];
+    newImages.splice(index, 1);
     setImages(newImages);
 
     // Nếu ảnh bị xóa là một ảnh vừa mới chọn (preview), xóa nó khỏi imageFiles
     // Chúng ta cần cẩn thận ở đây vì images chứa cả ảnh cũ (từ server) và ảnh mới (blob)
-    // Cách đơn giản nhất: Nếu index >= (số lượng ảnh hiện có - số lượng file mới), 
-    // thì đó là file mới. Nhưng tốt hơn là track theo URL.
-    
-    // Tìm xem URL này có phải là preview của file nào không
-    const fileIndex = imageFiles.findIndex(f => URL.createObjectURL(f) === removedImageUrl);
-    // Lưu ý: URL.createObjectURL(f) tạo URL mới mỗi lần gọi, nên cách này không ổn định.
-    // Thay vào đó, khi handleFileChange ta nên gán preview vào file object hoặc dùng state quản lý mapping.
-    // Đơn giản hơn: khi xóa, ta sẽ filter lại imageFiles dựa trên những gì còn lại trong images 
-    // mà có format 'blob:'.
     
     setImageFiles(prevFiles => prevFiles.filter(f => {
         // Thực tế nếu chỉ xóa theo index trong mảng images thì hơi phức tạp.
@@ -154,11 +146,11 @@ function PostItemPage() {
 
       if (isEditMode) {
         await apiService.updateItem(itemId, itemData);
-        alert('Cập nhật vật phẩm thành công!');
+        await Swal.fire('Thành công!', 'Cập nhật vật phẩm thành công!', 'success');
         navigate(`/items/${itemId}`);
       } else {
         const createdItem = await apiService.createItem(itemData);
-        alert('Đăng vật phẩm thành công!');
+        await Swal.fire('Thành công!', 'Đăng vật phẩm thành công!', 'success');
         navigate(`/items/${createdItem.data._id}`);
       }
 

@@ -220,9 +220,10 @@ exports.handleVNPayReturn = async (req, res) => {
 
     if (vnpParams.vnp_ResponseCode === '00') {
       if (rental.paymentStatus !== PaymentStatus.ESCROWED) {
-        rental.paymentStatus = PaymentStatus.ESCROWED;
-        rental.status = RentalStatus.PENDING_CONFIRMATION;
-        await rental.save();
+        await Rental.findByIdAndUpdate(rental._id, {
+          paymentStatus: PaymentStatus.ESCROWED,
+          status: RentalStatus.PENDING_CONFIRMATION
+        });
 
         publishToQueue({
           task: 'new_rental_request',
@@ -282,10 +283,13 @@ exports.confirmRental = async (req, res) => {
 
     // Cập nhật trạng thái
     item.status = ItemStatus.RENTED;
-    rental.status = RentalStatus.CONFIRMED;
-
     await item.save();
-    const savedRental = await rental.save();
+
+    const savedRental = await Rental.findByIdAndUpdate(
+      rental._id,
+      { status: RentalStatus.CONFIRMED },
+      { new: true }
+    );
 
     // Gửi message đến RabbitMQ
     publishToQueue({
@@ -308,14 +312,18 @@ exports.rejectRental = async (req, res) => {
     return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_REJECT });
   }
 
-  rental.status = RentalStatus.REJECTED;
-  const savedRental = await rental.save();
+  // Dùng findByIdAndUpdate để tránh lỗi validation trên dữ liệu cũ
+  const savedRental = await Rental.findByIdAndUpdate(
+    rental._id, 
+    { status: RentalStatus.REJECTED }, 
+    { new: true }
+  );
 
   // Gửi message đến RabbitMQ
   publishToQueue({
     task: 'rental_status_changed',
     rentalId: savedRental._id,
-      status: RentalStatus.REJECTED
+    status: RentalStatus.REJECTED
   });
 
   res.status(200).json(savedRental);
@@ -346,8 +354,12 @@ exports.completeRental = async (req, res) => {
             await item.save();
         }
 
-        rental.status = RentalStatus.COMPLETED;
-        const savedRental = await rental.save();
+        // Dùng findByIdAndUpdate để tránh lỗi validation
+        const savedRental = await Rental.findByIdAndUpdate(
+            rental._id,
+            { status: RentalStatus.COMPLETED },
+            { new: true }
+        );
         
         res.status(200).json(savedRental);
 

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import DatePicker from 'react-datepicker';
+import Swal from 'sweetalert2';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/CustomDetail.css';
 import '../styles/ItemDetailPage.css';
@@ -296,7 +297,25 @@ function ItemDetailPage() {
       const pay = await apiService.createVNPayUrl(res.data._id);
       window.location.href = pay.data.paymentUrl;
     } catch (err) {
-      alert(err.response?.data?.message || 'Lỗi hệ thống');
+      const errorMsg = err.response?.data?.message || 'Không thể tạo yêu cầu thuê.';
+      
+      // Kiểm tra nếu lỗi do chưa xác thực eKYC
+      if (errorMsg.toLowerCase().includes('xác thực') || errorMsg.toLowerCase().includes('ekyc')) {
+        Swal.fire({
+          title: 'Yêu cầu xác thực! 🛡️',
+          text: 'Bạn cần hoàn tất xác thực danh tính (eKYC) trước khi có thể thuê vật dụng này để đảm bảo an toàn cho cả hai bên.',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Xác thực ngay',
+          cancelButtonText: 'Để sau'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            navigate('/account');
+          }
+        });
+      } else {
+        Swal.fire('Lỗi hệ thống', errorMsg, 'error');
+      }
       setIsSubmitting(false);
     }
   };
