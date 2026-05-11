@@ -78,9 +78,17 @@ function Header() {
                   
                 >
                   <div className="user-avatar">
-                    <i className="fa fa-user"></i>
+                    {isLoggedIn && user?.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.fullName}
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <i className="fa fa-user"></i>
+                    )}
                   </div>
-                  <span className="user-name">
+                  <span className="user-name fw-bold">
                     {isLoggedIn && user ? user.fullName : 'Tài khoản'}
                   </span>
                   <i className="fa fa-chevron-down dropdown-icon"></i>
@@ -97,6 +105,9 @@ function Header() {
                       <hr className="dropdown-divider mx-3 my-2" />
                       <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
                         <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
+                      </Link>
+                      <Link to="/account" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-user-cog me-2 item-icon"></i>Tài khoản của tôi
                       </Link>
                       <Link to="/post-item" className="dropdown-item custom-dropdown-item">
                         <i className="fas fa-plus-circle me-2 item-icon"></i>Đăng đồ cho thuê
@@ -283,7 +294,7 @@ function Header() {
                   
                   {/* Dropdown cho các trang phụ (nếu cần giống template) */}
                   <div className="nav-item dropdown">
-                    <a href="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown">Trang phụ</a>
+                    <span className="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" style={{ cursor: 'pointer' }}>Trang phụ</span>
                     <div className="dropdown-menu m-0">
                       <Link to="/about" className="dropdown-item">Giới thiệu</Link>
                       <Link to="/faq" className="dropdown-item">Câu hỏi thường gặp</Link>

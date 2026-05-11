@@ -42,6 +42,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+  };
+
   const value = {
     user,
     token,
@@ -49,6 +53,7 @@ export function AuthProvider({ children }) {
     loading,
     login: loginAction,
     logout: logoutAction,
+    updateUser,
   };
 
   return (

@@ -13,6 +13,8 @@ const statusConfig = {
   cancelled:            { label: 'Đã hủy',          cls: 'status-cancelled'       },
 };
 
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+
 function StatusBadge({ status }) {
   const cfg = statusConfig[status] || { label: status, cls: '' };
   return <span className={`status-badge ${cfg.cls}`}>{cfg.label}</span>;
@@ -47,8 +49,16 @@ function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, navi
           {new Date(rental.endDate).toLocaleDateString('vi-VN')}
         </p>
         <p className="rental-card-price">
-          {Number(rental.totalPrice).toLocaleString('vi-VN')}đ
+          {formatCurrency(rental.totalAmount)}
         </p>
+        <p className="rental-card-meta">💰 Phí thuê: {formatCurrency(rental.rentalFee)}</p>
+        <p className="rental-card-meta">🧾 Tiền cọc: {formatCurrency(rental.depositAmount)}</p>
+        {isOwner && (
+          <>
+            <p className="rental-card-meta">🏦 Hoa hồng nền tảng: {formatCurrency(rental.commissionAmount)}</p>
+            <p className="rental-card-meta">✅ Thực nhận: {formatCurrency(rental.payoutAmount)}</p>
+          </>
+        )}
         <p className="rental-card-party">
           {isOwner ? '👤 Người thuê:' : '🏠 Chủ sở hữu:'}{' '}
           <strong>{rental.counterparty?.fullName}</strong>{' '}

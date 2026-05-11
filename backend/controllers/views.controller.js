@@ -1,25 +1,33 @@
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
+const MESSAGES = require('../constants/messages.constant');
+const { ItemStatus } = require('../enums/item.enum');
+const { RentalStatus } = require('../enums/rental.enum');
 const mongoose = require('mongoose');
 
 // GET /api/views/item-details/:id
 exports.getItemDetailView = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-     return res.status(400).json({ message: 'Invalid Item ID' });
+    return res.status(400).json({ message: MESSAGES.COMMON.INVALID_ITEM_ID });
   }
 
   try {
     const item = await Item.findById(req.params.id)
-      .populate('ownerId', 'fullName avatarUrl _id'); 
+      .populate('ownerId', 'fullName avatarUrl phoneNumber _id'); 
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
+      return res.status(404).json({ message: MESSAGES.ITEM.NOT_FOUND });
     }
     
     // Tìm các đơn thuê đã được xác nhận/đang thuê/chờ xác nhận của vật phẩm này trong tương lai
+    const activeRentalStatuses = [
+        RentalStatus.CONFIRMED,
+        RentalStatus.IN_PROGRESS,
+        RentalStatus.PENDING_CONFIRMATION
+    ];
     const confirmedRentals = await Rental.find({ 
         itemId: req.params.id, 
-        status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
+        status: { $in: activeRentalStatuses },
         endDate: { $gte: new Date() } 
     }).select('startDate endDate');
 
@@ -31,6 +39,8 @@ exports.getItemDetailView = async (req, res) => {
         status: item.status,     // Bổ sung status
         images: item.images,
         pricePerDay: item.pricePerDay,
+        baseValue: item.baseValue,
+        depositPercentage: item.depositPercentage,
         address: item.address,
         owner: item.ownerId,
         bookedDates: confirmedRentals 
@@ -39,7 +49,7 @@ exports.getItemDetailView = async (req, res) => {
     res.status(200).json(viewData);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR });
   }
 };
 
@@ -63,7 +73,7 @@ exports.getMyRentalsView = async (req, res) => {
     // 2. Lấy các đơn tôi là chủ (asOwner)
     const asOwner = await Rental.find({
       ownerId: userId,
-      status: { $ne: 'pending_payment' }
+      status: { $ne: RentalStatus.PENDING_PAYMENT }
     })
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
@@ -76,7 +86,7 @@ exports.getMyRentalsView = async (req, res) => {
       });
     
     // 3. Lấy các vật phẩm tôi đã đăng (myItems)
-    const myItems = await Item.find({ ownerId: userId, status: { $ne: 'delisted' } })
+    const myItems = await Item.find({ ownerId: userId, status: { $ne: ItemStatus.DELISTED } })
       .sort({ createdAt: -1 });
 
     // 4. Hàm helper để định dạng lại rental
@@ -93,8 +103,12 @@ exports.getMyRentalsView = async (req, res) => {
             _id: rental._id,
             startDate: rental.startDate,
             endDate: rental.endDate,
-            totalPrice: rental.totalPrice,
-            escrowAmount: rental.escrowAmount,
+          rentalFee: rental.rentalFee,
+          depositAmount: rental.depositAmount,
+          totalAmount: rental.totalAmount,
+          commissionRate: rental.commissionRate,
+          commissionAmount: rental.commissionAmount,
+          payoutAmount: rental.payoutAmount,
             paymentStatus: rental.paymentStatus,
             status: rental.status,
             note: rental.note, 
@@ -118,6 +132,6 @@ exports.getMyRentalsView = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };

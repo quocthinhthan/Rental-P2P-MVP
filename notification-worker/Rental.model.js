@@ -19,11 +19,24 @@ const RentalSchema = new mongoose.Schema({
   },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
-  totalPrice: { type: Number, required: true },
+  rentalFee: { type: Number, required: true },
+  depositAmount: { type: Number, required: true },
+  totalAmount: { type: Number, required: true },
+  commissionRate: { type: Number, default: 10 },
+  commissionAmount: { type: Number, required: true },
+  payoutAmount: { type: Number, required: true },
   note: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['pending_confirmation', 'confirmed', 'rejected', 'in_progress', 'completed', 'cancelled'],
+    enum: [
+      'pending_payment',
+      'pending_confirmation',
+      'confirmed',
+      'rejected',
+      'in_progress',
+      'completed',
+      'cancelled'
+    ],
     default: 'pending_confirmation'
   }
 }, { timestamps: true });

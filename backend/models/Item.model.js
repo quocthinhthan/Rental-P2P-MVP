@@ -13,6 +13,8 @@ const ItemSchema = new mongoose.Schema({
     ref: 'User' 
   },
   pricePerDay: { type: Number, required: true },
+  baseValue: { type: Number, required: true },
+  depositPercentage: { type: Number, default: 100, min: 0, max: 120 },
   address: { type: String },
   status: { 
     type: String, 

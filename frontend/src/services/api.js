@@ -38,8 +38,14 @@ api.interceptors.request.use(
 export const login = (email, password) => 
   api.post('/auth/login', { email, password });
 
-export const register = (fullName, email, password) => 
-  api.post('/auth/register', { fullName, email, password });
+export const register = (fullName, email, password, phoneNumber) => 
+  api.post('/auth/register', { fullName, email, password, phoneNumber });
+
+export const updateProfile = (payload) =>
+  api.put('/auth/profile', payload);
+
+export const verifyEKYC = (idCardFrontUrl) =>
+  api.post('/auth/verify-ekyc', { idCardFrontUrl });
 
 // (Chúng ta có thể thêm hàm /auth/me để lấy thông tin user từ token)
 // export const getMe = () => api.get('/auth/me'); // Cần backend hỗ trợ
@@ -117,11 +123,17 @@ export const uploadImage = (file) => {
   });
 };
 
+export const deleteImage = (publicId) =>
+  api.post('/upload/delete', { publicId });
+
 // Export default object chứa tất cả các hàm
 const apiService = {
   login,
   register,
+  updateProfile,
+  verifyEKYC,
   uploadImage,
+  deleteImage,
   getMe,
   getItems,
   getCategories,
