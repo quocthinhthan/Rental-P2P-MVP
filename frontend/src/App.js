@@ -17,6 +17,7 @@ import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
+import AdminDisputesPage from './pages/AdminDisputesPage';
 
 function App() {
   return (
@@ -41,7 +42,7 @@ function App() {
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
           {/* Thêm bất kỳ route nào cần login vào đây */}
         </Route>
-
+        <Route path="/admin/disputes" element={<AdminDisputesPage />} />
       </Routes>
       <Footer />
 

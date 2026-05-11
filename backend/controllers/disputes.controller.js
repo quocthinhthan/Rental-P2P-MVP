@@ -33,7 +33,17 @@ exports.createDispute = async (req, res) => {
 // [ADMIN] GET /api/disputes - Xem tất cả sự cố
 exports.getAllDisputes = async (req, res) => {
   try {
-    const disputes = await Dispute.find().populate('reporterId', 'fullName email').populate('rentalId');
+    // Sửa lại đoạn populate để lấy thêm fullName của renterId và ownerId bên trong rentalId
+    const disputes = await Dispute.find()
+      .populate('reporterId', 'fullName email')
+      .populate({
+        path: 'rentalId',
+        populate: {
+          path: 'renterId ownerId',
+          select: 'fullName email phone' // Lấy thêm email/phone để admin tiện liên lạc nếu cần
+        }
+      });
+      
     res.status(200).json(disputes);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server' });

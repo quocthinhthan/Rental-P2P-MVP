@@ -117,6 +117,16 @@ export const uploadImage = (file) => {
   });
 };
 
+export const getAllDisputes = async () => {
+    const response = await api.get('/disputes');
+    return response.data;
+};
+
+export const resolveDispute = async (id, resolveData) => {
+    const response = await api.patch(`/disputes/${id}/resolve`, resolveData);
+    return response.data;
+};
+
 // Export default object chứa tất cả các hàm
 const apiService = {
   login,
