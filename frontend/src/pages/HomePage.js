@@ -166,8 +166,8 @@ function HomePage() {
                   Giảm 20%
                 </p>
 
-                <p className="text-primary fs-5 fw-bold mb-0">
-                  Ưu đãi Đặc biệt
+                <p className="text-white fs-5 fw-bold mb-0">
+                  ƯU ĐÃI ĐẶC BIỆT
                 </p>
               </div>
 
