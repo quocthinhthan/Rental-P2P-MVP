@@ -213,12 +213,12 @@ function Footer() {
       {/* Copyright End */}
 
       {/* Back To Top */}
-      <a
-        href="#"
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         className="btn btn-primary btn-lg-square back-to-top"
       >
         <i className="fa fa-arrow-up"></i>
-      </a>
+      </button>
     </>
   );
 }

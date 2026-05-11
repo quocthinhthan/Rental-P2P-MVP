@@ -57,6 +57,13 @@ exports.updateProfile = async (req, res) => {
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     user.address = req.body.address || user.address;
     user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
+    if (req.body.idCardNumber) {
+      user.idCardNumber = req.body.idCardNumber;
+      user.ekycStatus = 'verified';
+    }
+    if (Array.isArray(req.body.idCardImages) && req.body.idCardImages.length > 0) {
+      user.idCardImages = req.body.idCardImages;
+    }
     
     // Lưu ý: Thường không cho phép update CCCD ở đây, muốn đổi CCCD phải làm luồng khác
     // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.

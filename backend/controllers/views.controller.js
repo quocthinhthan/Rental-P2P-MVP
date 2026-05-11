@@ -13,7 +13,7 @@ exports.getItemDetailView = async (req, res) => {
 
   try {
     const item = await Item.findById(req.params.id)
-      .populate('ownerId', 'fullName avatarUrl _id'); 
+      .populate('ownerId', 'fullName avatarUrl phoneNumber _id'); 
 
     if (!item) {
       return res.status(404).json({ message: MESSAGES.ITEM.NOT_FOUND });
