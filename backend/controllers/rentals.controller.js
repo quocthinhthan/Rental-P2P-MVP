@@ -79,7 +79,12 @@ exports.createRentalRequest = async (req, res) => {
     if (days <= 0) {
       return res.status(400).json({ message: MESSAGES.RENTAL.INVALID_DATE_RANGE });
     }
-    const totalPrice = days * item.pricePerDay;
+    const rentalFee = days * item.pricePerDay;
+    const depositAmount = (item.baseValue * item.depositPercentage) / 100;
+    const commissionRate = 10;
+    const commissionAmount = (rentalFee * commissionRate) / 100;
+    const payoutAmount = rentalFee - commissionAmount;
+    const totalAmount = rentalFee + depositAmount;
 
     const rental = await Rental.create({
       itemId,
@@ -87,8 +92,12 @@ exports.createRentalRequest = async (req, res) => {
       ownerId: item.ownerId,
       startDate: start,
       endDate: end,
-      totalPrice,
-      escrowAmount: totalPrice,
+      rentalFee,
+      depositAmount,
+      totalAmount,
+      commissionRate,
+      commissionAmount,
+      payoutAmount,
       paymentStatus: PaymentStatus.PENDING,
       note,
       status: RentalStatus.PENDING_PAYMENT
@@ -106,32 +115,32 @@ exports.createVNPayUrl = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid Rental ID' });
+      return res.status(400).json({ message: MESSAGES.COMMON.INVALID_RENTAL_ID });
     }
 
     const rental = await Rental.findById(id);
     if (!rental) {
-      return res.status(404).json({ message: 'Rental not found' });
+      return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
     }
 
     if (!rental.renterId.equals(req.user._id)) {
-      return res.status(403).json({ message: 'Forbidden (not the renter of this rental)' });
+      return res.status(403).json({ message: MESSAGES.RENTAL.NOT_RENTER });
     }
 
-    if (rental.status !== 'pending_payment' || rental.paymentStatus !== 'pending') {
-      return res.status(400).json({ message: 'Rental is not waiting for payment' });
+    if (rental.status !== RentalStatus.PENDING_PAYMENT || rental.paymentStatus !== PaymentStatus.PENDING) {
+      return res.status(400).json({ message: MESSAGES.RENTAL.WAITING_PAYMENT_REQUIRED });
     }
 
     const requiredEnv = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
     const missingEnv = requiredEnv.filter((key) => !process.env[key]);
     if (missingEnv.length > 0) {
       return res.status(500).json({
-        message: 'VNPay config is missing',
+        message: MESSAGES.PAYMENT.VNPAY_CONFIG_MISSING,
         missing: missingEnv
       });
     }
 
-    const amount = Math.round(rental.escrowAmount * 100);
+    const amount = Math.round(rental.totalAmount * 100);
     let vnpParams = {
       vnp_Version: '2.1.0',
       vnp_Command: 'pay',
@@ -161,7 +170,7 @@ exports.createVNPayUrl = async (req, res) => {
 
     res.status(200).json({ paymentUrl });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 
@@ -169,7 +178,7 @@ exports.createVNPayUrl = async (req, res) => {
 exports.handleVNPayReturn = async (req, res) => {
   try {
     if (!process.env.VNP_HASH_SECRET) {
-      return res.status(500).json({ message: 'VNPay config is missing', missing: ['VNP_HASH_SECRET'] });
+      return res.status(500).json({ message: MESSAGES.PAYMENT.VNPAY_CONFIG_MISSING, missing: ['VNP_HASH_SECRET'] });
     }
 
     let vnpParams = { ...req.query };
@@ -189,7 +198,7 @@ exports.handleVNPayReturn = async (req, res) => {
     if (!secureHash || secureHash.toLowerCase() !== signed.toLowerCase()) {
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
-        message: 'Invalid VNPay signature'
+        message: MESSAGES.PAYMENT.VNPAY_SIGNATURE_INVALID
       }));
     }
 
@@ -197,7 +206,7 @@ exports.handleVNPayReturn = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(rentalId)) {
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
-        message: 'Invalid VNPay transaction reference'
+        message: MESSAGES.PAYMENT.VNPAY_TRANSACTION_INVALID
       }));
     }
 
@@ -205,14 +214,14 @@ exports.handleVNPayReturn = async (req, res) => {
     if (!rental) {
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
-        message: 'Rental not found'
+        message: MESSAGES.RENTAL.NOT_FOUND
       }));
     }
 
     if (vnpParams.vnp_ResponseCode === '00') {
-      if (rental.paymentStatus !== 'escrowed') {
-        rental.paymentStatus = 'escrowed';
-        rental.status = 'pending_confirmation';
+      if (rental.paymentStatus !== PaymentStatus.ESCROWED) {
+        rental.paymentStatus = PaymentStatus.ESCROWED;
+        rental.status = RentalStatus.PENDING_CONFIRMATION;
         await rental.save();
 
         publishToQueue({
@@ -232,10 +241,10 @@ exports.handleVNPayReturn = async (req, res) => {
       status: 'failed',
       rentalId: rental._id.toString(),
       responseCode: vnpParams.vnp_ResponseCode,
-      message: 'VNPay payment failed'
+      message: MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED
     }));
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 
@@ -244,16 +253,16 @@ const checkRentalOwner = async (req, res, next) => {
   try {
     const rental = await Rental.findById(req.params.id);
     if (!rental) {
-      return res.status(404).json({ message: 'Rental not found' });
+      return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
     }
     if (rental.ownerId.equals(req.user._id)) {
       req.rental = rental;
       next();
     } else {
-      res.status(403).json({ message: 'Forbidden (not the item owner)' });
+      res.status(403).json({ message: MESSAGES.RENTAL.NOT_OWNER });
     }
   } catch (error) {
-    res.status(404).json({ message: 'Rental not found' });
+    res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
   }
 };
 
@@ -261,19 +270,19 @@ const checkRentalOwner = async (req, res, next) => {
 exports.confirmRental = async (req, res) => {
   const rental = req.rental; // Từ middleware checkRentalOwner
 
-  if (rental.status !== 'pending_confirmation') {
-    return res.status(400).json({ message: 'Rental cannot be confirmed' });
+  if (rental.status !== RentalStatus.PENDING_CONFIRMATION) {
+    return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_CONFIRM });
   }
 
   try {
     const item = await Item.findById(rental.itemId);
-    if (!item || item.status !== 'available') {
-       return res.status(400).json({ message: 'Item is no longer available' });
+     if (!item || item.status !== ItemStatus.AVAILABLE) {
+       return res.status(400).json({ message: MESSAGES.ITEM.NO_LONGER_AVAILABLE });
     }
 
     // Cập nhật trạng thái
-    item.status = 'rented';
-    rental.status = 'confirmed';
+    item.status = ItemStatus.RENTED;
+    rental.status = RentalStatus.CONFIRMED;
 
     await item.save();
     const savedRental = await rental.save();
@@ -282,12 +291,12 @@ exports.confirmRental = async (req, res) => {
     publishToQueue({
       task: 'rental_status_changed',
       rentalId: savedRental._id,
-      status: 'confirmed'
+      status: RentalStatus.CONFIRMED
     });
 
     res.status(200).json(savedRental);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 
@@ -295,18 +304,18 @@ exports.confirmRental = async (req, res) => {
 exports.rejectRental = async (req, res) => {
   const rental = req.rental; // Từ middleware checkRentalOwner
 
-  if (rental.status !== 'pending_confirmation') {
-    return res.status(400).json({ message: 'Rental cannot be rejected' });
+  if (rental.status !== RentalStatus.PENDING_CONFIRMATION) {
+    return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_REJECT });
   }
 
-  rental.status = 'rejected';
+  rental.status = RentalStatus.REJECTED;
   const savedRental = await rental.save();
 
   // Gửi message đến RabbitMQ
   publishToQueue({
     task: 'rental_status_changed',
     rentalId: savedRental._id,
-    status: 'rejected'
+      status: RentalStatus.REJECTED
   });
 
   res.status(200).json(savedRental);
@@ -317,33 +326,33 @@ exports.completeRental = async (req, res) => {
     try {
         const rental = await Rental.findById(req.params.id);
         if (!rental) {
-            return res.status(404).json({ message: 'Rental not found' });
+          return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
         }
         
         // Chỉ renter hoặc owner mới được complete
         if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
-            return res.status(403).json({ message: 'Forbidden (not part of this rental)' });
+          return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
         }
         
         // Chỉ complete khi đã 'confirmed' hoặc 'in_progress'
-        if (rental.status !== 'confirmed' && rental.status !== 'in_progress') {
-            return res.status(400).json({ message: 'Rental cannot be completed' });
+        if (rental.status !== RentalStatus.CONFIRMED && rental.status !== RentalStatus.IN_PROGRESS) {
+          return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_COMPLETE });
         }
         
         const item = await Item.findById(rental.itemId);
         if (item) {
             // Trả item về 'available'
-            item.status = 'available';
+          item.status = ItemStatus.AVAILABLE;
             await item.save();
         }
 
-        rental.status = 'completed';
+        rental.status = RentalStatus.COMPLETED;
         const savedRental = await rental.save();
         
         res.status(200).json(savedRental);
 
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
     }
 };
 
