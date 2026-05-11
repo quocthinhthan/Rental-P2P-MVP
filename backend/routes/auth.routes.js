@@ -1,20 +1,19 @@
+// backend/routes/auth.routes.js
 const express = require('express');
 const router = express.Router();
-// 1. Sửa dòng import này, thêm "getMe" vào cuối
-const { registerUser, loginUser, logoutUser, getMe } = require('../controllers/auth.controller');
+// Bổ sung updateProfile
+const { registerUser, loginUser, logoutUser, getMe, verifyEKYC, updateProfile } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
-// spec: /auth/register
 router.post('/register', registerUser);
-
-// spec: /auth/login
 router.post('/login', loginUser);
-
-// spec: /auth/logout (yêu cầu đã đăng nhập)
 router.post('/logout', protect, logoutUser);
-
-// 2. THÊM ROUTE MỚI NÀY
-// (Route này sẽ dùng token (qua middleware 'protect') để tìm và trả về user)
 router.get('/me', protect, getMe);
+
+// >>> THÊM ROUTE UPDATE PROFILE <<<
+router.put('/profile', protect, updateProfile);
+
+// >>> SỬA ROUTE EKYC (BỎ CHỮ protect ĐI VÌ CHƯA ĐĂNG NHẬP VẪN QUÉT ĐƯỢC) <<<
+router.post('/verify-ekyc', verifyEKYC);
 
 module.exports = router;
