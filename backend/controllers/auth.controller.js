@@ -153,12 +153,17 @@ exports.verifyEKYC = async (req, res) => {
     user.ekycStatus = 'verified';
     user.idCardNumber = realIdNumber;
     user.idCardImages = [idCardFrontUrl];
+    // >>> THÊM DÒNG NÀY: Ghi đè tên ảo bằng tên thật trên CCCD <<<
+    user.fullName = realName; 
     await user.save();
 
     res.status(200).json({ 
-      message: 'Xác thực danh tính thành công! Bạn đã có thể giao dịch.',
+      message: 'Xác thực danh tính thành công! Hồ sơ của bạn đã được cập nhật theo CCCD.',
       ekycStatus: user.ekycStatus,
-      extractedData: { idNumber: realIdNumber, fullName: realName }
+      extractedData: { 
+        idNumber: realIdNumber, 
+        fullName: realName // Trả về tên thật cho Frontend biết mà cập nhật giao diện
+      }
     });
 
   } catch (error) {

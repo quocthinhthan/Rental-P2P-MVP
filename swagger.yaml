@@ -461,11 +461,12 @@ paths:
         '404':
           description: Rental not found
 
-  /rentals/{id}/complete:
-    patch:
+  /rentals/{id}/sign-contract:
+    post:
       tags:
         - Rentals
-      summary: Mark a rental as complete (by renter or owner)
+      summary: Ký hợp đồng điện tử (Cả 2 bên)
+      description: Chủ đồ hoặc Người thuê gọi API này để đánh dấu chữ ký điện tử (Timestamp) vào hợp đồng.
       security:
         - bearerAuth: []
       parameters:
@@ -474,15 +475,70 @@ paths:
           required: true
           schema:
             type: string
+          description: ID của Đơn thuê (Rental ID)
       responses:
         '200':
-          description: Rental marked as complete
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden (not part of this rental)
-        '404':
-          description: Rental not found
+          description: Ký hợp đồng thành công
+
+  /rentals/{id}/pickup:
+    patch:
+      tags:
+        - Rentals
+      summary: Xác nhận giao/nhận đồ (Chuyển sang in_progress)
+      description: Bắt buộc cả 2 bên phải ký hợp đồng xong mới gọi được API này. Bắt buộc kèm ảnh chụp lúc giao đồ.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pickupImages:
+                  type: array
+                  items:
+                    type: string
+                  description: Mảng chứa URL ảnh chụp lúc giao nhận đồ
+      responses:
+        '200':
+          description: Đã xác nhận giao đồ thành công
+
+  /rentals/{id}/complete:
+    patch:
+      tags:
+        - Rentals
+      summary: Hoàn thành đơn và Trả đồ (Chuyển sang completed)
+      description: Đơn phải đang ở trạng thái in_progress. Bắt buộc kèm ảnh chụp lúc trả đồ.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnImages:
+                  type: array
+                  items:
+                    type: string
+                  description: Mảng chứa URL ảnh chụp lúc trả đồ
+      responses:
+        '200':
+          description: Trả đồ và hoàn thành đơn thành công
           
   # ===============================================================
   # Admin Endpoints

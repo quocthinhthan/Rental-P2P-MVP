@@ -1,6 +1,7 @@
 // backend/controllers/rentals.controller.js
 const Rental = require('../models/Rental.model');
 const Item = require('../models/Item.model');
+const Contract = require('../models/Contract.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
@@ -269,38 +270,47 @@ const checkRentalOwner = async (req, res, next) => {
 
 // PATCH /api/rentals/:id/confirm
 exports.confirmRental = async (req, res) => {
-  const rental = req.rental; // Từ middleware checkRentalOwner
-
+  const rental = req.rental; 
+  
+  // Dùng Enum
   if (rental.status !== RentalStatus.PENDING_CONFIRMATION) {
-    return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_CONFIRM });
+    return res.status(400).json({ message: 'Rental cannot be confirmed' });
   }
 
   try {
     const item = await Item.findById(rental.itemId);
-     if (!item || item.status !== ItemStatus.AVAILABLE) {
-       return res.status(400).json({ message: MESSAGES.ITEM.NO_LONGER_AVAILABLE });
+    // Dùng Enum
+    if (!item || item.status !== ItemStatus.AVAILABLE) {
+      return res.status(400).json({ message: 'Item is no longer available' });
     }
 
-    // Cập nhật trạng thái
-    item.status = ItemStatus.RENTED;
-    await item.save();
+    const owner = await User.findById(rental.ownerId);
+    const renter = await User.findById(rental.renterId);
 
-    const savedRental = await Rental.findByIdAndUpdate(
-      rental._id,
-      { status: RentalStatus.CONFIRMED },
-      { new: true }
-    );
+    if (owner.ekycStatus !== 'verified' || renter.ekycStatus !== 'verified') {
+       return res.status(400).json({ message: 'Cả hai bên phải hoàn tất eKYC để tự động lập hợp đồng!' });
+    }
 
-    // Gửi message đến RabbitMQ
-    publishToQueue({
-      task: 'rental_status_changed',
-      rentalId: savedRental._id,
-      status: RentalStatus.CONFIRMED
+    const contract = await Contract.create({
+      rentalId: rental._id,
+      ownerInfo: { userId: owner._id, fullName: owner.fullName, idCardNumber: owner.idCardNumber },
+      renterInfo: { userId: renter._id, fullName: renter.fullName, idCardNumber: renter.idCardNumber },
+      itemInfo: { itemId: item._id, name: item.name, pricePerDay: item.pricePerDay },
+      rentalPeriod: { startDate: rental.startDate, endDate: rental.endDate },
+      totalPrice: rental.totalPrice
     });
 
-    res.status(200).json(savedRental);
+    // Dùng Enum cập nhật trạng thái
+    item.status = ItemStatus.RENTED;
+    rental.status = RentalStatus.CONFIRMED;
+    rental.contractId = contract._id; 
+
+    await item.save();
+    const savedRental = await rental.save();
+
+    res.status(200).json({ message: 'Xác nhận đơn và tạo Hợp đồng thành công', rental: savedRental, contract });
   } catch (error) {
-    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -331,41 +341,97 @@ exports.rejectRental = async (req, res) => {
 
 // PATCH /api/rentals/:id/complete
 exports.completeRental = async (req, res) => {
-    try {
-        const rental = await Rental.findById(req.params.id);
-        if (!rental) {
-          return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
-        }
-        
-        // Chỉ renter hoặc owner mới được complete
-        if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
-          return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
-        }
-        
-        // Chỉ complete khi đã 'confirmed' hoặc 'in_progress'
-        if (rental.status !== RentalStatus.CONFIRMED && rental.status !== RentalStatus.IN_PROGRESS) {
-          return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_COMPLETE });
-        }
-        
-        const item = await Item.findById(rental.itemId);
-        if (item) {
-            // Trả item về 'available'
+  const { returnImages } = req.body; 
+
+  try {
+      const rental = await Rental.findById(req.params.id);
+      if (!rental) return res.status(404).json({ message: 'Rental not found' });
+      
+      if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
+          return res.status(403).json({ message: 'Forbidden' });
+      }
+      
+      // Dùng Enum
+      if (rental.status !== RentalStatus.IN_PROGRESS) {
+        return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang diễn ra' });
+      }
+      if (!returnImages || returnImages.length === 0) {
+        return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
+      }
+
+      const item = await Item.findById(rental.itemId);
+      if (item) {
+          // Dùng Enum
           item.status = ItemStatus.AVAILABLE;
-            await item.save();
-        }
+          await item.save();
+      }
 
-        // Dùng findByIdAndUpdate để tránh lỗi validation
-        const savedRental = await Rental.findByIdAndUpdate(
-            rental._id,
-            { status: RentalStatus.COMPLETED },
-            { new: true }
-        );
-        
-        res.status(200).json(savedRental);
+      rental.returnImages = returnImages;
+      // Dùng Enum
+      rental.status = RentalStatus.COMPLETED;
+      const savedRental = await rental.save();
+      
+      res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });
+  } catch (error) {
+      res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
 
-    } catch (error) {
-        res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
+// POST /api/rentals/:id/sign-contract - Ký hợp đồng
+exports.signContract = async (req, res) => {
+  try {
+    const rental = await Rental.findById(req.params.id);
+    if (!rental || !rental.contractId) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });
+
+    const contract = await Contract.findById(rental.contractId);
+    const userId = req.user._id;
+
+    if (rental.ownerId.equals(userId)) contract.ownerSignedAt = new Date();
+    else if (rental.renterId.equals(userId)) contract.renterSignedAt = new Date();
+    else return res.status(403).json({ message: 'Bạn không có quyền ký hợp đồng này' });
+
+    // Kiểm tra nếu cả 2 đã ký
+    if (contract.ownerSignedAt && contract.renterSignedAt) {
+      contract.isFullySigned = true;
     }
+
+    await contract.save();
+    res.status(200).json({ message: 'Ký hợp đồng thành công', contract });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// PATCH /api/rentals/:id/pickup - Giao/Nhận đồ (Up ảnh lúc nhận)
+exports.pickupItem = async (req, res) => {
+  const { pickupImages } = req.body;
+  
+  try {
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Không tìm thấy đơn' });
+    
+    // Dùng Enum
+    if (rental.status !== RentalStatus.CONFIRMED) {
+      return res.status(400).json({ message: 'Đơn thuê chưa được xác nhận' });
+    }
+    if (!pickupImages || pickupImages.length === 0) {
+      return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc bàn giao!' });
+    }
+
+    const contract = await Contract.findById(rental.contractId);
+    if (!contract || !contract.isFullySigned) {
+      return res.status(400).json({ message: 'Cả 2 bên phải ký hợp đồng điện tử trước khi giao nhận đồ!' });
+    }
+
+    rental.pickupImages = pickupImages;
+    // Dùng Enum
+    rental.status = RentalStatus.IN_PROGRESS; 
+    await rental.save();
+
+    res.status(200).json({ message: 'Đã xác nhận giao đồ', rental });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
 };
 
 // Đính kèm middleware vào exports
