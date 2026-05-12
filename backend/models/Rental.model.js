@@ -32,6 +32,11 @@ const RentalSchema = new mongoose.Schema({
     default: PaymentStatus.PENDING
   },
   note: { type: String, default: '' },
+
+  contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' }, // Link tới hợp đồng
+  pickupImages: [{ type: String }], // Ảnh lúc nhận đồ
+  returnImages: [{ type: String }], // Ảnh lúc trả đồ
+  
   status: {
     type: String,
     enum: Object.values(RentalStatus),

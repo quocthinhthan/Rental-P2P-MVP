@@ -8,7 +8,10 @@ const {
   confirmRental,
   rejectRental,
   completeRental,
-  checkRentalOwner
+  checkRentalOwner,
+  signContract,
+  pickupItem,
+  getContractByRentalId
 } = require('../controllers/rentals.controller');
 const { protect, checkVerified } = require('../middleware/auth.middleware');
 
@@ -29,5 +32,14 @@ router.patch('/:id/reject', protect, checkRentalOwner, rejectRental);
 
 // PATCH /api/rentals/:id/complete - (Owner hoặc Renter) Hoàn thành
 router.patch('/:id/complete', protect, completeRental);
+
+// [CẢ 2 BÊN] Ký hợp đồng điện tử
+router.post('/:id/sign-contract', protect, checkVerified, signContract);
+
+// [CẢ 2 BÊN] Chụp ảnh nhận đồ (Chuyển sang in_progress)
+router.patch('/:id/pickup', protect, checkVerified, pickupItem);
+
+// [CẢ 2 BÊN] Lấy thông tin Hợp đồng để hiển thị lên màn hình
+router.get('/:id/contract', protect, getContractByRentalId);
 
 module.exports = router;
