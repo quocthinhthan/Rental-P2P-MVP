@@ -1,0 +1,341 @@
+/* ===================================================
+   Auth.css — Giao diện Đăng nhập / Đăng ký Cao cấp (Max Effects)
+   =================================================== */
+
+.auth-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+/* =========================================
+   CỘT FORM & HIỆU ỨNG NỀN (BACKGROUND)
+========================================= */
+.auth-form-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 8%;
+  position: relative;
+  overflow: hidden;
+  background-color: #fafbfc;
+  
+  /* Lưới chấm bi di chuyển */
+  background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  animation: moveGrid 15s linear infinite;
+}
+
+@keyframes moveGrid {
+  0% { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+
+/* --- CÁC KHỐI MÀU MESH GRADIENT TRÔI NỔI --- */
+.auth-bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px); /* Làm nhòe mạnh hơn để trộn màu */
+  opacity: 0.7;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.shape-1 {
+  top: -15%;
+  left: -15%;
+  width: 450px;
+  height: 450px;
+  background: linear-gradient(135deg, #1a6b4a 0%, #34d399 100%);
+  animation: floatComplex1 15s infinite alternate ease-in-out;
+}
+
+.shape-2 {
+  bottom: -15%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #ffb524 0%, #fb923c 100%);
+  animation: floatComplex2 18s infinite alternate-reverse ease-in-out;
+}
+
+.shape-3 {
+  top: 30%;
+  left: 40%;
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  animation: floatComplex3 20s infinite alternate ease-in-out;
+  opacity: 0.5;
+}
+
+@keyframes floatComplex1 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(80px, 50px) scale(1.2) rotate(45deg); }
+  100% { transform: translate(-20px, 100px) scale(0.9) rotate(90deg); }
+}
+
+@keyframes floatComplex2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-100px, -60px) scale(1.15) rotate(-30deg); }
+  100% { transform: translate(40px, -120px) scale(1) rotate(-60deg); }
+}
+
+@keyframes floatComplex3 {
+  0% { transform: translate(0, 0) scale(0.8); }
+  50% { transform: translate(-60px, 80px) scale(1.3); }
+  100% { transform: translate(80px, -40px) scale(0.9); }
+}
+
+/* =========================================
+   GLASSMORPHISM FORM TỪNG CHI TIẾT
+========================================= */
+.auth-form-container {
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative; 
+  z-index: 10;
+  
+  /* Hiệu ứng kính cường lực (Deep Glassmorphism) */
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(25px) saturate(150%);
+  -webkit-backdrop-filter: blur(25px) saturate(150%);
+  padding: 40px;
+  border-radius: 24px;
+  
+  /* Đổ bóng tầng (Layered shadow) cho độ sâu 3D */
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    
+  /* Viền sáng giả lập ánh sáng chiếu vào kính */
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  border-left: 1px solid rgba(255, 255, 255, 0.8);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.auth-form-container:hover {
+  transform: translateY(-5px);
+}
+
+/* Typography */
+.auth-logo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #1a6b4a;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 4px rgba(26,107,74,0.1);
+}
+
+.auth-logo i { color: #ffb524; }
+
+.auth-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+/* =========================================
+   INPUT HIỆU ỨNG NỔI
+========================================= */
+.auth-input-group {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.auth-input-group i {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 1.1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 15px 20px 15px 50px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1e293b;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: #1a6b4a;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 5px rgba(26, 107, 74, 0.15), 0 8px 16px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+.auth-input:focus + i,
+.auth-input:not(:placeholder-shown) + i {
+  color: #1a6b4a;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.auth-input.is-invalid {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.auth-input.is-invalid:focus {
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.15);
+}
+
+.auth-invalid-feedback {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 6px;
+  margin-left: 6px;
+}
+
+/* =========================================
+   NÚT BẤM PHÁT SÁNG (GLOW BUTTON)
+========================================= */
+.auth-btn-submit {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #1a6b4a 0%, #22c55e 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  box-shadow: 0 4px 15px rgba(26, 107, 74, 0.3);
+}
+
+.auth-btn-submit::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: all 0.6s ease;
+}
+
+.auth-btn-submit:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(26, 107, 74, 0.4);
+}
+
+.auth-btn-submit:hover:not(:disabled)::after {
+  left: 100%;
+}
+
+.auth-btn-submit:disabled {
+  background: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.auth-link {
+  color: #1a6b4a;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.auth-link:hover {
+  color: #ffb524;
+}
+
+/* =========================================
+   CỘT HÌNH ẢNH (BREATHING EFFECT)
+========================================= */
+.auth-image-col {
+  flex: 1.2;
+  position: relative;
+  display: none;
+  background-color: #0f172a;
+  overflow: hidden;
+}
+
+@media (min-width: 992px) {
+  .auth-image-col {
+    display: block;
+  }
+}
+
+.auth-image-bg {
+  position: absolute;
+  inset: -5%; /* Tràn ra ngoài một chút để animation scale không bị lộ viền */
+  width: 110%;
+  height: 110%;
+  object-fit: cover;
+  /* Hiệu ứng thở (Zoom In/Out chậm rãi) */
+  animation: breatheImage 25s infinite alternate ease-in-out;
+}
+
+@keyframes breatheImage {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.1) translate(-2%, -2%); }
+}
+
+.auth-image-overlay {
+  position: absolute;
+  inset: 0;
+  /* Gradient đè lên ảnh xịn hơn */
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.1) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 80px;
+  color: white;
+}
+
+.auth-image-overlay h2 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  line-height: 1.2;
+  color: #ffffff;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.auth-image-overlay p {
+  font-size: 1.15rem;
+  color: #cbd5e1;
+  line-height: 1.7;
+  max-width: 90%;
+  font-weight: 400;
+}
