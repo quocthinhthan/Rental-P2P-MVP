@@ -5,7 +5,7 @@ import './App.css';
 // Import components
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
-import Spinner from './components/Common/Spinner'; 
+import GlobalSpinner from './components/Common/GlobalSpinner';
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ItemDetailPage from './pages/ItemDetailPage';
@@ -23,7 +23,7 @@ import AdminDisputesPage from './pages/AdminDisputesPage';
 function App() {
   return (
     <>
-      <Spinner />
+      <GlobalSpinner />
       <Header />
       <Routes>
         {/* Routes công khai */}

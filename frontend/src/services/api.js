@@ -1,54 +1,51 @@
 import axios from 'axios';
+import { startGlobalLoading, stopGlobalLoading } from '../contexts/LoadingContext';
 
-// 1. Tạo một instance của axios
 const api = axios.create({
-  // Lấy URL của backend từ file .env của React (nếu có)
-  // Hoặc hardcode (cho mục đích học thuật)
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 2. Thiết lập Interceptor (can thiệp)
-// Đây là phần quan trọng: Nó sẽ tự động thêm token vào *mọi* request
-// mà không cần chúng ta phải làm thủ công ở từng trang.
 api.interceptors.request.use(
   (config) => {
-    // Lấy token từ localStorage
+    startGlobalLoading();
+
     const token = localStorage.getItem('token');
-    
+
     if (token) {
-      // Nếu có token, thêm vào header Authorization
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return config; // Trả về config đã chỉnh sửa
+
+    return config;
   },
   (error) => {
-    // Xử lý lỗi request
+    stopGlobalLoading();
     return Promise.reject(error);
   }
 );
 
-/* ===============================================================
- * Định nghĩa tất cả các hàm gọi API ở đây
- * =============================================================== */
+api.interceptors.response.use(
+  (response) => {
+    stopGlobalLoading();
+    return response;
+  },
+  (error) => {
+    stopGlobalLoading();
+    return Promise.reject(error);
+  }
+);
 
 // === Auth ===
-export const login = (email, password) => 
-  api.post('/auth/login', { email, password });
+export const login = (email, password) => api.post('/auth/login', { email, password });
 
-export const register = (fullName, email, password, phoneNumber) => 
+export const register = (fullName, email, password, phoneNumber) =>
   api.post('/auth/register', { fullName, email, password, phoneNumber });
 
-export const updateProfile = (payload) =>
-  api.put('/auth/profile', payload);
+export const updateProfile = (payload) => api.put('/auth/profile', payload);
 
-export const verifyEKYC = (idCardFrontUrl) =>
-  api.post('/auth/verify-ekyc', { idCardFrontUrl });
-
-// (Chúng ta có thể thêm hàm /auth/me để lấy thông tin user từ token)
-// export const getMe = () => api.get('/auth/me'); // Cần backend hỗ trợ
+export const verifyEKYC = (idCardFrontUrl) => api.post('/auth/verify-ekyc', { idCardFrontUrl });
 
 // === Items ===
 export const getItems = (params = {}) => {
@@ -58,8 +55,7 @@ export const getItems = (params = {}) => {
 
   const query = new URLSearchParams();
 
-  // Duyệt qua tất cả các key trong params để tự động thêm vào query string
-  Object.keys(params).forEach(key => {
+  Object.keys(params).forEach((key) => {
     if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
       query.set(key, params[key]);
     }
@@ -72,21 +68,16 @@ export const getItems = (params = {}) => {
 export const getCategories = () => api.get('/items/categories');
 export const getBestsellers = (limit = 3) => api.get(`/items/bestsellers?limit=${limit}`);
 
-export const createItem = (itemData) => 
-  api.post('/items', itemData); // Cần formData nếu có upload ảnh
+export const createItem = (itemData) => api.post('/items', itemData);
 
-export const updateItem = (itemId, itemData) => 
-  api.put(`/items/${itemId}`, itemData);
+export const updateItem = (itemId, itemData) => api.put(`/items/${itemId}`, itemData);
 
-export const deleteItem = (itemId) => 
-  api.delete(`/items/${itemId}`);
+export const deleteItem = (itemId) => api.delete(`/items/${itemId}`);
 
 // === Views (BFF) ===
-export const getItemDetails = (itemId) => 
-  api.get(`/views/item-details/${itemId}`);
+export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}`);
 
-export const getMyRentals = () => 
-  api.get('/views/my-rentals'); // Đã tự động đính kèm token
+export const getMyRentals = () => api.get('/views/my-rentals');
 
 // === Reviews ===
 export const createReview = ({ rentalId, rating, comment }) =>
@@ -97,50 +88,45 @@ export const getUserReviews = (userId, page = 1, limit = 5) =>
 
 // === Rentals (Actions) ===
 export const createRentalRequest = (itemId, startDate, endDate, note) =>
-  api.post('/rentals', { itemId, startDate, endDate, note});
+  api.post('/rentals', { itemId, startDate, endDate, note });
 
-export const createVNPayUrl = (rentalId) =>
-  api.post(`/rentals/${rentalId}/create-vnpay-url`);
+export const createVNPayUrl = (rentalId) => api.post(`/rentals/${rentalId}/create-vnpay-url`);
 
-export const confirmRental = (rentalId) =>
-  api.patch(`/rentals/${rentalId}/confirm`);
+export const confirmRental = (rentalId) => api.patch(`/rentals/${rentalId}/confirm`);
 
-export const rejectRental = (rentalId) =>
-  api.patch(`/rentals/${rentalId}/reject`);
+export const rejectRental = (rentalId) => api.patch(`/rentals/${rentalId}/reject`);
 
-export const completeRental = (rentalId) =>
-  api.patch(`/rentals/${rentalId}/complete`);
+export const completeRental = (rentalId) => api.patch(`/rentals/${rentalId}/complete`);
 
-export const getMe = () => api.get('/auth/me'); // Định nghĩa hàm
-// === Upload (MỚI) ===
+export const getMe = () => api.get('/auth/me');
+
+// === Upload ===
 export const uploadImage = (file) => {
   const formData = new FormData();
   formData.append('image', file);
 
   return api.post('/upload', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data', // Quan trọng
+      'Content-Type': 'multipart/form-data',
     },
   });
 };
 
 export const getAllDisputes = async () => {
-    const response = await api.get('/disputes');
-    return response.data;
+  const response = await api.get('/disputes');
+  return response.data;
 };
 
 export const resolveDispute = async (id, resolveData) => {
-    const response = await api.patch(`/disputes/${id}/resolve`, resolveData);
-    return response.data;
+  const response = await api.patch(`/disputes/${id}/resolve`, resolveData);
+  return response.data;
 };
 
 export const createDispute = (rentalId, reason, evidenceImages = []) =>
   api.post('/disputes', { rentalId, reason, evidenceImages });
 
-export const deleteImage = (publicId) =>
-  api.post('/upload/delete', { publicId });
+export const deleteImage = (publicId) => api.post('/upload/delete', { publicId });
 
-// Export default object chứa tất cả các hàm
 const apiService = {
   login,
   register,
