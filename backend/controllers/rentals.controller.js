@@ -377,18 +377,34 @@ exports.completeRental = async (req, res) => {
   }
 };
 
-// POST /api/rentals/:id/sign-contract - Ký hợp đồng
+// POST /api/rentals/:id/sign-contract - Ký hợp đồng 
 exports.signContract = async (req, res) => {
+  // Yêu cầu Frontend gửi URL của ảnh chữ ký (sau khi Frontend đã up lên Cloudinary)
+  const { signatureUrl } = req.body; 
+
   try {
+    if (!signatureUrl) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp chữ ký điện tử!' });
+    }
+
     const rental = await Rental.findById(req.params.id);
     if (!rental || !rental.contractId) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });
 
     const contract = await Contract.findById(rental.contractId);
     const userId = req.user._id;
 
-    if (rental.ownerId.equals(userId)) contract.ownerSignedAt = new Date();
-    else if (rental.renterId.equals(userId)) contract.renterSignedAt = new Date();
-    else return res.status(403).json({ message: 'Bạn không có quyền ký hợp đồng này' });
+    // Gắn thời gian VÀ dán ảnh chữ ký vào đúng người
+    if (rental.ownerId.equals(userId)) {
+      contract.ownerSignedAt = new Date();
+      contract.ownerSignatureUrl = signatureUrl;
+    } 
+    else if (rental.renterId.equals(userId)) {
+      contract.renterSignedAt = new Date();
+      contract.renterSignatureUrl = signatureUrl;
+    } 
+    else {
+      return res.status(403).json({ message: 'Bạn không có quyền ký hợp đồng này' });
+    }
 
     // Kiểm tra nếu cả 2 đã ký
     if (contract.ownerSignedAt && contract.renterSignedAt) {
@@ -397,6 +413,33 @@ exports.signContract = async (req, res) => {
 
     await contract.save();
     res.status(200).json({ message: 'Ký hợp đồng thành công', contract });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// GET /api/rentals/:id/contract - Lấy chi tiết Hợp đồng
+exports.getContractByRentalId = async (req, res) => {
+  try {
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) {
+      return res.status(404).json({ message: 'Không tìm thấy đơn thuê' });
+    }
+
+    // Chỉ người trong cuộc mới được xem hợp đồng
+    const userId = req.user._id;
+    if (!rental.renterId.equals(userId) && !rental.ownerId.equals(userId)) {
+      return res.status(403).json({ message: 'Bạn không có quyền xem hợp đồng này' });
+    }
+
+    if (!rental.contractId) {
+      return res.status(404).json({ message: 'Đơn thuê này chưa sinh hợp đồng (Chưa được xác nhận)' });
+    }
+
+    // Lấy chi tiết hợp đồng
+    const contract = await Contract.findById(rental.contractId);
+    
+    res.status(200).json(contract);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }

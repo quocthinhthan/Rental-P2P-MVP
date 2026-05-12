@@ -465,8 +465,36 @@ paths:
     post:
       tags:
         - Rentals
-      summary: Ký hợp đồng điện tử (Cả 2 bên)
-      description: Chủ đồ hoặc Người thuê gọi API này để đánh dấu chữ ký điện tử (Timestamp) vào hợp đồng.
+      summary: Ký hợp đồng điện tử (Vẽ chữ ký)
+      description: Gửi URL hình ảnh chữ ký điện tử (vẽ bằng chuột/touch) để dán vào hợp đồng.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signatureUrl:
+                  type: string
+                  description: URL ảnh chữ ký (Đã upload lên Cloudinary)
+      responses:
+        '200':
+          description: Ký hợp đồng thành công
+
+  /rentals/{id}/contract:
+    get:
+      tags:
+        - Rentals
+      summary: Lấy chi tiết Hợp đồng điện tử
+      description: Dùng để Frontend vẽ giao diện Hợp đồng (Bao gồm thông tin 2 bên, ngày ký và link ảnh chữ ký). Chỉ Owner hoặc Renter của đơn này mới xem được.
       security:
         - bearerAuth: []
       parameters:
@@ -478,7 +506,11 @@ paths:
           description: ID của Đơn thuê (Rental ID)
       responses:
         '200':
-          description: Ký hợp đồng thành công
+          description: Trả về Object chi tiết Hợp đồng
+        '403':
+          description: Bạn không có quyền xem
+        '404':
+          description: Đơn chưa được xác nhận, chưa có hợp đồng
 
   /rentals/{id}/pickup:
     patch:

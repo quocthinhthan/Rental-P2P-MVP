@@ -25,9 +25,13 @@ const ContractSchema = new mongoose.Schema({
   totalPrice: Number,
   terms: { type: String, default: 'Hai bên cam kết giao nhận tài sản đúng như mô tả. Nếu có hư hỏng, hệ thống sẽ sử dụng tiền ký quỹ để đền bù theo quy định của pháp luật.' },
 
-  // Chữ ký điện tử (Lưu thời gian ký)
+  // Chữ ký điện tử (Lưu thời gian ký VÀ Hình ảnh chữ ký)
   ownerSignedAt: { type: Date, default: null },
+  ownerSignatureUrl: { type: String, default: '' }, // >>> Ảnh chữ ký của Chủ đồ
+
   renterSignedAt: { type: Date, default: null },
+  renterSignatureUrl: { type: String, default: '' }, // >>> Ảnh chữ ký của Người thuê
+
   isFullySigned: { type: Boolean, default: false }
 
 }, { timestamps: true });
