@@ -461,11 +461,12 @@ paths:
         '404':
           description: Rental not found
 
-  /rentals/{id}/complete:
-    patch:
+  /rentals/{id}/sign-contract:
+    post:
       tags:
         - Rentals
-      summary: Mark a rental as complete (by renter or owner)
+      summary: Ký hợp đồng điện tử (Vẽ chữ ký)
+      description: Gửi URL hình ảnh chữ ký điện tử (vẽ bằng chuột/touch) để dán vào hợp đồng.
       security:
         - bearerAuth: []
       parameters:
@@ -474,15 +475,102 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signatureUrl:
+                  type: string
+                  description: URL ảnh chữ ký (Đã upload lên Cloudinary)
       responses:
         '200':
-          description: Rental marked as complete
-        '401':
-          description: Unauthorized
+          description: Ký hợp đồng thành công
+
+  /rentals/{id}/contract:
+    get:
+      tags:
+        - Rentals
+      summary: Lấy chi tiết Hợp đồng điện tử
+      description: Dùng để Frontend vẽ giao diện Hợp đồng (Bao gồm thông tin 2 bên, ngày ký và link ảnh chữ ký). Chỉ Owner hoặc Renter của đơn này mới xem được.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của Đơn thuê (Rental ID)
+      responses:
+        '200':
+          description: Trả về Object chi tiết Hợp đồng
         '403':
-          description: Forbidden (not part of this rental)
+          description: Bạn không có quyền xem
         '404':
-          description: Rental not found
+          description: Đơn chưa được xác nhận, chưa có hợp đồng
+
+  /rentals/{id}/pickup:
+    patch:
+      tags:
+        - Rentals
+      summary: Xác nhận giao/nhận đồ (Chuyển sang in_progress)
+      description: Bắt buộc cả 2 bên phải ký hợp đồng xong mới gọi được API này. Bắt buộc kèm ảnh chụp lúc giao đồ.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pickupImages:
+                  type: array
+                  items:
+                    type: string
+                  description: Mảng chứa URL ảnh chụp lúc giao nhận đồ
+      responses:
+        '200':
+          description: Đã xác nhận giao đồ thành công
+
+  /rentals/{id}/complete:
+    patch:
+      tags:
+        - Rentals
+      summary: Hoàn thành đơn và Trả đồ (Chuyển sang completed)
+      description: Đơn phải đang ở trạng thái in_progress. Bắt buộc kèm ảnh chụp lúc trả đồ.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnImages:
+                  type: array
+                  items:
+                    type: string
+                  description: Mảng chứa URL ảnh chụp lúc trả đồ
+      responses:
+        '200':
+          description: Trả đồ và hoàn thành đơn thành công
           
   # ===============================================================
   # Admin Endpoints
