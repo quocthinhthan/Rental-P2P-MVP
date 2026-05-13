@@ -277,6 +277,174 @@
 .btn-outline-xs:hover       { background: var(--brand-light); }
 .btn-ghost-xs               { background: var(--surface-2); color: var(--text-secondary); border: 1.5px solid var(--border); }
 .btn-ghost-xs:hover         { border-color: var(--brand); color: var(--brand); }
+.btn-xs:disabled            { opacity: .6; cursor: not-allowed; transform: none; }
+
+.contract-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.contract-state-ready {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.contract-state-waiting {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Modal dùng cho ký hợp đồng và ảnh bàn giao */
+.rental-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, .58);
+}
+
+.rental-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255,255,255,.18);
+  padding: 22px;
+}
+
+.rental-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.rental-modal-eyebrow {
+  margin: 0 0 4px;
+  color: var(--brand);
+  font-size: .76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rental-modal h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.16rem;
+}
+
+.rental-modal-subtitle {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+.modal-close-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.modal-close-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.signature-pad-wrap {
+  overflow: hidden;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.signature-pad {
+  width: 100%;
+  height: 220px;
+  display: block;
+  background: #fff;
+  touch-action: none;
+}
+
+.handover-upload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 138px;
+  padding: 18px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+
+.handover-upload-box:hover {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.handover-upload-box input {
+  display: none;
+}
+
+.handover-upload-box span {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.handover-upload-box small {
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+.handover-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.handover-preview-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.rental-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
 
 /* ── Item Grid Card ── */
 .item-card {

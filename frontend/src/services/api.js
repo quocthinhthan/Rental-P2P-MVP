@@ -96,7 +96,16 @@ export const confirmRental = (rentalId) => api.patch(`/rentals/${rentalId}/confi
 
 export const rejectRental = (rentalId) => api.patch(`/rentals/${rentalId}/reject`);
 
-export const completeRental = (rentalId) => api.patch(`/rentals/${rentalId}/complete`);
+export const getRentalContract = (rentalId) => api.get(`/rentals/${rentalId}/contract`);
+
+export const signContract = (rentalId, signatureUrl) =>
+  api.post(`/rentals/${rentalId}/sign-contract`, { signatureUrl });
+
+export const pickupRental = (rentalId, pickupImages) =>
+  api.patch(`/rentals/${rentalId}/pickup`, { pickupImages });
+
+export const completeRental = (rentalId, returnImages) =>
+  api.patch(`/rentals/${rentalId}/complete`, { returnImages });
 
 export const getMe = () => api.get('/auth/me');
 
@@ -110,6 +119,11 @@ export const uploadImage = (file) => {
       'Content-Type': 'multipart/form-data',
     },
   });
+};
+
+export const uploadImages = async (files = []) => {
+  const uploadResults = await Promise.all(files.map((file) => uploadImage(file)));
+  return uploadResults.map((response) => response.data.imageUrl);
 };
 
 export const getAllDisputes = async () => {
@@ -148,9 +162,13 @@ const apiService = {
   createVNPayUrl,
   confirmRental,
   rejectRental,
+  getRentalContract,
+  signContract,
+  pickupRental,
   completeRental,
   createDispute,
   getBestsellers,
+  uploadImages,
 };
 
 export default apiService;
