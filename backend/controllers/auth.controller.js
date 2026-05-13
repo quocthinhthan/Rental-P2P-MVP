@@ -2,6 +2,9 @@ const User = require('../models/User.model');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const FormData = require('form-data');
+const crypto = require('crypto');
+const { publishToQueue } = require('../config/rabbitmq');
+
 
 // Hàm trợ giúp để tạo token
 const generateToken = (id) => {
@@ -168,5 +171,56 @@ exports.verifyEKYC = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: 'Lỗi hệ thống eKYC', error: error.message });
+  }
+};
+
+// [PUBLIC] POST /api/auth/forgot-password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản với email này' });
+    }
+
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; 
+    await user.save();
+    
+    publishToQueue({
+      task: 'forgot_password',
+      email: user.email,
+      fullName: user.fullName,
+      resetToken: resetToken 
+    });
+
+    res.status(200).json({ message: 'Email khôi phục mật khẩu đã được gửi!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// [PUBLIC] PUT /api/auth/reset-password/:token
+exports.resetPassword = async (req, res) => {
+  try {
+    // 1. Mã hóa cái token người dùng gửi lên để so sánh với cái trong DB
+    const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() } // Kiểm tra còn hạn không
+    });
+
+    if (!user) return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+
+    // 2. Đổi mật khẩu
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save(); // Middleware hash password ở User.model sẽ tự chạy
+
+    res.status(200).json({ message: 'Đổi mật khẩu thành công! Vui lòng đăng nhập lại.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };

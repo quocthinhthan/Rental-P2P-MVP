@@ -5,7 +5,7 @@ const Rental = require('../models/Rental.model');
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
-    const { search, category, address, startDate, endDate, ownerId, exclude } = req.query;
+    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius } = req.query;
 
     let query = { status: { $ne: 'delisted' } };
 
@@ -56,6 +56,16 @@ const searchItems = async (req, res) => {
       query._id = { ...query._id, $nin: unavailableItemIds };
     }
 
+    if (lat && lng) {
+      const radiusInMeters = (parseFloat(radius) || 5) * 1000; // Mặc định tìm bán kính 5km
+      query.location = {
+        $near: {
+          $geometry: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
+          $maxDistance: radiusInMeters
+        }
+      };
+    }
+
     // Chạy Query
     const items = await Item.find(query)
       .select('_id name category address pricePerDay images status')
@@ -89,9 +99,21 @@ const createItem = async (req, res) => {
     address,
     images,
     baseValue,
-    depositPercentage
+    depositPercentage,
+    lat, 
+    lng
   } = req.body;
   try {
+
+    // Xử lý tạo tọa độ Location (GeoJSON) nếu người dùng có gửi lat, lng
+    let location = undefined;
+    if (lat !== undefined && lng !== undefined) {
+      location = {
+        type: 'Point',
+        coordinates: [parseFloat(lng), parseFloat(lat)] // Lưu ý: MongoDB bắt buộc Kinh độ (lng) viết trước, Vĩ độ (lat) viết sau
+      };
+    }
+
     const item = new Item({
       name,
       description,
@@ -101,6 +123,7 @@ const createItem = async (req, res) => {
       images,
       baseValue,
       depositPercentage,
+      location,
       ownerId: req.user.id
     });
     const createdItem = await item.save();
@@ -136,7 +159,9 @@ const updateItem = async (req, res) => {
     images,
     status,
     baseValue,
-    depositPercentage
+    depositPercentage,
+    lat, 
+    lng
   } = req.body;
   const item = req.item; 
 
@@ -151,6 +176,13 @@ const updateItem = async (req, res) => {
   
   if (status && ['available', 'delisted'].includes(status)) {
      item.status = status;
+  }
+
+  if (lat !== undefined && lng !== undefined) {
+    item.location = {
+      type: 'Point',
+      coordinates: [parseFloat(lng), parseFloat(lat)]
+    };
   }
 
   try {
@@ -286,4 +318,4 @@ module.exports = {
   checkOwner,
   getCategories,
   getBestsellerItems
-};
+};
