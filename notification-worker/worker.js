@@ -54,6 +54,31 @@ const sendNotification = async (data) => {
   }
 
   try {
+
+    if (data.task === 'forgot_password') {
+      console.log(`[WORKER] Processing: forgot password for ${data.email}`);
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${data.resetToken}`;
+
+      const mailOptions = {
+        from: `"P2P Rental" <${process.env.EMAIL_USER}>`,
+        to: data.email,
+        subject: `🔑 Yêu cầu khôi phục mật khẩu`,
+        html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2>Khôi phục mật khẩu</h2>
+          <p>Xin chào <strong>${data.fullName}</strong>,</p>
+          <p>Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng bấm vào nút bên dưới để đặt lại mật khẩu (Link có hiệu lực trong 10 phút):</p>
+          <a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#28a745;color:#fff;text-decoration:none;border-radius:5px;">Đặt lại mật khẩu</a>
+          <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+        </div>`
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`[WORKER] Password reset email sent to ${data.email}`);
+      
+      return; 
+    }
+
     const rental = await Rental.findById(data.rentalId)
       .populate('itemId', 'name')
       .populate('renterId', 'fullName email')
