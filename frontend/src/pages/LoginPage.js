@@ -21,7 +21,7 @@ function LoginPage() {
 
       if (!token || !user) throw new Error('Phản hồi từ server không hợp lệ');
       
-      login(user, token);
+      login(user, token, data.rememberMe);
       navigate('/');
     } catch (error) {
       if (error.response && (error.response.status === 401 || error.response.status === 400)) {
@@ -86,7 +86,12 @@ function LoginPage() {
 
             <div className="d-flex justify-content-between align-items-center mb-4 mt-2">
               <div className="form-check">
-                <input type="checkbox" className="form-check-input" id="rememberMe" />
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="rememberMe"
+                  {...register('rememberMe')}
+                />
                 <label className="form-check-label text-muted fs-7" htmlFor="rememberMe">Ghi nhớ tôi</label>
               </div>
               <Link to="/forgot-password" className="auth-link fs-7">Quên mật khẩu?</Link>
