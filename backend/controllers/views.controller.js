@@ -1,5 +1,6 @@
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
+const Review = require('../models/Review.model');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
 const { RentalStatus } = require('../enums/rental.enum');
@@ -89,6 +90,14 @@ exports.getMyRentalsView = async (req, res) => {
     const myItems = await Item.find({ ownerId: userId, status: { $ne: ItemStatus.DELISTED } })
       .sort({ createdAt: -1 });
 
+    const rentalIds = [...asRenter, ...asOwner].map((rental) => rental._id);
+    const relatedReviews = await Review.find({ rentalId: { $in: rentalIds } })
+      .select('_id rentalId reviewerId revieweeId rating comment isPublic createdAt');
+    const reviewByRentalAndReviewer = relatedReviews.reduce((acc, review) => {
+      acc[`${review.rentalId.toString()}:${review.reviewerId.toString()}`] = review;
+      return acc;
+    }, {});
+
     // 4. Hàm helper để định dạng lại rental
     const formatRentalDetail = (rental, counterparty) => {
         // Rào chắn nếu item bị null (do đã bị xóa)
@@ -98,6 +107,16 @@ exports.getMyRentalsView = async (req, res) => {
             pricePerDay: rental.itemId.pricePerDay,
             mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : ''
         } : null;
+        const rentalKey = rental._id.toString();
+        const reviewerKey = userId.toString();
+        const counterpartyKey = counterparty?._id?.toString();
+        const myReview = reviewByRentalAndReviewer[`${rentalKey}:${reviewerKey}`] || null;
+        const counterpartyReview = counterpartyKey
+          ? reviewByRentalAndReviewer[`${rentalKey}:${counterpartyKey}`] || null
+          : null;
+        const reviewStatus = !myReview
+          ? 'not_reviewed'
+          : (counterpartyReview || myReview.isPublic ? 'completed' : 'waiting_counterparty');
 
         return {
             _id: rental._id,
@@ -113,7 +132,20 @@ exports.getMyRentalsView = async (req, res) => {
             status: rental.status,
             note: rental.note, 
             item: itemSummary,
-            counterparty: counterparty
+            counterparty: counterparty,
+            review: {
+              status: reviewStatus,
+              hasMyReview: Boolean(myReview),
+              hasCounterpartyReview: Boolean(counterpartyReview),
+              isPublic: Boolean(myReview?.isPublic),
+              myReview: myReview ? {
+                _id: myReview._id,
+                rating: myReview.rating,
+                comment: myReview.comment,
+                isPublic: myReview.isPublic,
+                createdAt: myReview.createdAt
+              } : null
+            }
         };
     };
 

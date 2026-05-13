@@ -7,6 +7,11 @@ import Swal from 'sweetalert2';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/CustomDetail.css';
 import '../styles/ItemDetailPage.css';
+import {
+  getDetailMainImage,
+  getDetailThumbImage,
+  getRelatedItemImage
+} from '../utils/cloudinaryImage';
 
 /* ─────────────────────────────────────────
    Helper: star renderer
@@ -20,12 +25,19 @@ const renderStars = (rating) =>
    Helper: related product card
    ───────────────────────────────────────── */
 function ProdCard({ item }) {
+  const imageUrl = item.mainImage || 'https://via.placeholder.com/300x190';
+  const imageSources = getRelatedItemImage(imageUrl);
+
   return (
     <div className="idp-prod-card">
       <div className="idp-prod-img-wrap">
         <img
-          src={item.mainImage || 'https://via.placeholder.com/300x190'}
+          src={imageSources.src}
+          srcSet={imageSources.srcSet}
+          sizes={imageSources.sizes}
           alt={item.name}
+          loading="lazy"
+          decoding="async"
         />
         <div className="idp-prod-overlay">
           <Link to={`/items/${item._id}`} className="idp-prod-overlay-btn" title="Xem chi tiết">
@@ -141,12 +153,6 @@ function ItemDetailPage() {
   const [ownerTotalReviews, setOwnerTotalReviews] = useState(0);
   const [reviewLoading, setReviewLoading]       = useState(false);
   const [reviewError, setReviewError]           = useState(null);
-  const [eligibleRental, setEligibleRental]     = useState(null);
-  const [reviewRating, setReviewRating]         = useState(5);
-  const [reviewComment, setReviewComment]       = useState('');
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewSubmitMessage, setReviewSubmitMessage] = useState('');
-  const [reviewSubmitError, setReviewSubmitError] = useState('');
 
   /* ── state: tabs ── */
   const [activeTab, setActiveTab] = useState('desc');
@@ -255,25 +261,6 @@ function ItemDetailPage() {
   }, [item?.owner?._id]);
 
   /* ─────────────────────────────────────
-     Fetch eligible rental
-     ───────────────────────────────────── */
-  useEffect(() => {
-    if (!isLoggedIn || !item?._id) { setEligibleRental(null); return; }
-
-    const fetchEligible = async () => {
-      try {
-        const res = await apiService.getMyRentals();
-        const rentals = [...(res.data?.asRenter || []), ...(res.data?.asOwner || [])];
-        setEligibleRental(
-          rentals.find((r) => String(r.item?._id) === String(item._id) && r.status === 'completed') || null
-        );
-      } catch { setEligibleRental(null); }
-    };
-
-    fetchEligible();
-  }, [isLoggedIn, item?._id]);
-
-  /* ─────────────────────────────────────
      Hash → review tab
      ───────────────────────────────────── */
   useEffect(() => {
@@ -320,38 +307,6 @@ function ItemDetailPage() {
     }
   };
 
-  const handleReviewSubmit = async (e) => {
-    e.preventDefault();
-    if (!eligibleRental?._id) {
-      setReviewSubmitError('Bạn chỉ có thể đánh giá sau khi có đơn thuê hoàn thành.');
-      return;
-    }
-    try {
-      setReviewSubmitting(true);
-      setReviewSubmitError('');
-      setReviewSubmitMessage('');
-      await apiService.createReview({
-        rentalId: eligibleRental._id,
-        rating: Number(reviewRating),
-        comment: reviewComment.trim(),
-      });
-      setReviewSubmitMessage('Đánh giá đã được gửi thành công.');
-      setReviewComment('');
-      setReviewRating(5);
-      // Refetch reviews
-      if (item?.owner?._id) {
-        const res = await apiService.getUserReviews(item.owner._id, 1, 5);
-        setOwnerTrustScore(res.data.trustScore);
-        setOwnerTotalReviews(res.data.totalReviews || 0);
-        setOwnerReviews(res.data.reviews || []);
-      }
-    } catch (err) {
-      setReviewSubmitError(err.response?.data?.message || 'Không thể gửi đánh giá.');
-    } finally {
-      setReviewSubmitting(false);
-    }
-  };
-
   const excludeDates =
     item?.bookedDates?.map((r) => ({ start: new Date(r.startDate), end: new Date(r.endDate) })) || [];
 
@@ -371,6 +326,7 @@ function ItemDetailPage() {
 
   const isOwner = isLoggedIn && user?._id === item.owner._id;
   const allImages = item.images?.length ? item.images : [item.mainImage || 'https://via.placeholder.com/600'];
+  const activeImageSources = getDetailMainImage(allImages[activeImg]);
   const depositPercentage = Number(item.depositPercentage ?? 100);
   const baseValue = Number(item.baseValue ?? 0);
   const depositAmount = (baseValue * depositPercentage) / 100;
@@ -401,19 +357,32 @@ function ItemDetailPage() {
           <div className="col-lg-6">
             <div className="sticky-top" style={{ top: '100px' }}>
               <div className="idp-main-img">
-                <img src={allImages[activeImg]} alt={item.name} />
+                <img
+                  src={activeImageSources.src}
+                  srcSet={activeImageSources.srcSet}
+                  sizes={activeImageSources.sizes}
+                  alt={item.name}
+                  decoding="async"
+                />
               </div>
               {allImages.length > 1 && (
                 <div className="idp-thumb-row">
-                  {allImages.slice(0, 5).map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`thumb-${idx}`}
-                      className={`idp-thumb${activeImg === idx ? ' active' : ''}`}
-                      onClick={() => setActiveImg(idx)}
-                    />
-                  ))}
+                  {allImages.slice(0, 5).map((img, idx) => {
+                    const thumbSources = getDetailThumbImage(img);
+                    return (
+                      <img
+                        key={idx}
+                        src={thumbSources.src}
+                        srcSet={thumbSources.srcSet}
+                        sizes={thumbSources.sizes}
+                        alt={`thumb-${idx}`}
+                        className={`idp-thumb${activeImg === idx ? ' active' : ''}`}
+                        loading="lazy"
+                        decoding="async"
+                        onClick={() => setActiveImg(idx)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -648,7 +617,7 @@ function ItemDetailPage() {
                       <div className="bg-white border rounded-4 p-4 shadow-sm">
                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
                           <h5 className="fw-bold mb-0">Đánh giá từ người thuê</h5>
-                          <span className="text-muted small">Đánh giá công khai từ chủ vật dụng.</span>
+                          <span className="text-muted small">Đánh giá công khai về chủ vật dụng.</span>
                         </div>
 
                         {reviewLoading && (
@@ -688,65 +657,18 @@ function ItemDetailPage() {
                           </div>
                         )}
 
-                        {/* Write review */}
+                        {/* Review entry point */}
                         <div className="mt-4 pt-4 border-top">
-                          <p className="idp-review-form-title">Viết đánh giá của bạn</p>
+                          <p className="idp-review-form-title">Bạn muốn đánh giá sau khi thuê?</p>
                           {!isLoggedIn && (
                             <div className="alert alert-light border">
-                              <Link to="/login">Đăng nhập</Link> để gửi đánh giá.
+                              <Link to="/login">Đăng nhập</Link> để xem đơn thuê và gửi đánh giá cho đúng đối phương.
                             </div>
                           )}
-                          {isLoggedIn && !eligibleRental && (
+                          {isLoggedIn && (
                             <div className="alert alert-light border">
-                              Chỉ có thể đánh giá khi bạn đã có đơn thuê hoàn thành.
+                              Đánh giá được gửi từ <Link to="/my-rentals">Đơn thuê của tôi</Link> sau khi đơn hoàn thành, để cả chủ sở hữu và người thuê có thể đánh giá lẫn nhau theo đúng đơn.
                             </div>
-                          )}
-                          {isLoggedIn && eligibleRental && (
-                            <form onSubmit={handleReviewSubmit}>
-                              <div className="mb-3">
-                                <label className="form-label fw-bold small text-uppercase text-muted mb-2 d-block">
-                                  Đánh giá
-                                </label>
-                                <div className="d-flex gap-1">
-                                  {[1, 2, 3, 4, 5].map((s) => (
-                                    <button
-                                      key={s}
-                                      type="button"
-                                      className="idp-star-btn"
-                                      onClick={() => setReviewRating(s)}
-                                      aria-label={`${s} sao`}
-                                    >
-                                      <i className={`fa fa-star fa-lg ${s <= reviewRating ? 'text-warning' : 'text-muted'}`} />
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="mb-3">
-                                <label className="form-label fw-bold small text-uppercase text-muted mb-2 d-block">
-                                  Nội dung
-                                </label>
-                                <textarea
-                                  className="form-control border-0 shadow-sm rounded-3 p-3"
-                                  rows="4"
-                                  placeholder="Chia sẻ trải nghiệm thuê của bạn..."
-                                  value={reviewComment}
-                                  onChange={(e) => setReviewComment(e.target.value)}
-                                />
-                              </div>
-                              {reviewSubmitError && (
-                                <div className="alert alert-danger py-2">{reviewSubmitError}</div>
-                              )}
-                              {reviewSubmitMessage && (
-                                <div className="alert alert-success py-2">{reviewSubmitMessage}</div>
-                              )}
-                              <button
-                                type="submit"
-                                className="btn btn-primary rounded-pill px-5 py-2"
-                                disabled={reviewSubmitting}
-                              >
-                                {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
-                              </button>
-                            </form>
                           )}
                         </div>
                       </div>

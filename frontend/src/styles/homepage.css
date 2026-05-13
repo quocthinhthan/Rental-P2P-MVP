@@ -39,6 +39,21 @@
     color: white;
 }
 
+.product .product-item .product-item-inner img,
+.products .products-mini .products-mini-item .products-mini-img img {
+    image-rendering: auto;
+    object-position: center;
+    backface-visibility: hidden;
+}
+
+.product .product-item:hover .product-item-inner img {
+    transform: scale(1.03);
+}
+
+.products .products-mini .products-mini-item:hover .products-mini-img img {
+    transform: scale(1.04);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .homepage-carousel-content {

@@ -25,6 +25,163 @@ function StatusBadge({ status }) {
   return <span className={`status-badge ${cfg.cls}`}>{cfg.label}</span>;
 }
 
+function ReviewModal({ isOpen, rental, type, onClose, onSubmitted }) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setRating(5);
+      setComment('');
+      setError('');
+    }
+  }, [isOpen, rental?._id]);
+
+  if (!isOpen || !rental) return null;
+
+  const isOwner = type === 'asOwner';
+  const targetRole = isOwner ? 'người thuê' : 'chủ sở hữu';
+  const targetName = rental.counterparty?.fullName || targetRole;
+  const myReview = rental.review?.myReview;
+  const hasMyReview = Boolean(myReview);
+  const reviewCompleted = rental.review?.status === 'completed' || rental.review?.isPublic;
+  const reviewStatusText = reviewCompleted
+    ? 'Cả hai bên đã đánh giá. Đánh giá của bạn đã được công khai trong hồ sơ uy tín.'
+    : 'Bạn đã gửi đánh giá. Hệ thống đang chờ đối phương đánh giá lại trước khi công khai.';
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      setSubmitting(true);
+      setError('');
+      const response = await apiService.createReview({
+        rentalId: rental._id,
+        rating: Number(rating),
+        comment: comment.trim(),
+      });
+      await onSubmitted?.();
+      Swal.fire('Đã gửi đánh giá', response.data?.message || 'Cảm ơn bạn đã đánh giá đối phương.', 'success');
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="rental-modal-backdrop" role="dialog" aria-modal="true">
+      <div className="rental-modal review-modal">
+        <div className="rental-modal-header">
+          <div>
+            <p className="rental-modal-eyebrow">Đánh giá sau thuê</p>
+            <h3>Đánh giá {targetRole}</h3>
+          </div>
+          <button className="modal-close-btn" type="button" onClick={onClose} disabled={submitting} aria-label="Đóng">
+            ×
+          </button>
+        </div>
+
+        <div className="review-modal-summary">
+          <img
+            src={rental.item?.mainImage || 'https://via.placeholder.com/96'}
+            alt={rental.item?.name}
+            className="review-modal-item-img"
+          />
+          <div>
+            <p className="review-modal-item-name">{rental.item?.name || 'Vật phẩm đã thuê'}</p>
+            <p className="review-modal-counterparty">
+              {hasMyReview ? 'Bạn đã đánh giá' : 'Bạn đang đánh giá'} <strong>{targetName}</strong>
+            </p>
+            <p className="review-modal-date">
+              {new Date(rental.startDate).toLocaleDateString('vi-VN')} - {new Date(rental.endDate).toLocaleDateString('vi-VN')}
+            </p>
+          </div>
+        </div>
+
+        {hasMyReview ? (
+          <>
+            <div className={`review-status-note ${reviewCompleted ? 'is-complete' : 'is-waiting'}`}>
+              {reviewStatusText}
+            </div>
+            <div className="review-readonly-box">
+              <div className="review-readonly-stars">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <i
+                    key={star}
+                    className={`fa fa-star ${star <= Number(myReview.rating) ? 'active' : ''}`}
+                  />
+                ))}
+              </div>
+              <p className="review-readonly-comment">
+                {myReview.comment || <em>Không có nội dung đánh giá.</em>}
+              </p>
+              <p className="review-readonly-date">
+                Đã gửi ngày {new Date(myReview.createdAt).toLocaleDateString('vi-VN')}
+              </p>
+            </div>
+            <div className="rental-modal-actions">
+              <button className="btn-xs btn-primary-xs" type="button" onClick={onClose}>
+                Đã hiểu
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="review-blind-note">
+              Đánh giá sẽ được giữ riêng tư và chỉ công khai khi cả hai bên đã đánh giá nhau, hoặc khi hết thời hạn phản hồi theo hệ thống.
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="review-field">
+                <label>Chọn số sao</label>
+                <div className="review-star-row">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`review-star-btn${star <= rating ? ' active' : ''}`}
+                      onClick={() => setRating(star)}
+                      aria-label={`${star} sao`}
+                    >
+                      <i className="fa fa-star" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="review-field">
+                <label htmlFor="rental-review-comment">Nội dung đánh giá</label>
+                <textarea
+                  id="rental-review-comment"
+                  className="review-textarea"
+                  rows="4"
+                  placeholder={isOwner ? 'Ví dụ: Người thuê giữ đồ cẩn thận, trả đúng hẹn...' : 'Ví dụ: Chủ sở hữu hỗ trợ tốt, vật phẩm đúng mô tả...'}
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+              </div>
+
+              {error && <div className="review-error">{error}</div>}
+
+              <div className="rental-modal-actions">
+                <button className="btn-xs btn-ghost-xs" type="button" onClick={onClose} disabled={submitting}>
+                  Hủy
+                </button>
+                <button className="btn-xs btn-primary-xs" type="submit" disabled={submitting}>
+                  {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─────── RentalCard ─────── */
 function RentalCard({
   rental,
@@ -35,7 +192,7 @@ function RentalCard({
   onOpenReturn,
   onPayEscrow,
   onDispute,
-  navigate,
+  onOpenReview,
 }) {
   if (!rental.item) {
     return (
@@ -57,6 +214,8 @@ function RentalCard({
   const canPickup = rental.status === 'confirmed' && isFullySigned;
   const needsSignatureBeforePickup = rental.status === 'confirmed' && !isFullySigned;
   const canReturn = rental.status === 'in_progress';
+  const hasMyReview = Boolean(rental.review?.hasMyReview);
+  const reviewCompleted = rental.review?.status === 'completed' || rental.review?.isPublic;
 
   return (
     <div className="rental-card">
@@ -159,12 +318,19 @@ function RentalCard({
 
           {/* Đánh giá */}
           {rental.status === 'completed' && rental.item?._id && (
-            <button
-              className="btn-xs btn-outline-xs"
-              onClick={() => navigate(`/items/${rental.item._id}#nav-review`, { state: { openReviewTab: true } })}
-            >
-              ⭐ Đánh giá {reviewTargetLabel}
-            </button>
+            <>
+              <button
+                className="btn-xs btn-outline-xs"
+                onClick={() => onOpenReview(rental, type)}
+              >
+                ⭐ {hasMyReview ? 'Xem đánh giá' : `Đánh giá ${reviewTargetLabel}`}
+              </button>
+              {hasMyReview && (
+                <span className={`review-state-chip ${reviewCompleted ? 'is-complete' : 'is-waiting'}`}>
+                  {reviewCompleted ? 'Hai bên đã đánh giá' : 'Chờ đối phương đánh giá'}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -214,6 +380,7 @@ function MyRentalsPage() {
   const [activeTab, setActiveTab] = useState('asRenter');
   const [signatureRental, setSignatureRental] = useState(null);
   const [handoverState, setHandoverState] = useState({ type: null, rental: null });
+  const [reviewState, setReviewState] = useState({ type: null, rental: null });
 
   const enrichRentalsWithContracts = useCallback(async (list = []) => {
     return Promise.all(
@@ -417,7 +584,7 @@ function MyRentalsPage() {
                     onOpenReturn={(selectedRental) => setHandoverState({ type: 'return', rental: selectedRental })}
                     onPayEscrow={handlePayEscrow}
                     onDispute={handleDispute}
-                    navigate={navigate}
+                    onOpenReview={(selectedRental, selectedType) => setReviewState({ type: selectedType, rental: selectedRental })}
                   />
                 ))
               )}
@@ -445,7 +612,7 @@ function MyRentalsPage() {
                     onOpenReturn={(selectedRental) => setHandoverState({ type: 'return', rental: selectedRental })}
                     onPayEscrow={handlePayEscrow}
                     onDispute={handleDispute}
-                    navigate={navigate}
+                    onOpenReview={(selectedRental, selectedType) => setReviewState({ type: selectedType, rental: selectedRental })}
                   />
                 ))
               )}
@@ -492,6 +659,14 @@ function MyRentalsPage() {
         type={handoverState.type}
         onClose={() => setHandoverState({ type: null, rental: null })}
         onSuccess={fetchMyRentals}
+      />
+
+      <ReviewModal
+        isOpen={Boolean(reviewState.rental)}
+        rental={reviewState.rental}
+        type={reviewState.type}
+        onClose={() => setReviewState({ type: null, rental: null })}
+        onSubmitted={fetchMyRentals}
       />
     </div>
   );
