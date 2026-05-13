@@ -20,6 +20,8 @@ const UserSchema = new mongoose.Schema({
   },
   idCardNumber: { type: String, default: '' }, // Số CCCD
   idCardImages: [{ type: String }],
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
 }, { timestamps: true }); // timestamps thêm createdAt và updatedAt
 
 // Middleware để hash mật khẩu TRƯỚC KHI lưu

@@ -183,6 +183,46 @@ paths:
       responses:
         '200':
           description: Đã cập nhật thành công
+  /auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Yêu cầu khôi phục mật khẩu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Email đã được gửi
+  /auth/reset-password/{token}:
+    put:
+      tags:
+        - Auth
+      summary: Đặt lại mật khẩu mới
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Thành công
 
   # ===============================================================
   # General Purpose Endpoints (Actions)
@@ -259,6 +299,21 @@ paths:
             type: string
             format: date
           description: Ngày kết thúc cần thuê (YYYY-MM-DD)
+        - in: query
+          name: lat
+          schema:
+            type: number
+          description: Vĩ độ của người dùng (VD 10.8231)
+        - in: query
+          name: lng
+          schema:
+            type: number
+          description: Kinh độ của người dùng (VD 106.6297)
+        - in: query
+          name: radius
+          schema:
+            type: number
+          description: Bán kính tìm kiếm tính bằng KM (Mặc định 5km)
       responses:
         '200':
           description: Danh sách vật phẩm tìm được
@@ -978,7 +1033,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [name, pricePerDay]
+            required: [name, pricePerDay, baseValue]
             properties:
               name:
                 type: string
@@ -988,12 +1043,24 @@ components:
                 type: string
               pricePerDay:
                 type: integer
+              baseValue:
+                type: integer
+                description: Giá trị gốc của tài sản (VNĐ)
+              depositPercentage:
+                type: integer
+                description: Phần trăm đặt cọc (VD: 100 là 100%)
               address:
                 type: string
               images:
                 type: array
                 items:
                   type: string
+              lat:
+                type: number
+                description: Vĩ độ nơi để đồ vật
+              lng:
+                type: number
+                description: Kinh độ nơi để đồ vật
     CreateRentalInput:
       required: true
       content:

@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 // Bổ sung updateProfile
-const { registerUser, loginUser, logoutUser, getMe, verifyEKYC, updateProfile } = require('../controllers/auth.controller');
+const { registerUser, loginUser, logoutUser, getMe, verifyEKYC, updateProfile, forgotPassword, resetPassword } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
 router.post('/register', registerUser);
@@ -14,5 +14,8 @@ router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 
 router.post('/verify-ekyc', protect, verifyEKYC);
+
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:token', resetPassword);
 
 module.exports = router;
