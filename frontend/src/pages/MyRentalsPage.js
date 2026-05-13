@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/api';
 import Swal from 'sweetalert2';
+import SignatureModal from '../components/Rentals/SignatureModal';
+import HandoverModal from '../components/Rentals/HandoverModal';
 import '../styles/MyRentalsPage.css';
 
 /* ─────── helpers ─────── */
@@ -24,7 +26,17 @@ function StatusBadge({ status }) {
 }
 
 /* ─────── RentalCard ─────── */
-function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, onDispute, navigate }) {
+function RentalCard({
+  rental,
+  type,
+  onOwnerAction,
+  onOpenSignature,
+  onOpenPickup,
+  onOpenReturn,
+  onPayEscrow,
+  onDispute,
+  navigate,
+}) {
   if (!rental.item) {
     return (
       <div className="rental-card rental-card-deleted">
@@ -36,6 +48,15 @@ function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, onDi
 
   const isOwner = type === 'asOwner';
   const reviewTargetLabel = isOwner ? 'người thuê' : 'chủ sở hữu';
+  const isFullySigned = Boolean(rental.isFullySigned || rental.contract?.isFullySigned);
+  const hasCurrentUserSigned = isOwner
+    ? Boolean(rental.contract?.ownerSignedAt)
+    : Boolean(rental.contract?.renterSignedAt);
+  const canSignContract = rental.status === 'confirmed' && !isFullySigned && !hasCurrentUserSigned;
+  const isWaitingForOtherSignature = rental.status === 'confirmed' && !isFullySigned && hasCurrentUserSigned;
+  const canPickup = rental.status === 'confirmed' && isFullySigned;
+  const needsSignatureBeforePickup = rental.status === 'confirmed' && !isFullySigned;
+  const canReturn = rental.status === 'in_progress';
 
   return (
     <div className="rental-card">
@@ -86,7 +107,7 @@ function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, onDi
           {isOwner && rental.status === 'pending_confirmation' && (
             <>
               <button className="btn-xs btn-success-xs" onClick={() => onOwnerAction(rental._id, 'confirm')}>
-                ✔ Chấp nhận
+                ✔ Chấp nhận cho thuê
               </button>
               <button className="btn-xs btn-danger-xs" onClick={() => onOwnerAction(rental._id, 'reject')}>
                 ✕ Từ chối
@@ -94,10 +115,38 @@ function RentalCard({ rental, type, onOwnerAction, onComplete, onPayEscrow, onDi
             </>
           )}
 
-          {/* Đánh dấu hoàn thành — cả hai bên đều có thể */}
-          {(rental.status === 'confirmed' || rental.status === 'in_progress') && (
-            <button className="btn-xs btn-info-xs" onClick={() => onComplete(rental._id)}>
-              ✅ Hoàn thành
+          {canSignContract && (
+            <button className="btn-xs btn-primary-xs" onClick={() => onOpenSignature(rental)}>
+              ✍ Ký hợp đồng
+            </button>
+          )}
+
+          {isFullySigned && rental.status === 'confirmed' && (
+            <span className="contract-state contract-state-ready">Hợp đồng đã ký đủ</span>
+          )}
+
+          {isWaitingForOtherSignature && (
+            <span className="contract-state contract-state-waiting">Bạn đã ký, đang chờ bên còn lại</span>
+          )}
+
+          {needsSignatureBeforePickup && (
+            <button
+              className="btn-xs btn-info-xs"
+              onClick={() => Swal.fire('Chưa thể giao đồ', 'Phải ký hợp đồng trước khi giao đồ.', 'warning')}
+            >
+              📦 Giao đồ
+            </button>
+          )}
+
+          {canPickup && (
+            <button className="btn-xs btn-info-xs" onClick={() => onOpenPickup(rental)}>
+              📦 Xác nhận giao đồ
+            </button>
+          )}
+
+          {canReturn && (
+            <button className="btn-xs btn-info-xs" onClick={() => onOpenReturn(rental)}>
+              ✅ Hoàn tất đơn / Trả đồ
             </button>
           )}
 
@@ -163,21 +212,57 @@ function MyRentalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('asRenter');
+  const [signatureRental, setSignatureRental] = useState(null);
+  const [handoverState, setHandoverState] = useState({ type: null, rental: null });
 
-  const fetchMyRentals = async () => {
+  const enrichRentalsWithContracts = useCallback(async (list = []) => {
+    return Promise.all(
+      list.map(async (rental) => {
+        if (!['confirmed', 'in_progress'].includes(rental.status)) {
+          return rental;
+        }
+
+        try {
+          const contractResponse = await apiService.getRentalContract(rental._id);
+          const contract = contractResponse.data;
+          return {
+            ...rental,
+            contract,
+            isFullySigned: Boolean(contract?.isFullySigned),
+          };
+        } catch (err) {
+          return {
+            ...rental,
+            isFullySigned: false,
+          };
+        }
+      })
+    );
+  }, []);
+
+  const fetchMyRentals = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getMyRentals();
-      setRentals(response.data);
+      const [asRenter, asOwner] = await Promise.all([
+        enrichRentalsWithContracts(response.data.asRenter || []),
+        enrichRentalsWithContracts(response.data.asOwner || []),
+      ]);
+
+      setRentals({
+        asRenter,
+        asOwner,
+        myItems: response.data.myItems || [],
+      });
+      setError(null);
     } catch (err) {
       setError('Không thể tải dữ liệu. Vui lòng thử lại.');
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [enrichRentalsWithContracts]);
 
-  useEffect(() => { fetchMyRentals(); }, []);
-  useEffect(() => { fetchMyRentals(); }, [location.key]); // eslint-disable-line
+  useEffect(() => { fetchMyRentals(); }, [fetchMyRentals, location.key]);
 
   const handleOwnerAction = async (rentalId, action) => {
     try {
@@ -187,28 +272,6 @@ function MyRentalsPage() {
       Swal.fire('Thành công!', action === 'confirm' ? 'Đã chấp nhận đơn thuê.' : 'Đã từ chối đơn thuê.', 'success');
     } catch (err) {
       Swal.fire('Lỗi!', 'Thao tác thất bại.', 'error');
-      console.error(err);
-    }
-  };
-
-  const handleCompleteRental = async (rentalId) => {
-    const result = await Swal.fire({
-      title: 'Xác nhận?',
-      text: 'Xác nhận đánh dấu đơn thuê này là hoàn thành?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Đồng ý',
-      cancelButtonText: 'Hủy'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      await apiService.completeRental(rentalId);
-      fetchMyRentals();
-      Swal.fire('Hoàn thành!', 'Đơn thuê đã kết thúc tốt đẹp.', 'success');
-    } catch (err) {
-      Swal.fire('Lỗi!', 'Không thể hoàn thành đơn thuê.', 'error');
       console.error(err);
     }
   };
@@ -349,7 +412,9 @@ function MyRentalsPage() {
                     rental={rental}
                     type="asRenter"
                     onOwnerAction={handleOwnerAction}
-                    onComplete={handleCompleteRental}
+                    onOpenSignature={setSignatureRental}
+                    onOpenPickup={(selectedRental) => setHandoverState({ type: 'pickup', rental: selectedRental })}
+                    onOpenReturn={(selectedRental) => setHandoverState({ type: 'return', rental: selectedRental })}
                     onPayEscrow={handlePayEscrow}
                     onDispute={handleDispute}
                     navigate={navigate}
@@ -375,8 +440,11 @@ function MyRentalsPage() {
                     rental={rental}
                     type="asOwner"
                     onOwnerAction={handleOwnerAction}
-                    onComplete={handleCompleteRental}
+                    onOpenSignature={setSignatureRental}
+                    onOpenPickup={(selectedRental) => setHandoverState({ type: 'pickup', rental: selectedRental })}
+                    onOpenReturn={(selectedRental) => setHandoverState({ type: 'return', rental: selectedRental })}
                     onPayEscrow={handlePayEscrow}
+                    onDispute={handleDispute}
                     navigate={navigate}
                   />
                 ))
@@ -410,6 +478,21 @@ function MyRentalsPage() {
 
         </div>
       </div>
+
+      <SignatureModal
+        isOpen={Boolean(signatureRental)}
+        rental={signatureRental}
+        onClose={() => setSignatureRental(null)}
+        onSigned={fetchMyRentals}
+      />
+
+      <HandoverModal
+        isOpen={Boolean(handoverState.rental)}
+        rental={handoverState.rental}
+        type={handoverState.type}
+        onClose={() => setHandoverState({ type: null, rental: null })}
+        onSuccess={fetchMyRentals}
+      />
     </div>
   );
 }

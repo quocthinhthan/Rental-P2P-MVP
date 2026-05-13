@@ -2,6 +2,7 @@
 const Rental = require('../models/Rental.model');
 const Item = require('../models/Item.model');
 const Contract = require('../models/Contract.model');
+const User = require('../models/User.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
@@ -287,6 +288,10 @@ exports.confirmRental = async (req, res) => {
     const owner = await User.findById(rental.ownerId);
     const renter = await User.findById(rental.renterId);
 
+    if (!owner || !renter) {
+      return res.status(404).json({ message: 'Không tìm thấy thông tin chủ sở hữu hoặc người thuê' });
+    }
+
     if (owner.ekycStatus !== 'verified' || renter.ekycStatus !== 'verified') {
        return res.status(400).json({ message: 'Cả hai bên phải hoàn tất eKYC để tự động lập hợp đồng!' });
     }
@@ -297,7 +302,7 @@ exports.confirmRental = async (req, res) => {
       renterInfo: { userId: renter._id, fullName: renter.fullName, idCardNumber: renter.idCardNumber },
       itemInfo: { itemId: item._id, name: item.name, pricePerDay: item.pricePerDay },
       rentalPeriod: { startDate: rental.startDate, endDate: rental.endDate },
-      totalPrice: rental.totalPrice
+      totalPrice: rental.totalAmount
     });
 
     // Dùng Enum cập nhật trạng thái
