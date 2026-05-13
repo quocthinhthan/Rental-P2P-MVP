@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { startGlobalLoading, stopGlobalLoading } from '../contexts/LoadingContext';
 
+const TOKEN_KEY = 'token';
+const getStoredToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost/api',
   headers: {
@@ -12,7 +15,7 @@ api.interceptors.request.use(
   (config) => {
     startGlobalLoading();
 
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -42,6 +45,10 @@ export const login = (email, password) => api.post('/auth/login', { email, passw
 
 export const register = (fullName, email, password, phoneNumber) =>
   api.post('/auth/register', { fullName, email, password, phoneNumber });
+
+export const forgotPassword = (email) => api.post('/auth/forgot-password', { email });
+
+export const resetPassword = (token, password) => api.put(`/auth/reset-password/${token}`, { password });
 
 export const updateProfile = (payload) => api.put('/auth/profile', payload);
 
@@ -144,6 +151,8 @@ export const deleteImage = (publicId) => api.post('/upload/delete', { publicId }
 const apiService = {
   login,
   register,
+  forgotPassword,
+  resetPassword,
   updateProfile,
   verifyEKYC,
   uploadImage,
