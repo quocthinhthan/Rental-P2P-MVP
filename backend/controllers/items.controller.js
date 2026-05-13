@@ -2,6 +2,17 @@
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
 
+// Hàm Helper Validate Tọa Độ
+const validateCoordinates = (lat, lng) => {
+  const parseLat = parseFloat(lat);
+  const parseLng = parseFloat(lng);
+  
+  if (isNaN(parseLat) || parseLat < -90 || parseLat > 90) return false;
+  if (isNaN(parseLng) || parseLng < -180 || parseLng > 180) return false;
+  
+  return { parseLat, parseLng };
+};
+
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
@@ -9,32 +20,15 @@ const searchItems = async (req, res) => {
 
     let query = { status: { $ne: 'delisted' } };
 
-    // Lọc theo Chủ sở hữu
-    if (ownerId) {
-      query.ownerId = ownerId;
-    }
+    // 1. CÁC BỘ LỌC CƠ BẢN
+    if (ownerId) query.ownerId = ownerId;
+    if (exclude) query._id = { ...query._id, $ne: exclude };
+    
+    if (search) query.name = { $regex: createViFuzzyRegex(search), $options: 'i' };
+    if (category) query.category = { $regex: createViFuzzyRegex(category), $options: 'i' };
+    if (address) query.address = { $regex: createViFuzzyRegex(address), $options: 'i' };
 
-    // Loại trừ vật phẩm cụ thể (Ví dụ: loại trừ chính nó khi lấy "Sản phẩm liên quan")
-    if (exclude) {
-      query._id = { ...query._id, $ne: exclude };
-    }
-
-    // Lọc theo Tên (Tìm gần đúng, không dấu, không hoa thường)
-    if (search) {
-      query.name = { $regex: createViFuzzyRegex(search), $options: 'i' };
-    }
-
-    // Lọc theo Danh mục (Tìm gần đúng, không dấu, không hoa thường)
-    if (category) {
-      query.category = { $regex: createViFuzzyRegex(category), $options: 'i' };
-    }
-
-    // Lọc theo Địa chỉ (Tìm gần đúng, không dấu, không hoa thường)
-    if (address) {
-      query.address = { $regex: createViFuzzyRegex(address), $options: 'i' };
-    }
-
-    // LỌC THỜI GIAN TRỐNG
+    // 2. LỌC THỜI GIAN TRỐNG
     if (startDate && endDate) {
       const reqStart = new Date(startDate);
       const reqEnd = new Date(endDate);
@@ -43,7 +37,6 @@ const searchItems = async (req, res) => {
         return res.status(400).json({ message: 'Ngày kết thúc phải sau ngày bắt đầu' });
       }
 
-      // Tìm những món đồ ĐANG KẸT LỊCH
       const overlappingRentals = await Rental.find({
         status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
         startDate: { $lte: reqEnd },
@@ -51,27 +44,50 @@ const searchItems = async (req, res) => {
       }).select('itemId');
 
       const unavailableItemIds = overlappingRentals.map(rental => rental.itemId);
-
-      // Loại những món đồ đó ra
       query._id = { ...query._id, $nin: unavailableItemIds };
     }
 
+    let items = [];
+
+    // 3. TÌM KIẾM THEO VỊ TRÍ ($geoNear) NẾU CÓ TỌA ĐỘ
     if (lat && lng) {
-      const radiusInMeters = (parseFloat(radius) || 5) * 1000; // Mặc định tìm bán kính 5km
-      query.location = {
-        $near: {
-          $geometry: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
-          $maxDistance: radiusInMeters
-        }
-      };
+      const coords = validateCoordinates(lat, lng);
+      if (!coords) {
+        return res.status(400).json({ message: 'Tọa độ (lat/lng) không hợp lệ' });
+      }
+
+      // Giới hạn bán kính tìm kiếm tối đa (ví dụ: 50km) để tránh query quá nặng
+      let reqRadius = parseFloat(radius) || 5;
+      if (reqRadius > 50) reqRadius = 50; 
+      const radiusInMeters = reqRadius * 1000;
+
+      items = await Item.aggregate([
+        {
+          // LƯU Ý: $geoNear BẮT BUỘC phải là stage đầu tiên trong pipeline
+          $geoNear: {
+            near: { type: "Point", coordinates: [coords.parseLng, coords.parseLat] },
+            distanceField: "distance",
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: query // Đẩy toàn bộ filter (name, status, exclude...) vào đây
+          }
+        },
+        {
+          $project: {
+            _id: 1, name: 1, category: 1, address: 1, pricePerDay: 1, status: 1, images: 1, distance: 1
+          }
+        },
+        { $limit: 20 }
+      ]);
+    } else {
+      // 4. FALLBACK: NẾU KHÔNG CÓ TỌA ĐỘ, DÙNG FIND BÌNH THƯỜNG
+      items = await Item.find(query)
+        .select('_id name category address pricePerDay images status')
+        .sort({ createdAt: -1 })
+        .limit(20);
     }
 
-    // Chạy Query
-    const items = await Item.find(query)
-      .select('_id name category address pricePerDay images status')
-      .sort({ createdAt: -1 })
-      .limit(20);
-
+    // 5. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
     const itemSummaries = items.map(item => ({
       _id: item._id,
       name: item.name,
@@ -79,7 +95,9 @@ const searchItems = async (req, res) => {
       address: item.address,
       pricePerDay: item.pricePerDay,
       status: item.status,
-      mainImage: (item.images && item.images.length > 0) ? item.images[0] : ''
+      mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
+      // Frontend chỉ nhận được khoảng cách (km), không lộ tọa độ thật của item
+      distance: item.distance ? parseFloat((item.distance / 1000).toFixed(1)) : null 
     }));
 
     res.status(200).json(itemSummaries);
@@ -91,39 +109,21 @@ const searchItems = async (req, res) => {
 
 // POST /api/items
 const createItem = async (req, res) => {
-  const {
-    name,
-    description,
-    category,
-    pricePerDay,
-    address,
-    images,
-    baseValue,
-    depositPercentage,
-    lat, 
-    lng
-  } = req.body;
+  const { name, description, category, pricePerDay, address, images, baseValue, depositPercentage, lat, lng } = req.body;
   try {
-
-    // Xử lý tạo tọa độ Location (GeoJSON) nếu người dùng có gửi lat, lng
     let location = undefined;
     if (lat !== undefined && lng !== undefined) {
+      const coords = validateCoordinates(lat, lng);
+      if (!coords) return res.status(400).json({ message: 'Tọa độ không hợp lệ' });
+      
       location = {
         type: 'Point',
-        coordinates: [parseFloat(lng), parseFloat(lat)] // Lưu ý: MongoDB bắt buộc Kinh độ (lng) viết trước, Vĩ độ (lat) viết sau
+        coordinates: [coords.parseLng, coords.parseLat]
       };
     }
 
     const item = new Item({
-      name,
-      description,
-      category,
-      pricePerDay,
-      address,
-      images,
-      baseValue,
-      depositPercentage,
-      location,
+      name, description, category, pricePerDay, address, images, baseValue, depositPercentage, location,
       ownerId: req.user.id
     });
     const createdItem = await item.save();
@@ -150,24 +150,12 @@ const checkOwner = async (req, res, next) => {
 
 // PUT /api/items/:id
 const updateItem = async (req, res) => {
-  const {
-    name,
-    description,
-    category,
-    pricePerDay,
-    address,
-    images,
-    status,
-    baseValue,
-    depositPercentage,
-    lat, 
-    lng
-  } = req.body;
+  const { name, description, category, pricePerDay, address, images, status, baseValue, depositPercentage, lat, lng } = req.body;
   const item = req.item; 
 
   item.name = name ?? item.name;
   item.description = description ?? item.description;
-  item.category = category ?? item.category; // Thêm update category
+  item.category = category ?? item.category;
   item.pricePerDay = pricePerDay ?? item.pricePerDay;
   item.baseValue = baseValue ?? item.baseValue;
   item.depositPercentage = depositPercentage ?? item.depositPercentage;
@@ -179,9 +167,12 @@ const updateItem = async (req, res) => {
   }
 
   if (lat !== undefined && lng !== undefined) {
+    const coords = validateCoordinates(lat, lng);
+    if (!coords) return res.status(400).json({ message: 'Tọa độ không hợp lệ' });
+
     item.location = {
       type: 'Point',
-      coordinates: [parseFloat(lng), parseFloat(lat)]
+      coordinates: [coords.parseLng, coords.parseLat]
     };
   }
 
