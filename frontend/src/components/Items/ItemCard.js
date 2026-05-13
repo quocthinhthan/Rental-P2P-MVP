@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getItemStatusI18nKey, ItemStatus } from '../../constants/enums';
+import { getItemCardImage } from '../../utils/cloudinaryImage';
 
 function ItemCard({ item }) {
   const { t } = useTranslation();
   const imageUrl = item.mainImage || 'https://via.placeholder.com/300x300.png?text=No+Image';
+  const imageSources = getItemCardImage(imageUrl);
   const statusKey = getItemStatusI18nKey(item.status);
   const isAvailable = item.status === ItemStatus.AVAILABLE;
 
@@ -18,10 +20,14 @@ function ItemCard({ item }) {
         <div className="product-item-inner d-flex flex-column h-100">
           <div className="position-relative">
             <img
-              src={imageUrl}
+              src={imageSources.src}
+              srcSet={imageSources.srcSet}
+              sizes={imageSources.sizes}
               alt={item.name || t('common.placeholderImage')}
               className="img-fluid w-100"
-              style={{ height: '230px', objectFit: 'cover' }}
+              loading="lazy"
+              decoding="async"
+              style={{ height: '230px', objectFit: 'cover', backfaceVisibility: 'hidden' }}
             />
 
             <span className={`badge position-absolute top-0 start-0 m-2 ${isAvailable ? 'bg-success' : 'bg-secondary'}`}>
@@ -81,7 +87,7 @@ function ItemCard({ item }) {
             box-shadow: 0 6px 15px rgba(0,0,0,0.15);
           }
           .product-item:hover img {
-            filter: brightness(0.9);
+            filter: none;
           }
           .product-item:hover a.position-absolute {
             opacity: 1 !important;

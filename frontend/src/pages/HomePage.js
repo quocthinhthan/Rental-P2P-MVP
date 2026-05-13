@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ItemList from '../components/Items/ItemList';
 import apiService from '../services/api';
 import '../styles/homepage.css';
+import { getMiniItemImage } from '../utils/cloudinaryImage';
 
 function HomePage() {
   const [searchInput, setSearchInput] = useState('');
@@ -461,21 +462,28 @@ function HomePage() {
                 </div>
               ))
             ) : (
-              bestsellers.map((item, idx) => (
-                <div key={item._id} className="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay={`${0.1 + idx * 0.2}s`}>
-                  <div className="products-mini-item border rounded">
-                    <div className="row g-0">
-                      <div className="col-5">
-                        <div className="products-mini-img border-end h-100 position-relative">
-                          <img
-                            src={item.mainImage || '/img/product-3.png'}
-                            className="img-fluid w-100 h-100"
-                            style={{ objectFit: 'cover' }}
-                            alt={item.name}
-                          />
-                          <div className="products-mini-icon rounded-circle bg-primary">
-                            <Link to={`/items/${item._id}`}><i className="fa fa-eye fa-1x text-white" /></Link>
-                          </div>
+              bestsellers.map((item, idx) => {
+                const imageSources = getMiniItemImage(item.mainImage || '/img/product-3.png');
+
+                return (
+                  <div key={item._id} className="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay={`${0.1 + idx * 0.2}s`}>
+                    <div className="products-mini-item border rounded">
+                      <div className="row g-0">
+                        <div className="col-5">
+                          <div className="products-mini-img border-end h-100 position-relative">
+                            <img
+                              src={imageSources.src}
+                              srcSet={imageSources.srcSet}
+                              sizes={imageSources.sizes}
+                              className="img-fluid w-100 h-100"
+                              style={{ objectFit: 'cover', backfaceVisibility: 'hidden' }}
+                              alt={item.name}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            <div className="products-mini-icon rounded-circle bg-primary">
+                              <Link to={`/items/${item._id}`}><i className="fa fa-eye fa-1x text-white" /></Link>
+                            </div>
                         </div>
                       </div>
                       <div className="col-7">
@@ -503,7 +511,8 @@ function HomePage() {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -514,4 +523,4 @@ function HomePage() {
 }
 
 export default HomePage;
-
+

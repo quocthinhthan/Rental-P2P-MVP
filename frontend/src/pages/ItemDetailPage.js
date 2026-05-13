@@ -7,6 +7,11 @@ import Swal from 'sweetalert2';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../styles/CustomDetail.css';
 import '../styles/ItemDetailPage.css';
+import {
+  getDetailMainImage,
+  getDetailThumbImage,
+  getRelatedItemImage
+} from '../utils/cloudinaryImage';
 
 /* ─────────────────────────────────────────
    Helper: star renderer
@@ -20,12 +25,19 @@ const renderStars = (rating) =>
    Helper: related product card
    ───────────────────────────────────────── */
 function ProdCard({ item }) {
+  const imageUrl = item.mainImage || 'https://via.placeholder.com/300x190';
+  const imageSources = getRelatedItemImage(imageUrl);
+
   return (
     <div className="idp-prod-card">
       <div className="idp-prod-img-wrap">
         <img
-          src={item.mainImage || 'https://via.placeholder.com/300x190'}
+          src={imageSources.src}
+          srcSet={imageSources.srcSet}
+          sizes={imageSources.sizes}
           alt={item.name}
+          loading="lazy"
+          decoding="async"
         />
         <div className="idp-prod-overlay">
           <Link to={`/items/${item._id}`} className="idp-prod-overlay-btn" title="Xem chi tiết">
@@ -371,6 +383,7 @@ function ItemDetailPage() {
 
   const isOwner = isLoggedIn && user?._id === item.owner._id;
   const allImages = item.images?.length ? item.images : [item.mainImage || 'https://via.placeholder.com/600'];
+  const activeImageSources = getDetailMainImage(allImages[activeImg]);
   const depositPercentage = Number(item.depositPercentage ?? 100);
   const baseValue = Number(item.baseValue ?? 0);
   const depositAmount = (baseValue * depositPercentage) / 100;
@@ -401,19 +414,32 @@ function ItemDetailPage() {
           <div className="col-lg-6">
             <div className="sticky-top" style={{ top: '100px' }}>
               <div className="idp-main-img">
-                <img src={allImages[activeImg]} alt={item.name} />
+                <img
+                  src={activeImageSources.src}
+                  srcSet={activeImageSources.srcSet}
+                  sizes={activeImageSources.sizes}
+                  alt={item.name}
+                  decoding="async"
+                />
               </div>
               {allImages.length > 1 && (
                 <div className="idp-thumb-row">
-                  {allImages.slice(0, 5).map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`thumb-${idx}`}
-                      className={`idp-thumb${activeImg === idx ? ' active' : ''}`}
-                      onClick={() => setActiveImg(idx)}
-                    />
-                  ))}
+                  {allImages.slice(0, 5).map((img, idx) => {
+                    const thumbSources = getDetailThumbImage(img);
+                    return (
+                      <img
+                        key={idx}
+                        src={thumbSources.src}
+                        srcSet={thumbSources.srcSet}
+                        sizes={thumbSources.sizes}
+                        alt={`thumb-${idx}`}
+                        className={`idp-thumb${activeImg === idx ? ' active' : ''}`}
+                        loading="lazy"
+                        decoding="async"
+                        onClick={() => setActiveImg(idx)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
