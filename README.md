@@ -1,6 +1,6 @@
 # Nền tảng Cho thuê đồ dùng cá nhân P2P (P2P Rental Platform)
 
-Đây là dự án giữa kỳ cho môn học Lập trình Web với NodeJS (502070). Dự án xây dựng một nền tảng kinh tế chia sẻ (MVP) cho phép người dùng cho thuê và đi thuê các vật dụng cá nhân một cách an toàn và tiện lợi. Hệ thống được xây dựng trên kiến trúc microservices, có khả năng mở rộng và được điều phối bởi Docker Compose và Docker Swarm.
+Dự án xây dựng một nền tảng kinh tế chia sẻ (MVP) cho phép người dùng cho thuê và đi thuê các vật dụng cá nhân một cách an toàn và tiện lợi. Hệ thống được xây dựng trên kiến trúc microservices, có khả năng mở rộng và được điều phối bởi Docker Compose và Docker Swarm.
 
 ## ✨ Tính năng chính
 
