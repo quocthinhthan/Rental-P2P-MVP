@@ -16,7 +16,8 @@ const validateCoordinates = (lat, lng) => {
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
-    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius } = req.query;
+    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius, includeMapLocation } = req.query;
+    const shouldIncludeMapLocation = Boolean(lat && lng && (includeMapLocation === 'true' || includeMapLocation === '1'));
 
     let query = { status: { $ne: 'delisted' } };
 
@@ -61,6 +62,21 @@ const searchItems = async (req, res) => {
       if (reqRadius > 50) reqRadius = 50; 
       const radiusInMeters = reqRadius * 1000;
 
+      const projectFields = {
+        _id: 1,
+        name: 1,
+        category: 1,
+        address: 1,
+        pricePerDay: 1,
+        status: 1,
+        images: 1,
+        distance: 1
+      };
+
+      if (shouldIncludeMapLocation) {
+        projectFields.location = 1;
+      }
+
       items = await Item.aggregate([
         {
           // LƯU Ý: $geoNear BẮT BUỘC phải là stage đầu tiên trong pipeline
@@ -72,11 +88,7 @@ const searchItems = async (req, res) => {
             query: query // Đẩy toàn bộ filter (name, status, exclude...) vào đây
           }
         },
-        {
-          $project: {
-            _id: 1, name: 1, category: 1, address: 1, pricePerDay: 1, status: 1, images: 1, distance: 1
-          }
-        },
+        { $project: projectFields },
         { $limit: 20 }
       ]);
     } else {
@@ -88,17 +100,33 @@ const searchItems = async (req, res) => {
     }
 
     // 5. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
-    const itemSummaries = items.map(item => ({
-      _id: item._id,
-      name: item.name,
-      category: item.category,
-      address: item.address,
-      pricePerDay: item.pricePerDay,
-      status: item.status,
-      mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
-      // Frontend chỉ nhận được khoảng cách (km), không lộ tọa độ thật của item
-      distance: item.distance ? parseFloat((item.distance / 1000).toFixed(1)) : null 
-    }));
+    const itemSummaries = items.map(item => {
+      const summary = {
+        _id: item._id,
+        name: item.name,
+        category: item.category,
+        address: item.address,
+        pricePerDay: item.pricePerDay,
+        status: item.status,
+        mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
+        // Mặc định chỉ trả khoảng cách; map picker mới yêu cầu thêm mapLocation.
+        distance: item.distance !== undefined && item.distance !== null ? parseFloat((item.distance / 1000).toFixed(1)) : null 
+      };
+
+      if (
+        shouldIncludeMapLocation &&
+        item.location &&
+        Array.isArray(item.location.coordinates) &&
+        item.location.coordinates.length === 2
+      ) {
+        summary.mapLocation = {
+          lng: item.location.coordinates[0],
+          lat: item.location.coordinates[1]
+        };
+      }
+
+      return summary;
+    });
 
     res.status(200).json(itemSummaries);
   } catch (error) {

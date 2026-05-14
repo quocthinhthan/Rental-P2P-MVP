@@ -275,47 +275,70 @@ exports.confirmRental = async (req, res) => {
   
   // Dùng Enum
   if (rental.status !== RentalStatus.PENDING_CONFIRMATION) {
-    return res.status(400).json({ message: 'Rental cannot be confirmed' });
+    return res.status(400).json({ message: MESSAGES.RENTAL.CANNOT_CONFIRM });
   }
 
   try {
     const item = await Item.findById(rental.itemId);
+    let contract = await Contract.findOne({ rentalId: rental._id });
     // Dùng Enum
-    if (!item || item.status !== ItemStatus.AVAILABLE) {
-      return res.status(400).json({ message: 'Item is no longer available' });
+    if (!item || (!contract && item.status !== ItemStatus.AVAILABLE)) {
+      return res.status(400).json({ message: MESSAGES.ITEM.NO_LONGER_AVAILABLE });
     }
 
     const owner = await User.findById(rental.ownerId);
     const renter = await User.findById(rental.renterId);
 
     if (!owner || !renter) {
-      return res.status(404).json({ message: 'Không tìm thấy thông tin chủ sở hữu hoặc người thuê' });
+      return res.status(404).json({ message: MESSAGES.USER.NOT_FOUND });
     }
 
     if (owner.ekycStatus !== 'verified' || renter.ekycStatus !== 'verified') {
        return res.status(400).json({ message: 'Cả hai bên phải hoàn tất eKYC để tự động lập hợp đồng!' });
     }
 
-    const contract = await Contract.create({
-      rentalId: rental._id,
-      ownerInfo: { userId: owner._id, fullName: owner.fullName, idCardNumber: owner.idCardNumber },
-      renterInfo: { userId: renter._id, fullName: renter.fullName, idCardNumber: renter.idCardNumber },
-      itemInfo: { itemId: item._id, name: item.name, pricePerDay: item.pricePerDay },
-      rentalPeriod: { startDate: rental.startDate, endDate: rental.endDate },
-      totalPrice: rental.totalAmount
-    });
+    if (!contract) {
+      contract = await Contract.create({
+        rentalId: rental._id,
+        ownerInfo: { userId: owner._id, fullName: owner.fullName, idCardNumber: owner.idCardNumber },
+        renterInfo: { userId: renter._id, fullName: renter.fullName, idCardNumber: renter.idCardNumber },
+        itemInfo: { itemId: item._id, name: item.name, pricePerDay: item.pricePerDay },
+        rentalPeriod: { startDate: rental.startDate, endDate: rental.endDate },
+        totalPrice: rental.totalAmount
+      });
+    }
 
     // Dùng Enum cập nhật trạng thái
-    item.status = ItemStatus.RENTED;
-    rental.status = RentalStatus.CONFIRMED;
-    rental.contractId = contract._id; 
+    await Item.findByIdAndUpdate(item._id, { status: ItemStatus.RENTED });
+    const savedRental = await Rental.findByIdAndUpdate(
+      rental._id,
+      {
+        status: RentalStatus.CONFIRMED,
+        contractId: contract._id
+      },
+      { new: true }
+    );
 
-    await item.save();
-    const savedRental = await rental.save();
-
-    res.status(200).json({ message: 'Xác nhận đơn và tạo Hợp đồng thành công', rental: savedRental, contract });
+    res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    if (error.code === 11000) {
+      const existingContract = await Contract.findOne({ rentalId: rental._id });
+      if (existingContract) {
+        await Item.findByIdAndUpdate(rental.itemId, { status: ItemStatus.RENTED });
+        const savedRental = await Rental.findByIdAndUpdate(
+          rental._id,
+          {
+            status: RentalStatus.CONFIRMED,
+            contractId: existingContract._id
+          },
+          { new: true }
+        );
+
+        return res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract: existingContract });
+      }
+    }
+
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 
@@ -364,17 +387,16 @@ exports.completeRental = async (req, res) => {
         return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
       }
 
-      const item = await Item.findById(rental.itemId);
-      if (item) {
-          // Dùng Enum
-          item.status = ItemStatus.AVAILABLE;
-          await item.save();
-      }
+      await Item.findByIdAndUpdate(rental.itemId, { status: ItemStatus.AVAILABLE });
+      const savedRental = await Rental.findByIdAndUpdate(
+        rental._id,
+        {
+          returnImages,
+          status: RentalStatus.COMPLETED
+        },
+        { new: true }
+      );
 
-      rental.returnImages = returnImages;
-      // Dùng Enum
-      rental.status = RentalStatus.COMPLETED;
-      const savedRental = await rental.save();
       
       res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });
   } catch (error) {
