@@ -13,7 +13,9 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    startGlobalLoading();
+    if (!config.skipGlobalLoading) {
+      startGlobalLoading();
+    }
 
     const token = getStoredToken();
 
@@ -31,11 +33,15 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    stopGlobalLoading();
+    if (!response.config.skipGlobalLoading) {
+      stopGlobalLoading();
+    }
     return response;
   },
   (error) => {
-    stopGlobalLoading();
+    if (!error.config?.skipGlobalLoading) {
+      stopGlobalLoading();
+    }
     return Promise.reject(error);
   }
 );
@@ -60,6 +66,11 @@ export const getItems = (params = {}) => {
     return api.get(`/items?search=${encodeURIComponent(params)}`);
   }
 
+  const queryString = buildItemsQueryString(params);
+  return api.get(`/items${queryString ? `?${queryString}` : ''}`);
+};
+
+const buildItemsQueryString = (params = {}) => {
   const query = new URLSearchParams();
 
   Object.keys(params).forEach((key) => {
@@ -68,8 +79,18 @@ export const getItems = (params = {}) => {
     }
   });
 
-  const queryString = query.toString();
-  return api.get(`/items${queryString ? `?${queryString}` : ''}`);
+  return query.toString();
+};
+
+export const getNearbyMapItems = (params = {}) => {
+  const queryString = buildItemsQueryString({
+    ...params,
+    includeMapLocation: true,
+  });
+
+  return api.get(`/items${queryString ? `?${queryString}` : ''}`, {
+    skipGlobalLoading: true,
+  });
 };
 
 export const getCategories = () => api.get('/items/categories');
@@ -159,6 +180,7 @@ const apiService = {
   deleteImage,
   getMe,
   getItems,
+  getNearbyMapItems,
   getCategories,
   createItem,
   updateItem,

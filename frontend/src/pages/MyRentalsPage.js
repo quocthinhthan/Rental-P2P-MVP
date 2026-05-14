@@ -438,7 +438,7 @@ function MyRentalsPage() {
       fetchMyRentals();
       Swal.fire('Thành công!', action === 'confirm' ? 'Đã chấp nhận đơn thuê.' : 'Đã từ chối đơn thuê.', 'success');
     } catch (err) {
-      Swal.fire('Lỗi!', 'Thao tác thất bại.', 'error');
+      Swal.fire('Lỗi!', err.response?.data?.message || 'Thao tác thất bại.', 'error');
       console.error(err);
     }
   };

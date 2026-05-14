@@ -10,6 +10,15 @@ function ItemCard({ item }) {
   const imageSources = getItemCardImage(imageUrl);
   const statusKey = getItemStatusI18nKey(item.status);
   const isAvailable = item.status === ItemStatus.AVAILABLE;
+  const rawDistance = item.distanceKm ?? item.distance;
+  const distanceValue = Number(rawDistance);
+  const hasDistance = rawDistance !== undefined && rawDistance !== null && rawDistance !== '' && Number.isFinite(distanceValue);
+  const distanceLabel = hasDistance
+    ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(distanceValue)
+    : '';
+  const priceValue = Number(item.pricePerDay);
+  const hasValidPrice = Number.isFinite(priceValue);
+  const priceLabel = hasValidPrice ? priceValue.toLocaleString('vi-VN') : 'Liên hệ';
 
   return (
     <div className="col-md-6 col-lg-4 col-xl-3 mb-4">
@@ -62,10 +71,17 @@ function ItemCard({ item }) {
               </Link>
 
               <div className="fw-bold text-primary">
-                {t('common.currencyPerDay', {
-                  value: item.pricePerDay.toLocaleString('vi-VN')
-                })}
+                {hasValidPrice
+                  ? t('common.currencyPerDay', { value: priceLabel })
+                  : priceLabel}
               </div>
+
+              {hasDistance && (
+                <div className="small text-muted mt-2">
+                  <i className="fas fa-location-dot text-primary me-1"></i>
+                  Cách bạn {distanceLabel} km
+                </div>
+              )}
             </div>
 
             <div className="mt-auto pt-3">
