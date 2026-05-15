@@ -32,6 +32,12 @@ exports.getItemDetailView = async (req, res) => {
         endDate: { $gte: new Date() } 
     }).select('startDate endDate');
 
+    const hasMapLocation = (
+        item.location &&
+        Array.isArray(item.location.coordinates) &&
+        item.location.coordinates.length === 2
+    );
+
     const viewData = {
         _id: item._id,
         name: item.name,
@@ -43,6 +49,10 @@ exports.getItemDetailView = async (req, res) => {
         baseValue: item.baseValue,
         depositPercentage: item.depositPercentage,
         address: item.address,
+        mapLocation: hasMapLocation ? {
+          lng: item.location.coordinates[0],
+          lat: item.location.coordinates[1]
+        } : null,
         owner: item.ownerId,
         bookedDates: confirmedRentals 
     };

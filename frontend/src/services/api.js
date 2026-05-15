@@ -121,6 +121,10 @@ export const updateItem = (itemId, itemData) => api.put(`/items/${itemId}`, item
 
 export const deleteItem = (itemId) => api.delete(`/items/${itemId}`);
 
+export const suggestItemPrice = (payload) => api.post('/items/suggest-price', payload, {
+  skipGlobalLoading: true,
+});
+
 // === Views (BFF) ===
 export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}`);
 
@@ -204,6 +208,7 @@ const apiService = {
   createItem,
   updateItem,
   deleteItem,
+  suggestItemPrice,
   getItemDetails,
   getMyRentals,
   createReview,
