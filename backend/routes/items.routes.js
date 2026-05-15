@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/auth.middleware');
 const { 
   searchItems, 
   createItem, 
@@ -7,7 +8,8 @@ const {
   deleteItem, 
   checkOwner,
   getCategories,
-  getBestsellerItems
+  getBestsellerItems,
+  suggestPrice
 } = require('../controllers/items.controller');
 
 // ĐẶT TRÊN CÙNG ĐỂ KHÔNG BỊ NHẦM VỚI CÁC ROUTE KHÁC
@@ -15,6 +17,8 @@ router.get('/categories', getCategories);
 router.get('/bestsellers', getBestsellerItems);
 
 const { protect, checkVerified } = require('../middleware/auth.middleware');
+
+router.post('/suggest-price', protect, suggestPrice);
 
 // /api/items
 router.route('/')

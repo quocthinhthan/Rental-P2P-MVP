@@ -386,6 +386,71 @@ paths:
         '404':
           description: Item not found
 
+  /items/suggest-price:
+    post:
+      tags:
+        - Items
+      summary: Đề xuất giá cho thuê bằng AI (Hybrid Pricing)
+      description: Nhận thông tin món đồ, sử dụng Rule-based kết hợp Gemini AI để đề xuất mức giá cho thuê theo ngày dựa trên giá trị gốc và tình trạng Cung - Cầu trên sàn.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - baseValue
+              properties:
+                name:
+                  type: string
+                  description: Tên món đồ cho thuê
+                  example: "Máy ảnh Sony A6000 kèm Lens Kit"
+                category:
+                  type: string
+                  description: Danh mục của món đồ (để AI phân tích rủi ro)
+                  example: "Máy ảnh"
+                description:
+                  type: string
+                  description: Mô tả chi tiết tình trạng, độ mới, phụ kiện đi kèm
+                  example: "Mới 99%, kèm 2 pin dự phòng và túi chống sốc"
+                baseValue:
+                  type: number
+                  description: Giá trị mua mới của món đồ (VNĐ)
+                  example: 10000000
+      responses:
+        '200':
+          description: Đề xuất giá thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ruleBasedPrice:
+                    type: number
+                    description: Giá tính theo công thức % tĩnh
+                    example: 150000
+                  aiSuggestedPrice:
+                    type: number
+                    description: Giá do Gemini phân tích
+                    example: 200000
+                  finalSuggestion:
+                    type: number
+                    description: Giá đề xuất cuối cùng (Dùng số này hiển thị lên UI)
+                    example: 175000
+                  marketContext:
+                    type: string
+                    description: Nhận định thị trường hiện tại
+                    example: "Có 15 sản phẩm cùng danh mục đang cho thuê."
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ (thiếu name hoặc baseValue)
+        '401':
+          description: Chưa xác thực (Missing or invalid token)
+        '500':
+          description: Lỗi server hoặc AI Engine không phản hồi
+
   # --- Rentals ---
   /rentals:
     post:
