@@ -3,6 +3,13 @@ import { startGlobalLoading, stopGlobalLoading } from '../contexts/LoadingContex
 
 const TOKEN_KEY = 'token';
 const getStoredToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+export const ITEM_SEARCH_LIMIT = 20;
+export const ITEM_MAP_SEARCH_LIMIT = 50;
+const MAX_SEARCH_TEXT_LENGTH = 80;
+
+const trimSearchText = (value) => (
+  typeof value === 'string' ? value.trim().slice(0, MAX_SEARCH_TEXT_LENGTH) : value
+);
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost/api',
@@ -63,10 +70,17 @@ export const verifyEKYC = (idCardFrontUrl) => api.post('/auth/verify-ekyc', { id
 // === Items ===
 export const getItems = (params = {}) => {
   if (typeof params === 'string') {
-    return api.get(`/items?search=${encodeURIComponent(params)}`);
+    const queryString = buildItemsQueryString({
+      search: trimSearchText(params),
+      limit: ITEM_SEARCH_LIMIT,
+    });
+    return api.get(`/items?${queryString}`);
   }
 
-  const queryString = buildItemsQueryString(params);
+  const queryString = buildItemsQueryString({
+    ...params,
+    limit: ITEM_SEARCH_LIMIT,
+  });
   return api.get(`/items${queryString ? `?${queryString}` : ''}`);
 };
 
@@ -74,8 +88,12 @@ const buildItemsQueryString = (params = {}) => {
   const query = new URLSearchParams();
 
   Object.keys(params).forEach((key) => {
-    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
-      query.set(key, params[key]);
+    const value = ['search', 'category', 'address'].includes(key)
+      ? trimSearchText(params[key])
+      : params[key];
+
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value);
     }
   });
 
@@ -85,6 +103,7 @@ const buildItemsQueryString = (params = {}) => {
 export const getNearbyMapItems = (params = {}) => {
   const queryString = buildItemsQueryString({
     ...params,
+    limit: ITEM_MAP_SEARCH_LIMIT,
     includeMapLocation: true,
   });
 

@@ -1,15 +1,36 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { createPortal } from 'react-dom';
+import L from 'leaflet';
+import { Circle, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import apiService from '../../services/api';
 import 'leaflet/dist/leaflet.css';
 import './LocationPickerModal.css';
 
 const DEFAULT_LOCATION = {
-  lat: 10.7769,
-  lng: 106.7009,
+  lat: 10.7321,
+  lng: 106.6999,
 };
 
+const DEFAULT_RADIUS = '';
 const RADIUS_OPTIONS = ['1', '3', '5', '10', '20', '50'];
+const TILE_SOURCES = [
+  {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  },
+  {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  },
+];
+
+const itemMapIcon = L.divIcon({
+  className: 'location-picker-item-marker',
+  html: '<span class="location-picker-item-marker-inner"><i class="fas fa-box-open"></i></span>',
+  iconSize: [38, 46],
+  iconAnchor: [19, 42],
+  popupAnchor: [0, -38],
+});
 
 function MapCenterTracker({ onCenterChange }) {
   useMapEvents({
@@ -42,11 +63,18 @@ function MapReadyFix() {
   const map = useMap();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      map.invalidateSize();
-    }, 150);
+    const timers = [50, 180, 420, 900].map((delay) => (
+      window.setTimeout(() => {
+        map.invalidateSize();
+      }, delay)
+    ));
 
-    return () => window.clearTimeout(timer);
+    const frame = window.requestAnimationFrame(() => map.invalidateSize());
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.cancelAnimationFrame(frame);
+    };
   }, [map]);
 
   return null;
@@ -55,33 +83,80 @@ function MapReadyFix() {
 function LocationPickerModal({
   show,
   initialLocation,
-  initialRadius = '5',
+  initialRadius = DEFAULT_RADIUS,
   itemFilters = {},
   onClose,
   onConfirm,
+  onItemSelect,
+  preferCurrentLocation = false,
 }) {
-  const [selectedLocation, setSelectedLocation] = useState(initialLocation || DEFAULT_LOCATION);
+  const [selectedLocation, setSelectedLocation] = useState(initialLocation || null);
   const [mapCenter, setMapCenter] = useState(initialLocation || DEFAULT_LOCATION);
-  const [selectedRadius, setSelectedRadius] = useState(String(initialRadius || '5'));
+  const [selectedRadius, setSelectedRadius] = useState(String(initialRadius || DEFAULT_RADIUS));
   const [mapItems, setMapItems] = useState([]);
   const [mapItemsLoading, setMapItemsLoading] = useState(false);
   const [mapItemsError, setMapItemsError] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
+  const [tileSourceIndex, setTileSourceIndex] = useState(0);
 
   useEffect(() => {
     if (!show) return;
 
-    const nextLocation = initialLocation || DEFAULT_LOCATION;
-    setSelectedLocation(nextLocation);
-    setMapCenter(nextLocation);
-    setSelectedRadius(String(initialRadius || '5'));
+    setSelectedRadius(String(initialRadius || DEFAULT_RADIUS));
+    setMapItems([]);
     setMapItemsError('');
     setGeoError('');
-  }, [show, initialLocation, initialRadius]);
+    setGeoLoading(false);
+    setTileSourceIndex(0);
+
+    if (initialLocation && !preferCurrentLocation) {
+      setSelectedLocation(initialLocation);
+      setMapCenter(initialLocation);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setSelectedLocation(DEFAULT_LOCATION);
+      setMapCenter(DEFAULT_LOCATION);
+      setGeoError('Trình duyệt của bạn chưa hỗ trợ lấy vị trí hiện tại.');
+      return;
+    }
+
+    setSelectedLocation(null);
+    setMapCenter(DEFAULT_LOCATION);
+    setGeoLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+
+        setSelectedLocation(nextLocation);
+        setMapCenter(nextLocation);
+        setGeoLoading(false);
+      },
+      () => {
+        setSelectedLocation(DEFAULT_LOCATION);
+        setMapCenter(DEFAULT_LOCATION);
+        setGeoLoading(false);
+        setGeoError('Không thể lấy vị trí hiện tại. Vui lòng cho phép truy cập vị trí hoặc chọn trực tiếp trên bản đồ.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  }, [show, initialLocation, initialRadius, preferCurrentLocation]);
 
   useEffect(() => {
-    if (!show || !selectedLocation) return undefined;
+    if (!show || !selectedLocation || !selectedRadius) {
+      setMapItems([]);
+      return undefined;
+    }
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
@@ -94,6 +169,7 @@ function LocationPickerModal({
           lat: selectedLocation.lat,
           lng: selectedLocation.lng,
           radius: selectedRadius,
+          limit: 100,
         });
 
         if (!cancelled) {
@@ -139,6 +215,7 @@ function LocationPickerModal({
     )),
     [mapItems]
   );
+  const tileSource = TILE_SOURCES[tileSourceIndex];
 
   const handleUseCurrentLocation = () => {
     setGeoError('');
@@ -176,6 +253,8 @@ function LocationPickerModal({
     event?.preventDefault();
     event?.stopPropagation();
 
+    if (!selectedLocation) return;
+
     onConfirm({
       location: selectedLocation,
       radius: selectedRadius,
@@ -184,7 +263,7 @@ function LocationPickerModal({
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <>
       <div
         className="modal fade show location-picker-modal"
@@ -236,6 +315,7 @@ function LocationPickerModal({
                     value={selectedRadius}
                     onChange={(event) => setSelectedRadius(event.target.value)}
                   >
+                    <option value="">Chọn bán kính</option>
                     {RADIUS_OPTIONS.map((option) => (
                       <option key={option} value={option}>
                         {option} km
@@ -282,29 +362,37 @@ function LocationPickerModal({
                   className="location-picker-map"
                 >
                   <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Circle
-                    center={[selectedLocation.lat, selectedLocation.lng]}
-                    radius={Number(selectedRadius) * 1000}
-                    pathOptions={{
-                      color: '#0d6efd',
-                      fillColor: '#0d6efd',
-                      fillOpacity: 0.07,
-                      weight: 1,
+                    attribution={tileSource.attribution}
+                    url={tileSource.url}
+                    eventHandlers={{
+                      tileerror: () => {
+                        setTileSourceIndex((currentIndex) => (
+                          currentIndex < TILE_SOURCES.length - 1 ? currentIndex + 1 : currentIndex
+                        ));
+                      },
                     }}
                   />
-                  {visibleMapItems.map((item) => (
-                    <CircleMarker
-                      key={item._id}
-                      center={[item.mapLocation.lat, item.mapLocation.lng]}
-                      radius={8}
+                  {selectedLocation && selectedRadius && (
+                    <Circle
+                      center={[selectedLocation.lat, selectedLocation.lng]}
+                      radius={Number(selectedRadius) * 1000}
                       pathOptions={{
-                        color: '#ffffff',
-                        fillColor: '#f28b00',
-                        fillOpacity: 1,
-                        weight: 3,
+                        color: '#0d6efd',
+                        fillColor: '#0d6efd',
+                        fillOpacity: 0.07,
+                        weight: 1,
+                      }}
+                    />
+                  )}
+                  {visibleMapItems.map((item) => (
+                    <Marker
+                      key={item._id}
+                      position={[item.mapLocation.lat, item.mapLocation.lng]}
+                      icon={itemMapIcon}
+                      eventHandlers={{
+                        mouseover: (event) => event.target.openPopup(),
+                        mouseout: (event) => event.target.closePopup(),
+                        click: () => onItemSelect?.(item),
                       }}
                     >
                       <Popup>
@@ -320,7 +408,7 @@ function LocationPickerModal({
                           )}
                         </div>
                       </Popup>
-                    </CircleMarker>
+                    </Marker>
                   ))}
                   <MapReadyFix />
                   <MapRecenter center={mapCenter} />
@@ -333,10 +421,16 @@ function LocationPickerModal({
 
                 <div className="location-picker-floating-card shadow">
                   <div className="text-muted small">Vị trí đã chọn</div>
-                  <div className="fw-semibold text-dark">Khu vực đã chọn</div>
-                  <div className="small text-muted">Tìm trong bán kính {selectedRadius} km</div>
+                  <div className="fw-semibold text-dark">
+                    {geoLoading && !selectedLocation ? 'Đang xác định vị trí...' : 'Khu vực đã chọn'}
+                  </div>
+                  <div className="small text-muted">
+                    {selectedRadius ? `Tìm trong bán kính ${selectedRadius} km` : 'Chưa chọn bán kính'}
+                  </div>
                   <div className="d-flex align-items-center gap-2 mt-2 flex-wrap">
-                    <span className="badge bg-primary">Bán kính: {selectedRadius} km</span>
+                    {selectedRadius && (
+                      <span className="badge bg-primary">Bán kính: {selectedRadius} km</span>
+                    )}
                     <span className="location-picker-item-count">
                       {mapItemsLoading ? 'Đang tải...' : `${visibleMapItems.length} vật phẩm`}
                     </span>
@@ -352,7 +446,7 @@ function LocationPickerModal({
               <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
                 Đóng
               </button>
-              <button type="button" className="btn btn-primary rounded-pill px-4" onClick={handleConfirm}>
+              <button type="button" className="btn btn-primary rounded-pill px-4" onClick={handleConfirm} disabled={!selectedLocation || !selectedRadius}>
                 <i className="fas fa-search-location me-2"></i>
                 Tìm đồ quanh vị trí này
               </button>
@@ -361,7 +455,8 @@ function LocationPickerModal({
         </div>
       </div>
       <div className="modal-backdrop fade show location-picker-backdrop"></div>
-    </>
+    </>,
+    document.body
   );
 }
 
