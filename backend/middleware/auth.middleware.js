@@ -7,17 +7,32 @@ const protect = async (req, res, next) => {
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Lấy token từ header (ví dụ: "Bearer ...token...")
       token = req.headers.authorization.split(' ')[1];
-
-      // Xác thực token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      const user = await User.findById(decoded.id).select('-password');
 
-      // Lấy thông tin user từ token (không bao gồm mật khẩu)
-      // Gắn user vào object 'req' để các hàm controller sau có thể sử dụng
-      req.user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({ message: 'Tài khoản không tồn tại' });
+      }
 
-      next(); // Đi tiếp đến controller
+      // KIỂM TRA BỊ BAN VĨNH VIỄN
+      if (user.isBanned) {
+        return res.status(403).json({ 
+          message: 'Tài khoản của bạn đã bị khóa vĩnh viễn do vi phạm nghiêm trọng chính sách của chúng tôi.' 
+        });
+      }
+
+      // KIỂM TRA ĐANG TRONG THỜI GIAN ĐÌNH CHỈ
+      if (user.suspendedUntil && new Date() < new Date(user.suspendedUntil)) {
+        const unlockDate = new Date(user.suspendedUntil).toLocaleDateString('vi-VN');
+        return res.status(403).json({ 
+          message: `Tài khoản của bạn hiện đang bị đình chỉ. Bạn sẽ có thể truy cập lại vào ngày ${unlockDate}.` 
+        });
+      }
+
+      req.user = user;
+      next(); 
     } catch (error) {
       console.error(error);
       return res.status(401).json({ message: 'Unauthorized, token failed' });

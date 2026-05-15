@@ -440,6 +440,10 @@ paths:
                     type: number
                     description: Giá đề xuất cuối cùng (Dùng số này hiển thị lên UI)
                     example: 175000
+                  aiReasoning:
+                    type: string
+                    description: Lời giải thích của AI về việc tại sao lại đề xuất giá này
+                    example: "Máy ảnh mới 99% nhưng thị trường đang dồi dào, cần mức giá vừa phải để hút khách."
                   marketContext:
                     type: string
                     description: Nhận định thị trường hiện tại
@@ -812,8 +816,8 @@ paths:
   /disputes/{id}/resolve:
     patch:
       tags:
-        - Admin
-      summary: Admin phán xử tranh chấp
+        - Disputes
+      summary: Admin phán quyết tranh chấp và áp dụng chế tài lũy tiến
       security:
         - bearerAuth: []
       parameters:
@@ -822,26 +826,70 @@ paths:
           required: true
           schema:
             type: string
+          description: ID của hồ sơ tranh chấp (Dispute ID)
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - adminDecision
               properties:
                 adminDecision:
                   type: string
-                  description: Lời giải thích của admin
+                  description: Lời giải thích/phán quyết cuối cùng của Admin
+                  example: "Chủ đồ đã giao tài sản không đúng như mô tả. Quyết định hoàn tiền cho người thuê và cảnh cáo chủ đồ."
                 winner:
                   type: string
-                  enum: [renter, owner]
-                  description: Ai là người đúng? (renter = hoàn tiền, owner = trả tiền cho chủ)
+                  enum: [renter, owner, none]
+                  description: Người chiến thắng trong tranh chấp để hệ thống tự động xử lý tiền
+                  example: "renter"
                 penalizeUserId:
                   type: string
-                  description: (Tùy chọn) ID của kẻ gian bị phạt Banned
+                  description: ID của User bị phạt (để trống nếu không ai bị phạt)
+                  example: "64abc1234def567890"
+                penaltyType:
+                  type: string
+                  enum: [none, warning, suspension, ban]
+                  description: Hình thức kỷ luật áp dụng (Warning trừ 20đ, Suspension khóa 7 ngày + trừ 50đ, Ban khóa vĩnh viễn)
+                  example: "suspension"
       responses:
         '200':
-          description: Giải quyết thành công
+          description: Giải quyết tranh chấp thành công
+        '401':
+          description: Chưa xác thực (Missing Token)
+        '403':
+          description: Không có quyền truy cập (Admin Only)
+        '404':
+          description: Không tìm thấy hồ sơ sự cố
+        '500':
+          description: Lỗi máy chủ
+
+  /disputes/{id}/withdraw:
+    patch:
+      tags:
+        - Disputes
+      summary: Người dùng tự rút khiếu nại (Hòa giải thành công)
+      description: Cho phép người tạo báo cáo tự đóng sự cố. Hệ thống sẽ tự động đưa đơn thuê về trạng thái phù hợp (Đang thuê hoặc Hoàn tất) dựa trên thời gian thực tế của hợp đồng.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của hồ sơ tranh chấp
+      responses:
+        '200':
+          description: Rút khiếu nại thành công, đơn hàng mở băng
+        '400':
+          description: Sự cố đã bị đóng từ trước, không thể rút
+        '403':
+          description: Không phải người tạo khiếu nại
+        '404':
+          description: Không tìm thấy hồ sơ
 
 # ===============================================================
   # Review Endpoints
