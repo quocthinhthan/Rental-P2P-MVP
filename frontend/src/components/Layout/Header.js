@@ -48,6 +48,29 @@ function Header() {
     navigate(`/shop${queryString ? `?${queryString}` : ''}`);
   };
 
+  const handleOpenLocationPicker = () => {
+    const itemFilters = {
+      search: searchQuery.trim(),
+      category: selectedCategory,
+    };
+
+    window.dispatchEvent(new CustomEvent('rentalp2p:open-location-picker', {
+      detail: {
+        itemFilters,
+        preferCurrentLocation: true,
+        onConfirm: ({ location, radius }) => {
+          const params = new URLSearchParams();
+          if (itemFilters.search) params.append('search', itemFilters.search);
+          if (itemFilters.category) params.append('category', itemFilters.category);
+          params.append('lat', location.lat);
+          params.append('lng', location.lng);
+          if (radius) params.append('radius', radius);
+          navigate(`/shop?${params.toString()}`);
+        },
+      },
+    }));
+  };
+
   return (
     <>
       {/* Topbar Start */}
@@ -147,11 +170,11 @@ function Header() {
       {/* Topbar End */}
 
       {/* Search Header Start */}
-      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm mb-3">
+      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm mb-3 search-header-wrapper">
         <div className="row gx-0 align-items-center">
 
           {/* Logo */}
-          <div className="col-md-3 text-start">
+          <div className="col-md-3 col-xl-3 text-start">
             <Link to="/" className="navbar-brand p-0 text-decoration-none d-inline-block">
               <h1 className="display-6 text-primary m-0 fw-bold d-flex align-items-center">
                 <i className="fas fa-sync-alt text-secondary me-2 brand-icon-spin"></i>RentalP2P
@@ -160,60 +183,80 @@ function Header() {
           </div>
 
           {/* Thanh Tìm Kiếm Hiện Đại */}
-          <div className="col-md-6 text-center">
-            <form className="d-flex custom-search-bar" onSubmit={handleSearch}>
-              <input
-                className="form-control border-0 bg-transparent py-2 px-4 shadow-none"
-                type="text"
-                placeholder="Bạn đang tìm thuê gì hôm nay?"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          <div className="col-md-7 col-xl-6 text-center">
+            <div className="header-search-cluster">
+              <form className="d-flex custom-search-bar" onSubmit={handleSearch}>
+                <span className="search-field-icon">
+                  <i className="fas fa-search"></i>
+                </span>
+                <input
+                  className="form-control border-0 bg-transparent py-2 px-3 shadow-none search-main-input"
+                  type="text"
+                  placeholder="Bạn đang tìm thuê gì hôm nay?"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
 
-              <div className="search-divider"></div>
+                <div className="search-divider"></div>
 
-              {/* Custom Category Dropdown trong Search Bar */}
-              <div className="position-relative d-flex align-items-center">
-                <div
-                  className="custom-inner-select d-flex align-items-center justify-content-between px-3"
-                  onClick={() => setIsCatOpen(!isCatOpen)}
-                >
-                  <span className="text-truncate" style={{ maxWidth: '120px' }}>
-                    {selectedCategory || 'Tất cả'}
-                  </span>
-                  <i className={`fas fa-chevron-down ms-2 transition-icon ${isCatOpen ? 'rotate-180' : ''}`}></i>
+                {/* Custom Category Dropdown trong Search Bar */}
+                <div className="position-relative d-flex align-items-center">
+                  <div
+                    className="custom-inner-select d-flex align-items-center justify-content-between px-3"
+                    onClick={() => setIsCatOpen(!isCatOpen)}
+                  >
+                    <span className="text-truncate" style={{ maxWidth: '120px' }}>
+                      {selectedCategory || 'Tất cả'}
+                    </span>
+                    <i className={`fas fa-chevron-down ms-2 transition-icon ${isCatOpen ? 'rotate-180' : ''}`}></i>
+                  </div>
+
+                  {/* Menu danh sách hiện ra khi click */}
+                  {isCatOpen && (
+                    <div className="custom-inner-dropdown-menu shadow-lg">
+                      <div
+                        className="inner-dropdown-item"
+                        onClick={() => selectCategory('')}
+                      >
+                        Tất cả danh mục
+                      </div>
+                      {categories.map((cat) => (
+                        <div
+                          key={cat}
+                          className="inner-dropdown-item"
+                          onClick={() => selectCategory(cat)}
+                        >
+                          {cat}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Menu danh sách hiện ra khi click */}
-                {isCatOpen && (
-                  <div className="custom-inner-dropdown-menu shadow-lg">
-                    <div
-                      className="inner-dropdown-item"
-                      onClick={() => selectCategory('')}
-                    >
-                      Tất cả danh mục
-                    </div>
-                    {categories.map((cat) => (
-                      <div
-                        key={cat}
-                        className="inner-dropdown-item"
-                        onClick={() => selectCategory(cat)}
-                      >
-                        {cat}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <button type="submit" className="btn btn-primary search-btn px-3 ms-2">
+                  <i className="fas fa-search"></i>
+                </button>
+              </form>
 
-              <button type="submit" className="btn btn-primary search-btn px-4 ms-2">
-                <i className="fas fa-search"></i>
+              <button
+                type="button"
+                className="btn header-location-btn"
+                onClick={handleOpenLocationPicker}
+              >
+                <span className="header-location-icon">
+                  <i className="fas fa-location-arrow"></i>
+                </span>
+                <span className="header-location-copy">
+                  <span>Tìm đồ quanh đây</span>
+                  <small>Chọn vị trí trên bản đồ</small>
+                </span>
+                <i className="fas fa-chevron-right header-location-arrow"></i>
               </button>
-            </form>
+            </div>
           </div>
 
           {/* Giỏ Hàng / Đơn Thuê */}
-          <div className="col-md-3 text-end">
+          <div className="col-md-2 col-xl-3 text-end">
             <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center">
               <div className="position-relative cart-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
                 <i className="fas fa-shopping-cart text-primary fs-5"></i>
@@ -253,7 +296,7 @@ function Header() {
               </button>
 
               {/* Danh sách thả xuống của Danh Mục */}
-              <div className="collapse navbar-collapse rounded-bottom position-absolute w-100 bg-white shadow-lg custom-category-dropdown" id="allCat" style={{ top: '100%', left: 0, zIndex: 999 }}>
+              <div className="collapse navbar-collapse rounded-bottom position-absolute w-100 bg-white shadow-lg custom-category-dropdown" id="allCat" style={{ top: '100%', left: 0 }}>
                 <div className="navbar-nav py-0 w-100">
                   <div className="categories-list w-100">
                     {categories.length > 0 ? (

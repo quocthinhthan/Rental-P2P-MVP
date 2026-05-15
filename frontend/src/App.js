@@ -6,6 +6,7 @@ import './App.css';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import GlobalSpinner from './components/Common/GlobalSpinner';
+import LocationPickerHost from './components/Common/LocationPickerHost';
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ItemDetailPage from './pages/ItemDetailPage';
@@ -26,6 +27,7 @@ function App() {
   return (
     <>
       <GlobalSpinner />
+      <LocationPickerHost />
       <Header />
       <Routes>
         {/* Routes công khai */}

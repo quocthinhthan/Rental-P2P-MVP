@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import LocationPickerModal from '../components/Common/LocationPickerModal';
 import ItemList from '../components/Items/ItemList';
 import apiService from '../services/api';
+// Import file CSS riêng
+import '../styles/ShopPage.css';
 
 function ShopPage() {
   const [searchParams] = useSearchParams();
@@ -13,9 +14,14 @@ function ShopPage() {
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '');
   const [ownerId, setOwnerId] = useState(searchParams.get('ownerId') || '');
   const [categories, setCategories] = useState([]);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [nearbyLocation, setNearbyLocation] = useState(null);
-  const [radius, setRadius] = useState(searchParams.get('radius') || '5');
+  const [nearbyLocation, setNearbyLocation] = useState(() => {
+    const lat = Number(searchParams.get('lat'));
+    const lng = Number(searchParams.get('lng'));
+    const hasRadius = Boolean(searchParams.get('radius'));
+    return Number.isFinite(lat) && Number.isFinite(lng) && hasRadius ? { lat, lng } : null;
+  });
+  const [radius, setRadius] = useState(searchParams.get('radius') || '');
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -36,7 +42,11 @@ function ShopPage() {
     setStartDate(searchParams.get('startDate') || '');
     setEndDate(searchParams.get('endDate') || '');
     setOwnerId(searchParams.get('ownerId') || '');
-    setRadius(searchParams.get('radius') || '5');
+    const lat = Number(searchParams.get('lat'));
+    const lng = Number(searchParams.get('lng'));
+    const radiusParam = searchParams.get('radius') || '';
+    setNearbyLocation(Number.isFinite(lat) && Number.isFinite(lng) && radiusParam ? { lat, lng } : null);
+    setRadius(radiusParam);
   }, [searchParams]);
 
   const filters = useMemo(() => {
@@ -52,7 +62,7 @@ function ShopPage() {
     if (nearbyLocation) {
       nextFilters.lat = nearbyLocation.lat;
       nextFilters.lng = nearbyLocation.lng;
-      nextFilters.radius = radius;
+      if (radius) nextFilters.radius = radius;
     }
 
     return nextFilters;
@@ -75,17 +85,28 @@ function ShopPage() {
     setEndDate('');
     setOwnerId('');
     setNearbyLocation(null);
-    setRadius('5');
+    setRadius('');
+    setIsCategoryOpen(false);
+  };
+
+  const handleCategorySelect = (catName) => {
+    setCategory(catName);
+    setIsCategoryOpen(false);
   };
 
   const handleFindNearby = () => {
-    setShowLocationModal(true);
-  };
-
-  const handleLocationConfirm = ({ location, radius: selectedRadius }) => {
-    setNearbyLocation(location);
-    setRadius(selectedRadius);
-    setShowLocationModal(false);
+    window.dispatchEvent(new CustomEvent('rentalp2p:open-location-picker', {
+      detail: {
+        initialLocation: nearbyLocation,
+        initialRadius: nearbyLocation ? radius : undefined,
+        preferCurrentLocation: !nearbyLocation,
+        itemFilters: locationPickerFilters,
+        onConfirm: ({ location, radius: selectedRadius }) => {
+          setNearbyLocation(location);
+          setRadius(selectedRadius);
+        },
+      },
+    }));
   };
 
   const handleClearNearby = () => {
@@ -104,156 +125,202 @@ function ShopPage() {
   );
 
   return (
-    <>
-      <div className="container-fluid page-header py-5">
-        <h1 className="text-center text-white display-6 wow fadeInUp" data-wow-delay="0.1s">Cửa hàng</h1>
-        <ol className="breadcrumb justify-content-center mb-0 wow fadeInUp" data-wow-delay="0.3s">
-          <li className="breadcrumb-item"><Link to="/">Trang chủ</Link></li>
-          <li className="breadcrumb-item"><span className="text-white">Trang</span></li>
-          <li className="breadcrumb-item active text-white">Cửa hàng</li>
-        </ol>
-      </div>
-
-      <div className="container-fluid shop py-5">
-        <div className="container py-5">
-          <div className="row g-4">
-            <div className="col-lg-3 wow fadeInUp" data-wow-delay="0.1s">
-              <div className="bg-light rounded-4 p-4 shadow-sm sticky-top" style={{ top: '120px' }}>
-                <h4 className="mb-4">Bộ lọc</h4>
-
-                <label className="form-label">Từ khóa</label>
-                <input
-                  type="text"
-                  className="form-control mb-3"
-                  placeholder="camera, xe máy..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
-
-                <label className="form-label">Danh mục</label>
-                <select
-                  className="form-select mb-3"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  <option value="">Tất cả danh mục</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-
-                <label className="form-label">Vị trí</label>
-                <input
-                  type="text"
-                  className="form-control mb-3"
-                  placeholder="Quận, thành phố..."
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-
-                <div className="row g-2 mb-3">
-                  <div className="col-6">
-                    <label className="form-label">Từ ngày</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">Đến ngày</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-top pt-3 mt-3">
-                  <label className="form-label">Tìm quanh đây</label>
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary rounded-pill w-100 mb-2"
-                    onClick={handleFindNearby}
-                  >
-                    <i className="fas fa-map-marker-alt me-2"></i>
-                    {hasNearbyFilter ? 'Đổi vị trí' : 'Chọn vị trí trên bản đồ'}
-                  </button>
-
-                  {hasNearbyFilter && (
-                    <div className="small text-success mb-2">
-                      <div className="d-flex align-items-start gap-2 mb-2">
-                        <i className="fas fa-check-circle mt-1"></i>
-                        <span>Đang tìm quanh khu vực đã chọn trong bán kính {radius} km</span>
-                      </div>
-                      <div className="d-flex gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          className="btn btn-link btn-sm p-0 text-decoration-none"
-                          onClick={handleFindNearby}
-                        >
-                          Đổi vị trí
-                        </button>
-                        <span className="text-muted">·</span>
-                        <button
-                          type="button"
-                          className="btn btn-link btn-sm p-0 text-decoration-none text-danger"
-                          onClick={handleClearNearby}
-                        >
-                          Bỏ tìm quanh đây
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="d-grid gap-2 mt-3">
-                  <button type="button" className="btn btn-primary rounded-pill" onClick={() => {}}>
-                    Áp dụng bộ lọc
-                  </button>
-                  <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={handleReset}>
-                    Xóa bộ lọc
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-lg-9 wow fadeInUp" data-wow-delay="0.1s">
-              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                <div>
-                  <h4 className="mb-1">Kết quả tìm kiếm</h4>
-                  <small className="text-muted">
-                    {hasNearbyFilter
-                      ? `Đang tìm quanh khu vực đã chọn trong bán kính ${radius} km.`
-                      : hasActiveFilters
-                      ? 'Đang lọc theo tên, danh mục, vị trí và thời gian trống từ API.'
-                      : 'Hiển thị tất cả sản phẩm từ API.'}
-                  </small>
-                </div>
-                {hasActiveFilters && (
-                  <button type="button" className="btn btn-outline-primary rounded-pill" onClick={handleReset}>
-                    Bỏ tất cả
-                  </button>
-                )}
-              </div>
-              <ItemList filters={filters} />
-            </div>
-          </div>
+    <div className="bg-light min-vh-100 pb-5">
+      {/* Header Banner */}
+      <div className="container-fluid page-header shop-page-header wow fadeIn" data-wow-delay="0.1s">
+        <div className="container text-center">
+          <h1 className="text-white display-5 mb-3">Khám Phá Đồ Cho Thuê</h1>
+          <nav aria-label="breadcrumb">
+            <ol className="breadcrumb mb-0">
+              <li className="breadcrumb-item"><Link to="/">Trang chủ</Link></li>
+              <li className="breadcrumb-item active text-white-50" aria-current="page">Cửa hàng</li>
+            </ol>
+          </nav>
         </div>
       </div>
 
-      <LocationPickerModal
-        show={showLocationModal}
-        initialLocation={nearbyLocation}
-        initialRadius={radius}
-        itemFilters={locationPickerFilters}
-        onClose={() => setShowLocationModal(false)}
-        onConfirm={handleLocationConfirm}
-      />
-    </>
+      {/* Main Content */}
+      <div className="container">
+        <div className="row g-4">
+          
+          {/* Sidebar - Bộ Lọc */}
+          <div className="col-lg-3 col-md-12 wow fadeInUp" data-wow-delay="0.2s">
+            <div className="filter-sidebar">
+              <h4><i className="fas fa-sliders-h text-primary"></i> Bộ lọc tìm kiếm</h4>
+
+              {/* Từ khóa */}
+              <div className="filter-group">
+                <label className="filter-label">Bạn đang tìm gì?</label>
+                <div className="custom-input-wrapper">
+                  <i className="fas fa-search"></i>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Máy ảnh, lều trại, xe máy..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Danh mục */}
+              <div className="filter-group">
+                <label className="filter-label">Danh mục</label>
+                <div className="custom-input-wrapper shop-category-dropdown">
+                  <i className="fas fa-th-large"></i>
+                  <button
+                    type="button"
+                    className={`shop-category-toggle ${isCategoryOpen ? 'is-open' : ''}`}
+                    onClick={() => setIsCategoryOpen((open) => !open)}
+                    aria-expanded={isCategoryOpen}
+                  >
+                    <span className="text-truncate">{category || 'Tất cả danh mục'}</span>
+                    <i className={`fas fa-chevron-down ms-2 transition-icon ${isCategoryOpen ? 'rotate-180' : ''}`}></i>
+                  </button>
+
+                  {isCategoryOpen && (
+                    <div className="custom-inner-dropdown-menu shop-filter-category-menu shadow-lg">
+                      <button
+                        type="button"
+                        className={`inner-dropdown-item ${!category ? 'active' : ''}`}
+                        onClick={() => handleCategorySelect('')}
+                      >
+                        Tất cả danh mục
+                      </button>
+                      {categories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`inner-dropdown-item ${category === cat ? 'active' : ''}`}
+                          onClick={() => handleCategorySelect(cat)}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vị trí */}
+              <div className="filter-group">
+                <label className="filter-label">Khu vực</label>
+                <div className="custom-input-wrapper">
+                  <i className="fas fa-map-marker-alt"></i>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Nhập quận, thành phố..."
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Ngày thuê */}
+              <div className="filter-group date-inputs">
+                <label className="filter-label">Thời gian thuê</label>
+                <div className="row g-2">
+                  <div className="col-6">
+                    <div className={`custom-input-wrapper date-field ${startDate ? 'has-value' : ''}`} data-placeholder="Từ ngày">
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        title="Từ ngày"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className={`custom-input-wrapper date-field ${endDate ? 'has-value' : ''}`} data-placeholder="Đến ngày">
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        title="Đến ngày"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="my-4 text-muted" />
+
+              {/* Tìm quanh đây (Bản đồ) */}
+              <div className="filter-group">
+                <label className="filter-label">Tìm theo định vị</label>
+                <button
+                  type="button"
+                  className={`btn rounded-pill w-100 btn-map ${hasNearbyFilter ? 'active' : ''}`}
+                  onClick={handleFindNearby}
+                >
+                  <i className="fas fa-map-marked-alt"></i>
+                  {hasNearbyFilter ? 'Chỉnh sửa vị trí' : 'Chọn vị trí trên bản đồ'}
+                </button>
+
+                {hasNearbyFilter && (
+                  <div className="nearby-section shadow-sm">
+                    <div className="d-flex align-items-center gap-2 mb-2 text-success">
+                      <i className="fas fa-check-circle fs-5"></i>
+                      <span className="fw-medium text-dark" style={{fontSize: '0.9rem'}}>
+                        Bán kính: <strong>{radius} km</strong>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger rounded-pill w-100 mt-1"
+                      onClick={handleClearNearby}
+                    >
+                      <i className="fas fa-times me-1"></i> Bỏ định vị
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Nút hành động */}
+              <div className="d-grid gap-2 mt-4 pt-2">
+                <button type="button" className="btn btn-primary btn-apply rounded-pill text-white" onClick={() => {}}>
+                  Áp dụng bộ lọc
+                </button>
+                {hasActiveFilters && (
+                  <button type="button" className="btn btn-reset rounded-pill" onClick={handleReset}>
+                    Xóa tất cả
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Results Area */}
+          <div className="col-lg-9 col-md-12 wow fadeInUp" data-wow-delay="0.3s">
+            <div className="results-header d-flex align-items-sm-center justify-content-between flex-column flex-sm-row gap-3">
+              <div>
+                <h4 className="mb-1">Kết quả tìm kiếm</h4>
+                <div className="text-muted">
+                  {hasNearbyFilter
+                    ? <span><i className="fas fa-crosshairs text-primary me-1"></i> Đang tìm quanh vị trí của bạn ({radius} km).</span>
+                    : hasActiveFilters
+                    ? <span><i className="fas fa-filter text-primary me-1"></i> Đang áp dụng các bộ lọc tìm kiếm.</span>
+                    : <span><i className="fas fa-list text-primary me-1"></i> Hiển thị tất cả sản phẩm.</span>}
+                </div>
+              </div>
+              
+              {hasActiveFilters && (
+                <button type="button" className="btn btn-light rounded-pill border shadow-sm px-4" onClick={handleReset}>
+                  <i className="fas fa-undo-alt me-2 text-secondary"></i> Bỏ lọc
+                </button>
+              )}
+            </div>
+            
+            {/* Component hiển thị danh sách sản phẩm */}
+            <ItemList filters={filters} />
+          </div>
+
+        </div>
+      </div>
+    </div>
   );
 }
 

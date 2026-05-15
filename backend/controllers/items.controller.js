@@ -2,6 +2,23 @@
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
 
+const DEFAULT_SEARCH_LIMIT = 100;
+const MAX_SEARCH_LIMIT = 200;
+const DEFAULT_MAP_SEARCH_LIMIT = 100;
+const MAX_MAP_SEARCH_LIMIT = 200;
+const MAX_SEARCH_TEXT_LENGTH = 100;
+const MAX_BESTSELLER_LIMIT = 10;
+
+const clampNumber = (value, defaultValue, min, max) => {
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) return defaultValue;
+  return Math.min(Math.max(parsed, min), max);
+};
+
+const trimSearchText = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, MAX_SEARCH_TEXT_LENGTH);
+};
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
@@ -19,8 +36,11 @@ const validateCoordinates = (lat, lng) => {
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
-    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius, includeMapLocation } = req.query;
+    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius, includeMapLocation, limit } = req.query;
     const shouldIncludeMapLocation = Boolean(lat && lng && (includeMapLocation === 'true' || includeMapLocation === '1'));
+    const resultLimit = shouldIncludeMapLocation
+      ? clampNumber(limit, DEFAULT_MAP_SEARCH_LIMIT, 1, MAX_MAP_SEARCH_LIMIT)
+      : clampNumber(limit, DEFAULT_SEARCH_LIMIT, 1, MAX_SEARCH_LIMIT);
 
     let query = { status: { $ne: 'delisted' } };
 
@@ -28,9 +48,13 @@ const searchItems = async (req, res) => {
     if (ownerId) query.ownerId = ownerId;
     if (exclude) query._id = { ...query._id, $ne: exclude };
     
-    if (search) query.name = { $regex: createViFuzzyRegex(search), $options: 'i' };
-    if (category) query.category = { $regex: createViFuzzyRegex(category), $options: 'i' };
-    if (address) query.address = { $regex: createViFuzzyRegex(address), $options: 'i' };
+    const safeSearch = trimSearchText(search);
+    const safeCategory = trimSearchText(category);
+    const safeAddress = trimSearchText(address);
+
+    if (safeSearch) query.name = { $regex: createViFuzzyRegex(safeSearch), $options: 'i' };
+    if (safeCategory) query.category = { $regex: createViFuzzyRegex(safeCategory), $options: 'i' };
+    if (safeAddress) query.address = { $regex: createViFuzzyRegex(safeAddress), $options: 'i' };
 
     // 2. LỌC THỜI GIAN TRỐNG
     if (startDate && endDate) {
@@ -92,14 +116,14 @@ const searchItems = async (req, res) => {
           }
         },
         { $project: projectFields },
-        { $limit: 20 }
+        { $limit: resultLimit }
       ]);
     } else {
       // 4. FALLBACK: NẾU KHÔNG CÓ TỌA ĐỘ, DÙNG FIND BÌNH THƯỜNG
       items = await Item.find(query)
         .select('_id name category address pricePerDay images status')
         .sort({ createdAt: -1 })
-        .limit(20);
+        .limit(resultLimit);
     }
 
     // 5. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
@@ -280,7 +304,7 @@ const getCategories = async (req, res) => {
 // GET /api/items/bestsellers?limit=3
 const getBestsellerItems = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 3;
+    const limit = clampNumber(req.query.limit, 3, 1, MAX_BESTSELLER_LIMIT);
 
     // Aggregate: đếm số lượng đơn thuê completed hoặc confirmed theo itemId
     const rentalsAgg = await Rental.aggregate([
