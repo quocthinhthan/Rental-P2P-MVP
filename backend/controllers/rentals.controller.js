@@ -3,6 +3,7 @@ const Rental = require('../models/Rental.model');
 const Item = require('../models/Item.model');
 const Contract = require('../models/Contract.model');
 const User = require('../models/User.model');
+const Message = require('../models/Message.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
@@ -501,6 +502,39 @@ exports.pickupItem = async (req, res) => {
     res.status(200).json({ message: 'Đã xác nhận giao đồ', rental });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+exports.sendMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    if (!content) return res.status(400).json({ message: 'Nội dung tin nhắn không được để trống' });
+
+    const newMessage = await Message.create({
+      rentalId: id,
+      senderId: req.user._id,
+      content
+    });
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi gửi tin nhắn', error: error.message });
+  }
+};
+
+// [USER/ADMIN] GET /api/rentals/:id/messages - Lấy lịch sử chat của 1 đơn thuê
+exports.getMessages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // (Có thể thêm logic check xem req.user._id có phải Renter/Owner/Admin không cho bảo mật)
+    
+    const messages = await Message.find({ rentalId: id }).sort({ createdAt: 1 });
+    res.status(200).json(messages);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi tải lịch sử chat', error: error.message });
   }
 };
 

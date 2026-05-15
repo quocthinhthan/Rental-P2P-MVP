@@ -11,7 +11,9 @@ const {
   checkRentalOwner,
   signContract,
   pickupItem,
-  getContractByRentalId
+  getContractByRentalId,
+  sendMessage,
+  getMessages
 } = require('../controllers/rentals.controller');
 const { protect, checkVerified } = require('../middleware/auth.middleware');
 
@@ -41,5 +43,9 @@ router.patch('/:id/pickup', protect, checkVerified, pickupItem);
 
 // [CẢ 2 BÊN] Lấy thông tin Hợp đồng để hiển thị lên màn hình
 router.get('/:id/contract', protect, getContractByRentalId);
+
+router.post('/:id/messages', protect, sendMessage);
+
+router.get('/:id/messages', protect, getMessages);
 
 module.exports = router;
