@@ -7,10 +7,10 @@ const ItemSchema = new mongoose.Schema({
   description: { type: String },
   category: { type: String, default: 'Khác' },
   images: [{ type: String }],
-  ownerId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'User' 
+  ownerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User'
   },
   pricePerDay: { type: Number, required: true },
   baseValue: { type: Number, required: true },
@@ -18,12 +18,12 @@ const ItemSchema = new mongoose.Schema({
   address: { type: String },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], required: true } // [Kinh độ, Vĩ độ] LƯU Ý: MongoDB là Lng trước, Lat sau
+    coordinates: { type: [Number], default: undefined } // [lng, lat]
   },
-  status: { 
-    type: String, 
-    enum: Object.values(ItemStatus), 
-    default: ItemStatus.AVAILABLE 
+  status: {
+    type: String,
+    enum: Object.values(ItemStatus),
+    default: ItemStatus.AVAILABLE
   },
 }, { timestamps: true });
 

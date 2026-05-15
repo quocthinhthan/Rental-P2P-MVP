@@ -403,7 +403,7 @@ const suggestPrice = async (req, res) => {
         marketContext = `Có ${similarItemsCount} sản phẩm cùng danh mục trên hệ thống.`;
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-3.1-flash-lite",
+            model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
             generationConfig: { responseMimeType: "application/json" }
         });
 
