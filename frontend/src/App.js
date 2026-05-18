@@ -16,6 +16,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AccountPage from './pages/AccountPage';
 import MyRentalsPage from './pages/MyRentalsPage';
+import RentalDetailPage from './pages/RentalDetailPage';
 import PostItemPage from './pages/PostItemPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -45,12 +46,13 @@ function App() {
         {/* 2. Cấu hình Routes cần bảo vệ */}
         <Route element={<ProtectedRoute />}>
           <Route path="/my-rentals" element={<MyRentalsPage />} />
+          <Route path="/my-rentals/:rentalId" element={<RentalDetailPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
+          <Route path="/admin/disputes" element={<AdminDisputesPage />} />
           {/* Thêm bất kỳ route nào cần login vào đây */}
         </Route>
-        <Route path="/admin/disputes" element={<AdminDisputesPage />} />
       </Routes>
       <Footer />
 

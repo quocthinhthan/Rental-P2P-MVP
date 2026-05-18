@@ -1,8 +1,8 @@
 const DisputeStatus = {
   PENDING: 'pending',
-  RESOLVED: 'resolved',
-  REJECTED: 'rejected',
-  WITHDRAWN: 'withdrawn'
+  ESCALATED: 'escalated',
+  WITHDRAWN: 'withdrawn',
+  RESOLVED: 'resolved'
 };
 
 const PenaltyType = {
@@ -12,4 +12,10 @@ const PenaltyType = {
   BAN: 'ban'
 };
 
-module.exports = { DisputeStatus, PenaltyType };
+const DisputeWinner = {
+  RENTER: 'renter',
+  OWNER: 'owner',
+  NONE: 'none'
+};
+
+module.exports = { DisputeStatus, PenaltyType, DisputeWinner };

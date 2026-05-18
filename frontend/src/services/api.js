@@ -177,8 +177,8 @@ export const uploadImages = async (files = []) => {
   return uploadResults.map((response) => response.data.imageUrl);
 };
 
-export const getAllDisputes = async () => {
-  const response = await api.get('/disputes');
+export const getAllDisputes = async (status) => {
+  const response = await api.get(status && status !== 'all' ? `/disputes?status=${status}` : '/disputes');
   return response.data;
 };
 
@@ -189,6 +189,10 @@ export const resolveDispute = async (id, resolveData) => {
 
 export const createDispute = (rentalId, reason, evidenceImages = []) =>
   api.post('/disputes', { rentalId, reason, evidenceImages });
+
+export const withdrawDispute = (id) => api.patch(`/disputes/${id}/withdraw`);
+
+export const escalateDispute = (id) => api.patch(`/disputes/${id}/escalate`);
 
 export const deleteImage = (publicId) => api.post('/upload/delete', { publicId });
 
@@ -222,6 +226,10 @@ const apiService = {
   pickupRental,
   completeRental,
   createDispute,
+  withdrawDispute,
+  escalateDispute,
+  getAllDisputes,
+  resolveDispute,
   getBestsellers,
   uploadImages,
 };

@@ -1,6 +1,8 @@
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
 const Review = require('../models/Review.model');
+const Dispute = require('../models/Dispute.model');
+const Contract = require('../models/Contract.model');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
 const { RentalStatus } = require('../enums/rental.enum');
@@ -107,6 +109,52 @@ exports.getMyRentalsView = async (req, res) => {
       acc[`${review.rentalId.toString()}:${review.reviewerId.toString()}`] = review;
       return acc;
     }, {});
+    const relatedContracts = await Contract.find({ rentalId: { $in: rentalIds } })
+      .select('_id rentalId ownerSignedAt renterSignedAt ownerSignatureUrl renterSignatureUrl isFullySigned createdAt updatedAt');
+    const contractByRental = relatedContracts.reduce((acc, contract) => {
+      acc[contract.rentalId.toString()] = contract;
+      return acc;
+    }, {});
+    const relatedDisputes = await Dispute.find({ rentalId: { $in: rentalIds } })
+      .sort({ createdAt: -1 })
+      .select('_id rentalId reporterId reason evidenceImages status previousRentalStatus previousItemStatus mediationEndsAt escalatedAt escalatedBy winner penaltyType penalizeUserId adminDecision resolvedAt resolvedBy createdAt updatedAt')
+      .populate('reporterId', '_id fullName email')
+      .populate('penalizeUserId', '_id fullName email')
+      .populate('escalatedBy', '_id fullName email')
+      .populate('resolvedBy', '_id fullName email');
+    const disputeByRental = relatedDisputes.reduce((acc, dispute) => {
+      const rentalKey = dispute.rentalId.toString();
+      if (!acc[rentalKey]) {
+        acc[rentalKey] = dispute;
+      }
+      return acc;
+    }, {});
+
+    const formatDisputeDetail = (dispute) => {
+      if (!dispute) return null;
+
+      return {
+        _id: dispute._id,
+        rentalId: dispute.rentalId,
+        reporterId: dispute.reporterId,
+        reason: dispute.reason,
+        evidenceImages: dispute.evidenceImages || [],
+        status: dispute.status,
+        previousRentalStatus: dispute.previousRentalStatus,
+        previousItemStatus: dispute.previousItemStatus,
+        mediationEndsAt: dispute.mediationEndsAt,
+        escalatedAt: dispute.escalatedAt,
+        escalatedBy: dispute.escalatedBy,
+        winner: dispute.winner,
+        penaltyType: dispute.penaltyType,
+        penalizeUserId: dispute.penalizeUserId,
+        adminDecision: dispute.adminDecision,
+        resolvedAt: dispute.resolvedAt,
+        resolvedBy: dispute.resolvedBy,
+        createdAt: dispute.createdAt,
+        updatedAt: dispute.updatedAt
+      };
+    };
 
     // 4. Hàm helper để định dạng lại rental
     const formatRentalDetail = (rental, counterparty) => {
@@ -127,6 +175,9 @@ exports.getMyRentalsView = async (req, res) => {
         const reviewStatus = !myReview
           ? 'not_reviewed'
           : (counterpartyReview || myReview.isPublic ? 'completed' : 'waiting_counterparty');
+        const visibleCounterpartyReview = myReview && counterpartyReview ? counterpartyReview : null;
+        const dispute = disputeByRental[rentalKey] || null;
+        const contract = contractByRental[rentalKey] || null;
 
         return {
             _id: rental._id,
@@ -140,13 +191,28 @@ exports.getMyRentalsView = async (req, res) => {
           payoutAmount: rental.payoutAmount,
             paymentStatus: rental.paymentStatus,
             status: rental.status,
-            note: rental.note, 
+            note: rental.note,
+            contractId: rental.contractId,
+            pickupImages: rental.pickupImages || [],
+            returnImages: rental.returnImages || [],
+            contract: contract ? {
+              _id: contract._id,
+              ownerSignedAt: contract.ownerSignedAt,
+              renterSignedAt: contract.renterSignedAt,
+              ownerSignatureUrl: contract.ownerSignatureUrl,
+              renterSignatureUrl: contract.renterSignatureUrl,
+              isFullySigned: contract.isFullySigned,
+              createdAt: contract.createdAt,
+              updatedAt: contract.updatedAt
+            } : null,
+            isFullySigned: Boolean(contract?.isFullySigned),
             item: itemSummary,
             counterparty: counterparty,
+            dispute: formatDisputeDetail(dispute),
             review: {
               status: reviewStatus,
               hasMyReview: Boolean(myReview),
-              hasCounterpartyReview: Boolean(counterpartyReview),
+              hasCounterpartyReview: Boolean(visibleCounterpartyReview),
               isPublic: Boolean(myReview?.isPublic),
               myReview: myReview ? {
                 _id: myReview._id,
@@ -154,6 +220,13 @@ exports.getMyRentalsView = async (req, res) => {
                 comment: myReview.comment,
                 isPublic: myReview.isPublic,
                 createdAt: myReview.createdAt
+              } : null,
+              counterpartyReview: visibleCounterpartyReview ? {
+                _id: visibleCounterpartyReview._id,
+                rating: visibleCounterpartyReview.rating,
+                comment: visibleCounterpartyReview.comment,
+                isPublic: visibleCounterpartyReview.isPublic,
+                createdAt: visibleCounterpartyReview.createdAt
               } : null
             }
         };
