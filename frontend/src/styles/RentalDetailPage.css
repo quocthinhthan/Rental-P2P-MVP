@@ -1,0 +1,1075 @@
+/* ══════════════════════════════════════════════════════════
+   RentalDetailPage.css
+   Styles riêng cho trang chi tiết đơn thuê.
+   Shared tokens (colors, buttons, badges, modal…) nằm ở
+   MyRentalsPage.css – file này chỉ import thêm sau đó.
+   ══════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────
+   1. DESIGN TOKENS (override / extend)
+   ───────────────────────────────────────── */
+.rental-detail-page {
+  --detail-sidebar-w: 340px;
+  --detail-gap: 24px;
+  --detail-panel-pad: 22px 24px;
+  --detail-radius: 10px;
+  --detail-hero-min-h: 340px;
+
+  /* Font-weight scale (dùng nhất quán toàn trang) */
+  --fw-normal: 400;   /* body text                  */
+  --fw-medium: 500;   /* label, kicker nhỏ          */
+  --fw-semibold: 600; /* heading phụ, strong label   */
+  --fw-bold: 700;     /* heading chính, price        */
+}
+
+/* ─────────────────────────────────────────
+   2. PAGE WRAPPER & BODY
+   ───────────────────────────────────────── */
+.rental-detail-page .myrp-body {
+  padding-top: 32px;
+  padding-bottom: 72px;
+}
+
+.rental-detail-page .myrp-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ─────────────────────────────────────────
+   3. TWO-COLUMN LAYOUT
+   ───────────────────────────────────────── */
+.rental-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--detail-sidebar-w);
+  gap: var(--detail-gap);
+  align-items: start;
+}
+
+.rental-detail-main {
+  display: grid;
+  gap: 18px;
+}
+
+/* Sticky sidebar */
+.rental-detail-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+/* ─────────────────────────────────────────
+   4. SHARED PANEL BASE
+   ───────────────────────────────────────── */
+.rental-detail-panel {
+  background: var(--surface);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--detail-radius);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, .06);
+  padding: var(--detail-panel-pad);
+  transition: box-shadow .2s;
+}
+
+/* ─────────────────────────────────────────
+   5. HERO SECTION (ảnh + tên + giá)
+   ───────────────────────────────────────── */
+.rental-hero-section {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--detail-radius);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, .06);
+}
+
+/* Media */
+.rental-hero-media {
+  min-height: var(--detail-hero-min-h);
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.rental-hero-media img {
+  width: 100%;
+  height: 100%;
+  min-height: var(--detail-hero-min-h);
+  object-fit: cover;
+  display: block;
+  transition: transform .35s ease;
+}
+
+.rental-hero-section:hover .rental-hero-media img {
+  transform: scale(1.03);
+}
+
+/* Content */
+.rental-hero-content {
+  padding: 28px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.rental-hero-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rental-hero-kicker {
+  margin: 0;
+  color: var(--brand);
+  font-size: .74rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.rental-hero-content h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  font-weight: var(--fw-bold);
+  line-height: 1.2;
+}
+
+.rental-hero-date {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .94rem;
+  font-weight: var(--fw-normal);
+}
+
+/* Price box */
+.rental-hero-price {
+  display: grid;
+  gap: 3px;
+  width: fit-content;
+  min-width: 200px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.rental-hero-price span {
+  color: #166534;
+  font-size: .72rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.rental-hero-price strong {
+  color: #14532d;
+  font-size: 1.32rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.2;
+}
+
+/* ─────────────────────────────────────────
+   6. SECTION HEADERS
+   ───────────────────────────────────────── */
+.detail-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-section-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.3;
+}
+
+/* Kicker above heading */
+.section-kicker {
+  margin: 0 0 4px;
+  color: var(--brand);
+  font-size: .7rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ─────────────────────────────────────────
+   7. INFO GRID (chi tiết thuê / thanh toán)
+   ───────────────────────────────────────── */
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-info-item {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #edf4fb;
+}
+
+/* Label */
+.detail-info-item span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* Value */
+.detail-info-item strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: .9rem;
+  font-weight: var(--fw-medium);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Highlighted row (e.g. tổng tiền) */
+.detail-info-item.is-highlight {
+  grid-column: 1 / -1;
+  background: #e0e6f9;
+  border-color: #c7d2fe;
+}
+
+.payment-info-grid .detail-info-item.is-highlight strong {
+  color: var(--brand);
+  font-size: 1.08rem;
+  font-weight: var(--fw-bold);
+}
+
+/* ─────────────────────────────────────────
+   8. RENTAL NOTE (ghi chú đơn)
+   ───────────────────────────────────────── */
+.rental-card-note {
+  margin-top: 12px;
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+  color: #0369a1;
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  padding: 8px 12px;
+  border-radius: 0 8px 8px 0;
+  line-height: 1.55;
+}
+
+.rental-card-note strong {
+  font-weight: var(--fw-semibold);
+}
+
+/* ─────────────────────────────────────────
+   9. PROCESS GRID (hợp đồng / bàn giao)
+   ───────────────────────────────────────── */
+.rental-process-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.process-card {
+  min-width: 0;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #edf4fb;
+  padding: 16px;
+  transition: border-color .2s;
+}
+
+.process-card:hover {
+  border-color: var(--brand-mid);
+}
+
+.process-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 10px;
+  border-radius: 7px;
+  background: #cbe3d8;
+  color: var(--brand);
+  font-weight: var(--fw-bold);
+  font-size: .78rem;
+}
+
+.process-card h4 {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: .9rem;
+  font-weight: var(--fw-semibold);
+}
+
+.process-card p {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.55;
+}
+
+/* ─────────────────────────────────────────
+   10. CONTRACT / REVIEW STATE CHIPS
+   ───────────────────────────────────────── */
+.contract-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: var(--fw-semibold);
+}
+
+.contract-state-ready {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.contract-state-waiting {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.contract-state-neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* ─────────────────────────────────────────
+   11. DISPUTE PANEL
+   ───────────────────────────────────────── */
+.dispute-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Accent bar on left */
+.dispute-panel::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #f97316, #ef4444);
+  border-radius: 4px 0 0 4px;
+}
+
+/* Exclamation prefix in header */
+.dispute-panel .detail-section-header {
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+
+.dispute-panel .detail-section-header::before {
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: var(--fw-bold);
+  font-size: .92rem;
+  flex-shrink: 0;
+}
+
+.dispute-panel .detail-section-header > div {
+  flex: 1;
+}
+
+/* Timeline */
+.dispute-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.dispute-timeline-step {
+  position: relative;
+  min-width: 0;
+  padding: 10px 10px 10px 30px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.dispute-timeline-step p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+}
+
+.dispute-timeline-step.done {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.dispute-timeline-step.done p {
+  color: #1d4ed8;
+}
+
+.dispute-timeline-dot {
+  position: absolute;
+  left: 9px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+}
+
+.dispute-timeline-step.done .dispute-timeline-dot {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.dispute-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Freeze / info boxes */
+.dispute-freeze-box {
+  margin: 0 0 14px;
+  padding: 10px 13px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 3px solid #f97316;
+  border-radius: 0 8px 8px 0;
+  color: #9a3412;
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+}
+
+.dispute-freeze-box strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: var(--fw-semibold);
+}
+
+.dispute-freeze-box p {
+  margin: 0;
+}
+
+.dispute-resolution-box,
+.penalty-box {
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: .84rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+}
+
+.dispute-resolution-box strong,
+.penalty-box strong {
+  font-weight: var(--fw-semibold);
+}
+
+.dispute-resolution-box p,
+.penalty-box p {
+  margin: 4px 0 0;
+}
+
+.penalty-box {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.penalty-box.is-current-user {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.dispute-summary {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  color: #7c2d12;
+  font-size: .84rem;
+  font-weight: var(--fw-normal);
+}
+
+.dispute-muted {
+  color: #9a3412;
+}
+
+/* ─────────────────────────────────────────
+   12. EVIDENCE IMAGE GRID
+   ───────────────────────────────────────── */
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.evidence-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: opacity .2s;
+}
+
+.evidence-grid a:hover img {
+  opacity: .82;
+}
+
+/* ─────────────────────────────────────────
+   13. COMPACT EMPTY STATE (inline)
+   ───────────────────────────────────────── */
+.compact-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #fafafa;
+  color: var(--text-secondary);
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+}
+
+.compact-empty-state > span {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.compact-empty-state p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ─────────────────────────────────────────
+   14. REVIEW SECTION
+   ───────────────────────────────────────── */
+.review-readonly-box {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.review-readonly-stars {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  color: #cbd5e1;
+}
+
+.review-readonly-stars .active {
+  color: #f59e0b;
+}
+
+.review-readonly-comment {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: .9rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.6;
+}
+
+.review-readonly-date {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: var(--fw-normal);
+}
+
+.review-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-detail-card {
+  min-height: 150px;
+}
+
+.review-card-title {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: .9rem;
+  font-weight: var(--fw-bold);
+}
+
+.review-state-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: var(--fw-semibold);
+}
+
+.review-state-chip.is-waiting {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.review-state-chip.is-complete {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.review-status-note {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+}
+
+.review-status-note.is-waiting {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.review-status-note.is-complete {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+/* ─────────────────────────────────────────
+   15. ACTION PANEL (sidebar)
+   ───────────────────────────────────────── */
+.rental-action-panel {
+  /* inherit from .rental-detail-panel */
+}
+
+.detail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.detail-actions .btn-xs,
+.detail-actions .contract-state {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 8px;
+  justify-content: center;
+  font-weight: var(--fw-semibold);
+}
+
+/* ─────────────────────────────────────────
+   16. MODAL (ký hợp đồng, ảnh bàn giao…)
+   ───────────────────────────────────────── */
+.rental-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 24, 39, .55);
+  backdrop-filter: blur(2px);
+}
+
+.rental-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--detail-radius);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .18);
+  border: 1px solid rgba(255, 255, 255, .15);
+  padding: 24px;
+}
+
+.review-modal {
+  width: min(620px, 100%);
+}
+
+.rental-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.rental-modal-eyebrow {
+  margin: 0 0 4px;
+  color: var(--brand);
+  font-size: .7rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.rental-modal h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.12rem;
+  font-weight: var(--fw-bold);
+}
+
+.rental-modal-subtitle {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: .88rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.55;
+}
+
+.modal-close-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background .15s, border-color .15s;
+}
+
+.modal-close-btn:hover {
+  background: var(--border);
+  border-color: var(--text-muted);
+}
+
+.modal-close-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.rental-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* Signature pad */
+.signature-pad-wrap {
+  overflow: hidden;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.signature-pad {
+  width: 100%;
+  height: 220px;
+  display: block;
+  background: #fff;
+  touch-action: none;
+}
+
+/* Handover upload */
+.handover-upload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 136px;
+  padding: 18px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+
+.handover-upload-box:hover {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.handover-upload-box input {
+  display: none;
+}
+
+.handover-upload-box span {
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+  margin-bottom: 4px;
+  font-size: .9rem;
+}
+
+.handover-upload-box small {
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: var(--fw-normal);
+}
+
+.handover-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.handover-preview-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* Review modal extras */
+.review-modal-summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.review-modal-item-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.review-modal-item-name {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-size: .95rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1.35;
+}
+
+.review-modal-counterparty,
+.review-modal-date {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+}
+
+.review-blind-note {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: .82rem;
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+}
+
+.review-field {
+  margin-bottom: 14px;
+}
+
+.review-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: .7rem;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.review-star-row {
+  display: flex;
+  gap: 6px;
+}
+
+.review-star-btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.review-star-btn:hover,
+.review-star-btn.active {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.review-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: .9rem;
+  font-weight: var(--fw-normal);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: inherit;
+}
+
+.review-textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(26, 107, 74, .1);
+}
+
+.review-error {
+  padding: 10px 12px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: .84rem;
+  font-weight: var(--fw-normal);
+}
+
+/* ─────────────────────────────────────────
+   17. LOADING & ERROR (trong detail page)
+   ───────────────────────────────────────── */
+.rental-detail-page .myrp-loading {
+  padding: 96px 24px;
+}
+
+.rental-detail-page .myrp-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 16px 20px;
+  color: #991b1b;
+  font-size: .9rem;
+  font-weight: var(--fw-normal);
+}
+
+/* ─────────────────────────────────────────
+   18. RESPONSIVE
+   ───────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .rental-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .rental-detail-sidebar {
+    position: static;
+  }
+
+  .rental-process-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .rental-hero-section {
+    grid-template-columns: 1fr;
+  }
+
+  .rental-hero-media,
+  .rental-hero-media img {
+    min-height: 240px;
+  }
+
+  .rental-hero-price {
+    width: 100%;
+  }
+
+  .detail-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dispute-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .rental-detail-page .myrp-body {
+    padding-top: 20px;
+    padding-bottom: 48px;
+  }
+
+  .rental-detail-panel {
+    padding: 16px;
+  }
+
+  .rental-hero-content {
+    padding: 20px;
+  }
+
+  .rental-process-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dispute-timeline {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rental-modal {
+    padding: 18px;
+  }
+}

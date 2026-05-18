@@ -9,6 +9,7 @@ const modalCopy = {
     subtitle: 'Tải lên ít nhất 1 ảnh tình trạng món đồ tại thời điểm bàn giao.',
     button: 'Xác nhận giao đồ',
     success: 'Đã xác nhận giao đồ. Đơn thuê chuyển sang trạng thái đang thuê.',
+    missing: 'Vui lòng tải lên ít nhất 1 ảnh bàn giao trước khi xác nhận.',
   },
   return: {
     eyebrow: 'Ảnh trả đồ',
@@ -16,6 +17,7 @@ const modalCopy = {
     subtitle: 'Tải lên ít nhất 1 ảnh tình trạng món đồ tại thời điểm nhận lại.',
     button: 'Hoàn tất đơn',
     success: 'Đơn thuê đã hoàn tất thành công.',
+    missing: 'Vui lòng tải lên ít nhất 1 ảnh trả đồ trước khi xác nhận.',
   },
 };
 
@@ -50,7 +52,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
 
   const handleSubmit = async () => {
     if (files.length === 0) {
-      Swal.fire('Thiếu ảnh bàn giao', 'Vui lòng tải lên ít nhất 1 ảnh trước khi xác nhận.', 'warning');
+      Swal.fire('Thiếu ảnh xác nhận', copy.missing, 'warning');
       return;
     }
 
@@ -70,10 +72,9 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
     } catch (err) {
       Swal.fire(
         'Lỗi!',
-        err.response?.data?.message || 'Không thể cập nhật ảnh bàn giao. Vui lòng thử lại.',
+        err.response?.data?.message || 'Không thể cập nhật ảnh xác nhận. Vui lòng thử lại.',
         'error'
       );
-      console.error(err);
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +88,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
             <p className="rental-modal-eyebrow">{copy.eyebrow}</p>
             <h3>{copy.title}</h3>
           </div>
-          <button className="modal-close-btn" type="button" onClick={onClose} disabled={submitting}>
+          <button className="modal-close-btn" type="button" onClick={onClose} disabled={submitting} aria-label="Đóng">
             ×
           </button>
         </div>
@@ -103,7 +104,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
         {previews.length > 0 && (
           <div className="handover-preview-grid">
             {previews.map((previewUrl, index) => (
-              <img key={previewUrl} src={previewUrl} alt={`Ảnh bàn giao ${index + 1}`} />
+              <img key={previewUrl} src={previewUrl} alt={`Ảnh xác nhận ${index + 1}`} />
             ))}
           </div>
         )}

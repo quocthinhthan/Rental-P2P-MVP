@@ -1,279 +1,335 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getAllDisputes, resolveDispute } from '../services/api';
 import Spinner from '../components/Common/Spinner';
-import Swal from 'sweetalert2'; // Thư viện thông báo đẹp
+import Swal from 'sweetalert2';
 
-const AdminDisputesPage = () => {
-    const [disputes, setDisputes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedDispute, setSelectedDispute] = useState(null);
-
-    // Form states
-    const [adminDecision, setAdminDecision] = useState('');
-    const [winner, setWinner] = useState('owner');
-    const [penalizeUser, setPenalizeUser] = useState('none');
-
-    useEffect(() => {
-        fetchDisputes();
-    }, []);
-
-    const fetchDisputes = async () => {
-        try {
-            setLoading(true);
-            const data = await getAllDisputes();
-            setDisputes(data);
-        } catch (error) {
-            Swal.fire('Lỗi!', 'Không thể tải danh sách sự cố.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleOpenResolve = (dispute) => {
-        setSelectedDispute(dispute);
-        // Tự động cuộn lên đầu modal nếu cần hoặc reset form
-        setAdminDecision('');
-    };
-
-    const handleResolveSubmit = async (e) => {
-        e.preventDefault();
-
-        // Hiển thị xác nhận trước khi gửi
-        const result = await Swal.fire({
-            title: 'Xác nhận phán quyết?',
-            text: "Hành động này sẽ thay đổi trạng thái đơn thuê và không thể hoàn tác!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Đồng ý, gửi phán quyết!',
-            cancelButtonText: 'Hủy'
-        });
-
-        if (result.isConfirmed) {
-            try {
-                let penalizeUserId = null;
-                if (penalizeUser === 'renter') penalizeUserId = selectedDispute.rentalId?.renterId;
-                if (penalizeUser === 'owner') penalizeUserId = selectedDispute.rentalId?.ownerId;
-
-                await resolveDispute(selectedDispute._id, {
-                    adminDecision,
-                    winner,
-                    penalizeUserId
-                });
-
-                await Swal.fire('Thành công!', 'Tranh chấp đã được giải quyết.', 'success');
-
-                setSelectedDispute(null);
-                fetchDisputes();
-            } catch (error) {
-                Swal.fire('Thất bại', 'Có lỗi xảy ra khi xử lý.', 'error');
-            }
-        }
-    };
-
-    if (loading) return <Spinner />;
-
-    return (
-        <div className="container-fluid px-4 pt-5 pb-5" style={{ minHeight: 'calc(100vh - 120px)' }}>
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="fw-bold text-primary">Trung Tâm Xử Lý Tranh Chấp</h2>
-                <button className="btn btn-outline-secondary btn-sm" onClick={fetchDisputes}>
-                    <i className="bi bi-arrow-clockwise"></i> Làm mới dữ liệu
-                </button>
-            </div>
-
-            <div className="card shadow-sm border-0">
-                <div className="card-body p-0">
-                    <div className="table-responsive">
-                        <table className="table table-hover align-middle mb-0">
-                            <thead className="table-light">
-                                <tr>
-                                    <th className="ps-4">Ngày tạo</th>
-                                    <th>Mã đơn thuê</th>
-                                    <th>Người báo cáo</th>
-                                    <th>Lý do tóm tắt</th>
-                                    <th>Trạng thái</th>
-                                    <th className="text-end pe-4">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {disputes.length === 0 ? (
-                                    <tr><td colSpan="6" className="text-center py-5 text-muted">Chưa có sự cố nào cần xử lý.</td></tr>
-                                ) : (
-                                    disputes.map((dispute) => (
-                                        <tr key={dispute._id}>
-                                            <td className="ps-4">{new Date(dispute.createdAt).toLocaleDateString('vi-VN')}</td>
-                                            <td><code className="text-primary">{dispute.rentalId?._id?.substring(0, 8)}...</code></td>
-                                            <td>
-                                                <div className="fw-bold">{dispute.reporterId?.fullName}</div>
-                                                <small className="text-muted">{dispute.reporterId?.email}</small>
-                                            </td>
-                                            <td className="text-truncate" style={{ maxWidth: '200px' }}>{dispute.reason}</td>
-                                            <td>
-                                                <span className={`badge rounded-pill ${dispute.status === 'pending' ? 'bg-warning text-dark' : 'bg-success'}`}>
-                                                    {dispute.status === 'pending' ? 'Chờ xử lý' : 'Đã xong'}
-                                                </span>
-                                            </td>
-                                            <td className="text-end pe-4">
-                                                <button
-                                                    className="btn btn-sm btn-dark px-3 shadow-sm"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#disputeDetailModal"
-                                                    onClick={() => handleOpenResolve(dispute)}
-                                                >
-                                                    Xem chi tiết
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* MODAL CHI TIẾT & XỬ LÝ */}
-            <div className="modal fade" id="disputeDetailModal" tabIndex="-1" aria-hidden="true">
-                <div className="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div className="modal-content border-0 shadow-lg">
-                        <div className="modal-header bg-dark text-white">
-                            <h5 className="modal-title">Chi tiết tranh chấp: {selectedDispute?._id}</h5>
-                            <button type="button" className="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div className="modal-body bg-light">
-                            {selectedDispute && (
-                                <div className="row g-4">
-                                    {/* Cột trái: Thông tin dữ liệu */}
-                                    <div className="col-lg-7">
-                                        <div className="card border-0 shadow-sm mb-4">
-                                            <div className="card-body">
-                                                <h6 className="text-muted text-uppercase fw-bold small mb-3">Nội dung khiếu nại</h6>
-                                                <p className="lead">{selectedDispute.reason}</p>
-                                                <hr />
-                                                <h6 className="text-muted text-uppercase fw-bold small mb-3">Bằng chứng hình ảnh ({selectedDispute.evidenceImages?.length || 0})</h6>
-                                                <div className="row g-2">
-                                                    {selectedDispute.evidenceImages?.map((img, idx) => (
-                                                        <div className="col-4" key={idx}>
-                                                            <a href={img} target="_blank" rel="noreferrer">
-                                                                <img src={img} className="img-fluid rounded border shadow-sm hover-zoom" alt="Evidence" style={{ height: '150px', width: '100%', objectFit: 'cover' }} />
-                                                            </a>
-                                                        </div>
-                                                    ))}
-                                                    {(!selectedDispute.evidenceImages || selectedDispute.evidenceImages.length === 0) && <p className="text-muted italic small">Không có hình ảnh đính kèm.</p>}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="card border-0 shadow-sm">
-                                            <div className="card-body">
-                                                <h6 className="text-muted text-uppercase fw-bold small mb-3">Thông tin giao dịch gốc</h6>
-                                                <div className="row g-3">
-                                                    <div className="col-md-6">
-                                                        <div className="p-3 border rounded bg-white">
-                                                            <small className="text-muted d-block mb-1">Người thuê (Renter)</small>
-                                                            <div className="fw-bold text-dark">
-                                                                <i className="bi bi-person-fill me-2"></i>
-                                                                {selectedDispute.rentalId?.renterId?.fullName || "N/A"}
-                                                            </div>
-                                                            <small className="text-muted">{selectedDispute.rentalId?.renterId?.email}</small>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-md-6">
-                                                        <div className="p-3 border rounded bg-white">
-                                                            <small className="text-muted d-block mb-1">Chủ đồ (Owner)</small>
-                                                            <div className="fw-bold text-dark">
-                                                                <i className="bi bi-shop me-2"></i>
-                                                                {selectedDispute.rentalId?.ownerId?.fullName || "N/A"}
-                                                            </div>
-                                                            <small className="text-muted">{selectedDispute.rentalId?.ownerId?.email}</small>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-12">
-                                                        <div className="d-flex justify-content-between align-items-center p-2 px-3 bg-light rounded border">
-                                                            <span>Mã đơn thuê: <strong>{selectedDispute.rentalId?._id}</strong></span>
-                                                            <span className="badge bg-success fs-6">
-                                                                Tổng tiền: {selectedDispute.rentalId?.totalPrice?.toLocaleString()}đ
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Cột phải: Form phán quyết */}
-                                    <div className="col-lg-5">
-                                        <div className="card border-0 shadow-sm border-top border-primary border-4 sticky-top" style={{ zIndex: 1 }}>
-                                            <div className="card-body">
-                                                <h5 className="mb-4 fw-bold">Hành động của Admin</h5>
-                                                {selectedDispute.status === 'pending' ? (
-                                                    <form onSubmit={handleResolveSubmit}>
-                                                        <div className="mb-3">
-                                                            <label className="form-label fw-bold">Phán quyết thắng kiện thuộc về:</label>
-                                                            <div className="btn-group w-100" role="group">
-                                                                <input type="radio" className="btn-check" name="winner" id="winOwner" value="owner" checked={winner === 'owner'} onChange={() => setWinner('owner')} />
-                                                                <label className="btn btn-outline-primary" htmlFor="winOwner">Chủ đồ thắng</label>
-
-                                                                <input type="radio" className="btn-check" name="winner" id="winRenter" value="renter" checked={winner === 'renter'} onChange={() => setWinner('renter')} />
-                                                                <label className="btn btn-outline-primary" htmlFor="winRenter">Người thuê thắng</label>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="mb-3">
-                                                            <label className="form-label fw-bold">Hình thức xử phạt tài khoản:</label>
-                                                            <select
-                                                                className="form-select"
-                                                                value={penalizeUser}
-                                                                onChange={(e) => setPenalizeUser(e.target.value)}
-                                                            >
-                                                                <option value="none">-- Không phạt --</option>
-                                                                <option value="owner">Khóa tài khoản Chủ đồ: {selectedDispute.rentalId?.ownerId?.fullName}</option>
-                                                                <option value="renter">Khóa tài khoản Người thuê: {selectedDispute.rentalId?.renterId?.fullName}</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div className="mb-4">
-                                                            <label className="form-label fw-bold">Nội dung giải quyết (Gửi cho các bên):</label>
-                                                            <textarea
-                                                                className="form-control"
-                                                                rows="5"
-                                                                placeholder="Nhập lý do phán quyết chi tiết..."
-                                                                required
-                                                                value={adminDecision}
-                                                                onChange={(e) => setAdminDecision(e.target.value)}
-                                                            ></textarea>
-                                                        </div>
-
-                                                        <button type="submit" className="btn btn-primary w-100 py-2 fw-bold shadow">
-                                                            GỬI PHÁN QUYẾT CUỐI CÙNG
-                                                        </button>
-                                                    </form>
-                                                ) : (
-                                                    <div className="alert alert-success border-0 shadow-sm">
-                                                        <h6 className="fw-bold"><i className="bi bi-check-circle-fill"></i> Đã giải quyết xong</h6>
-                                                        <hr />
-                                                        <p className="small mb-0"><strong>Quyết định:</strong> {selectedDispute.adminDecision}</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <style>{`
-                .hover-zoom { transition: transform .2s; cursor: pointer; }
-                .hover-zoom:hover { transform: scale(1.05); }
-                .modal-xl { max-width: 90%; }
-            `}</style>
-        </div>
-    );
+const STATUS_OPTIONS = ['all', 'pending', 'escalated', 'resolved', 'withdrawn'];
+const STATUS_LABELS = {
+  all: 'Tat ca',
+  pending: 'Dang hoa giai',
+  escalated: 'Can Admin',
+  resolved: 'Da xu ly',
+  withdrawn: 'Da rut'
 };
 
-export default AdminDisputesPage;
+const WINNER_LABELS = {
+  renter: 'Nguoi thue thang',
+  owner: 'Chu do thang',
+  none: 'Khong ben nao thang'
+};
+
+const PENALTY_LABELS = {
+  none: 'Khong phat',
+  warning: 'Canh bao',
+  suspension: 'Tam khoa 7 ngay',
+  ban: 'Cam tai khoan'
+};
+
+const getId = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value._id || value.id || '';
+};
+
+const getName = (value, fallback = 'N/A') => {
+  if (!value) return fallback;
+  if (typeof value === 'string') return value;
+  return value.fullName || value.name || value.email || value._id || fallback;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('vi-VN');
+};
+
+const getErrorMessage = (error, fallback) => {
+  if (error.response?.status === 401 || error.response?.status === 403) {
+    return 'Ban khong co quyen thuc hien thao tac nay.';
+  }
+  return error.response?.data?.message || fallback;
+};
+
+function ResolveForm({ dispute, onResolved }) {
+  const rental = dispute.rentalId || {};
+  const renter = rental.renterId || null;
+  const owner = rental.ownerId || null;
+  const [adminDecision, setAdminDecision] = useState('');
+  const [winner, setWinner] = useState('owner');
+  const [penaltyType, setPenaltyType] = useState('none');
+  const [penalizeUserId, setPenalizeUserId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (winner === 'none') {
+      setPenaltyType('none');
+      setPenalizeUserId('');
+    }
+  }, [winner]);
+
+  useEffect(() => {
+    if (penaltyType === 'none') {
+      setPenalizeUserId('');
+    }
+  }, [penaltyType]);
+
+  const canResolve = ['pending', 'escalated'].includes(dispute.status);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!adminDecision.trim()) {
+      Swal.fire('Thieu thong tin', 'Vui long nhap quyet dinh cua Admin.', 'warning');
+      return;
+    }
+
+    if (winner === 'none' && penaltyType !== 'none') {
+      Swal.fire('Sai nghiep vu', 'winner = none chi duoc di kem penaltyType = none.', 'warning');
+      return;
+    }
+
+    if (penaltyType !== 'none' && !penalizeUserId) {
+      Swal.fire('Thieu thong tin', 'Vui long chon tai khoan bi xu ly.', 'warning');
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Xac nhan xu ly tranh chap?',
+      text: 'Quyet dinh nay se cap nhat trang thai don thue theo ket qua dispute.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Gui quyet dinh',
+      cancelButtonText: 'Huy'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      setSubmitting(true);
+      await resolveDispute(dispute._id, {
+        adminDecision: adminDecision.trim(),
+        winner,
+        penaltyType,
+        penalizeUserId: penaltyType === 'none' ? null : penalizeUserId
+      });
+      Swal.fire('Thanh cong!', 'Tranh chap da duoc xu ly.', 'success');
+      setAdminDecision('');
+      setWinner('owner');
+      setPenaltyType('none');
+      setPenalizeUserId('');
+      await onResolved();
+    } catch (error) {
+      Swal.fire('That bai', getErrorMessage(error, 'Khong the xu ly tranh chap.'), 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!canResolve) {
+    return (
+      <div className="alert alert-light border mb-0">
+        <div className="fw-bold mb-1">Trang thai: {STATUS_LABELS[dispute.status] || dispute.status}</div>
+        <div className="small text-muted">Quyet dinh: {dispute.adminDecision || 'Chua co noi dung.'}</div>
+        {dispute.winner && <div className="small text-muted">Winner: {WINNER_LABELS[dispute.winner] || dispute.winner}</div>}
+        {dispute.penaltyType && <div className="small text-muted">Penalty: {PENALTY_LABELS[dispute.penaltyType] || dispute.penaltyType}</div>}
+        {dispute.penalizeUserId && <div className="small text-muted">Nguoi bi xu ly: {getName(dispute.penalizeUserId)}</div>}
+        {dispute.resolvedAt && <div className="small text-muted">Resolved at: {formatDateTime(dispute.resolvedAt)}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="border rounded p-3 bg-light">
+      <div className="mb-2">
+        <label className="form-label fw-bold">Quyet dinh Admin</label>
+        <textarea
+          className="form-control"
+          rows="3"
+          required
+          value={adminDecision}
+          onChange={(event) => setAdminDecision(event.target.value)}
+          placeholder="Nhap ly do va huong xu ly..."
+        />
+      </div>
+
+      <div className="row g-2">
+        <div className="col-md-4">
+          <label className="form-label fw-bold">Winner</label>
+          <select className="form-select" value={winner} onChange={(event) => setWinner(event.target.value)}>
+            <option value="renter">{WINNER_LABELS.renter}</option>
+            <option value="owner">{WINNER_LABELS.owner}</option>
+            <option value="none">{WINNER_LABELS.none}</option>
+          </select>
+        </div>
+
+        <div className="col-md-4">
+          <label className="form-label fw-bold">Penalty</label>
+          <select
+            className="form-select"
+            value={penaltyType}
+            onChange={(event) => setPenaltyType(event.target.value)}
+            disabled={winner === 'none'}
+          >
+            <option value="none">{PENALTY_LABELS.none}</option>
+            <option value="warning">{PENALTY_LABELS.warning}</option>
+            <option value="suspension">{PENALTY_LABELS.suspension}</option>
+            <option value="ban">{PENALTY_LABELS.ban}</option>
+          </select>
+        </div>
+
+        <div className="col-md-4">
+          <label className="form-label fw-bold">Nguoi bi xu ly</label>
+          <select
+            className="form-select"
+            value={penalizeUserId}
+            onChange={(event) => setPenalizeUserId(event.target.value)}
+            disabled={winner === 'none' || penaltyType === 'none'}
+          >
+            <option value="">Khong chon</option>
+            {getId(renter) && <option value={getId(renter)}>Nguoi thue: {getName(renter)}</option>}
+            {getId(owner) && <option value={getId(owner)}>Chu do: {getName(owner)}</option>}
+          </select>
+        </div>
+      </div>
+
+      {winner === 'none' && (
+        <div className="alert alert-warning py-2 mt-3 mb-0 small">
+          Case none khong ap dung che tai; frontend da khoa penaltyType ve none.
+        </div>
+      )}
+
+      <button type="submit" className="btn btn-primary mt-3" disabled={submitting}>
+        {submitting ? 'Dang gui...' : 'Gui quyet dinh'}
+      </button>
+    </form>
+  );
+}
+
+function DisputeCard({ dispute, onResolved }) {
+  const rental = dispute.rentalId || {};
+  const item = rental.itemId || {};
+  const renter = rental.renterId || {};
+  const owner = rental.ownerId || {};
+  const reporter = dispute.reporterId || {};
+  const penalizedUser = dispute.penalizeUserId || null;
+  const evidenceImages = Array.isArray(dispute.evidenceImages) ? dispute.evidenceImages : [];
+
+  return (
+    <div className={`card shadow-sm border-0 mb-3 ${dispute.status === 'escalated' ? 'border-start border-4 border-danger' : ''}`}>
+      <div className="card-body">
+        <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
+          <div>
+            <h5 className="mb-1">{item.name || 'Vat pham khong ro'}</h5>
+            <div className="text-muted small">Rental: <code>{getId(rental) || 'N/A'}</code></div>
+          </div>
+          <span className={`badge align-self-start ${dispute.status === 'escalated' ? 'bg-danger' : dispute.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+            {STATUS_LABELS[dispute.status] || dispute.status}
+          </span>
+        </div>
+
+        <div className="row g-3 mb-3">
+          <div className="col-md-3"><strong>Reporter</strong><br /><span className="text-muted">{getName(reporter)}</span></div>
+          <div className="col-md-3"><strong>Renter</strong><br /><span className="text-muted">{getName(renter)}</span></div>
+          <div className="col-md-3"><strong>Owner</strong><br /><span className="text-muted">{getName(owner)}</span></div>
+          <div className="col-md-3"><strong>Created</strong><br /><span className="text-muted">{formatDateTime(dispute.createdAt)}</span></div>
+          <div className="col-md-3"><strong>Mediation ends</strong><br /><span className="text-muted">{formatDateTime(dispute.mediationEndsAt)}</span></div>
+          <div className="col-md-3"><strong>Escalated at</strong><br /><span className="text-muted">{formatDateTime(dispute.escalatedAt)}</span></div>
+          <div className="col-md-3"><strong>Resolved at</strong><br /><span className="text-muted">{formatDateTime(dispute.resolvedAt)}</span></div>
+          <div className="col-md-3"><strong>Winner</strong><br /><span className="text-muted">{WINNER_LABELS[dispute.winner] || dispute.winner || '-'}</span></div>
+          <div className="col-md-3"><strong>Penalty</strong><br /><span className="text-muted">{PENALTY_LABELS[dispute.penaltyType] || dispute.penaltyType || '-'}</span></div>
+          <div className="col-md-3"><strong>Nguoi bi xu ly</strong><br /><span className="text-muted">{getName(penalizedUser, '-')}</span></div>
+          <div className="col-md-3"><strong>Rental status cu</strong><br /><span className="text-muted">{dispute.previousRentalStatus || '-'}</span></div>
+          <div className="col-md-3"><strong>Item status cu</strong><br /><span className="text-muted">{dispute.previousItemStatus || '-'}</span></div>
+        </div>
+
+        <div className="mb-3">
+          <strong>Ly do</strong>
+          <p className="mb-2 text-muted">{dispute.reason || 'Khong co noi dung.'}</p>
+          {evidenceImages.length > 0 && (
+            <div className="d-flex flex-wrap gap-2">
+              {evidenceImages.map((imageUrl) => (
+                <a key={imageUrl} href={imageUrl} target="_blank" rel="noreferrer">
+                  <img src={imageUrl} alt="Evidence" className="rounded border" style={{ width: 88, height: 88, objectFit: 'cover' }} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <ResolveForm dispute={dispute} onResolved={onResolved} />
+      </div>
+    </div>
+  );
+}
+
+export default function AdminDisputesPage() {
+  const [disputes, setDisputes] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+
+  const fetchDisputes = async (status = statusFilter) => {
+    try {
+      setLoading(true);
+      const data = await getAllDisputes(status);
+      setDisputes(Array.isArray(data) ? data : []);
+    } catch (error) {
+      Swal.fire('Loi!', getErrorMessage(error, 'Khong the tai danh sach tranh chap.'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDisputes(statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
+  const sortedDisputes = useMemo(() => {
+    const priority = { escalated: 0, pending: 1, resolved: 2, withdrawn: 3 };
+    return [...disputes].sort((a, b) => {
+      const statusCompare = (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
+      if (statusCompare !== 0) return statusCompare;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }, [disputes]);
+
+  return (
+    <div className="container-fluid px-4 pt-5 pb-5" style={{ minHeight: 'calc(100vh - 120px)' }}>
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h2 className="fw-bold text-primary mb-1">Quan ly tranh chap</h2>
+          <p className="text-muted mb-0">Uu tien cac tranh chap escalated va pending truoc.</p>
+        </div>
+        <button className="btn btn-outline-secondary btn-sm" onClick={() => fetchDisputes()}>
+          Lam moi
+        </button>
+      </div>
+
+      <div className="d-flex flex-wrap gap-2 mb-3">
+        {STATUS_OPTIONS.map((status) => (
+          <button
+            key={status}
+            type="button"
+            className={`btn btn-sm ${statusFilter === status ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setStatusFilter(status)}
+          >
+            {STATUS_LABELS[status]}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <Spinner />
+      ) : sortedDisputes.length === 0 ? (
+        <div className="card border-0 shadow-sm">
+          <div className="card-body text-center text-muted py-5">Chua co tranh chap nao trong bo loc nay.</div>
+        </div>
+      ) : (
+        sortedDisputes.map((dispute) => (
+          <DisputeCard key={dispute._id} dispute={dispute} onResolved={() => fetchDisputes()} />
+        ))
+      )}
+    </div>
+  );
+}
