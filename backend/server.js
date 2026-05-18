@@ -3,6 +3,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
@@ -13,6 +15,51 @@ dotenv.config();
 const { connectRabbitMQ } = require('./config/rabbitmq'); // >>> THÊM: Import hàm kết nối RabbitMQ
 
 const app = express();
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Cho phép FE (React/Vue/Flutter) kết nối
+    methods: ["GET", "POST"]
+  }
+});
+
+// Lắng nghe các sự kiện Real-time
+io.on('connection', (socket) => {
+  console.log(`[SOCKET] User connected: ${socket.id}`);
+
+  // 1. Tham gia vào phòng chat của 1 Đơn thuê
+  socket.on('join_rental_room', (rentalId) => {
+    socket.join(rentalId);
+    console.log(`User ${socket.id} joined room: ${rentalId}`);
+  });
+
+  // 2. Lắng nghe tin nhắn mới
+  socket.on('send_message', async (data) => {
+    // data FE gửi lên sẽ có dạng: { rentalId, senderId, content }
+    try {
+      const Message = require('./models/Message.model');
+      
+      // Lưu vào Database để làm bằng chứng sau này
+      const savedMessage = await Message.create({
+        rentalId: data.rentalId,
+        senderId: data.senderId,
+        content: data.content
+      });
+
+      // Phát (Broadcast) tin nhắn đó lại cho tất cả những ai đang trong phòng (bao gồm cả người gửi để hiển thị)
+      io.to(data.rentalId).emit('receive_message', savedMessage);
+      
+    } catch (error) {
+      console.error('[SOCKET] Lỗi lưu tin nhắn:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`[SOCKET] User disconnected: ${socket.id}`);
+  });
+});
+
 const swaggerDocument = YAML.load(path.join(__dirname, '..', 'swagger.yaml'));
 
 // --- Middleware ---
@@ -79,8 +126,8 @@ const startServer = async () => {
       throw new Error('FATAL ERROR: JWT_SECRET is not defined.');
     }
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+    server.listen(PORT, () => {
+      console.log(`[SERVER] Đang chạy trên cổng ${PORT} (Đã tích hợp Socket.io Real-time)`);
     });
 
   } catch (error) {

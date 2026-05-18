@@ -695,6 +695,68 @@ paths:
       responses:
         '200':
           description: Trả đồ và hoàn thành đơn thành công
+  /rentals/{id}/messages:
+    get:
+      tags:
+        - Rentals
+      summary: Lấy lịch sử trò chuyện của một đơn thuê (Chat History)
+      description: Tải toàn bộ tin nhắn giữa chủ đồ và người thuê. Admin cũng có thể dùng API này để đọc tin nhắn làm bằng chứng giải quyết tranh chấp.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của đơn thuê (Rental ID)
+      responses:
+        '200':
+          description: Tải lịch sử tin nhắn thành công
+        '401':
+          description: Chưa xác thực Token
+        '403':
+          description: Không có quyền xem hội thoại (Chỉ người thuê, chủ đồ hoặc Admin)
+        '404':
+          description: Không tìm thấy đơn thuê
+    post:
+      tags:
+        - Rentals
+      summary: Gửi tin nhắn mới vào đơn thuê (REST API fallback)
+      description: Dùng để gửi tin nhắn thông thường nếu Frontend không muốn dùng cơ chế emit của Socket.io.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của đơn thuê (Rental ID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Nội dung tin nhắn
+                  example: "Chào bạn, mình muốn thỏa thuận mức đền bù là 50k qua MoMo nhé!"
+      responses:
+        '201':
+          description: Gửi tin nhắn thành công
+        '400':
+          description: Nội dung tin nhắn không được để trống
+        '401':
+          description: Chưa xác thực Token
+        '403':
+          description: Không có quyền tham gia hội thoại này
+        '404':
+          description: Không tìm thấy đơn thuê  
           
   # ===============================================================
   # Admin Endpoints
@@ -781,7 +843,7 @@ paths:
   /disputes:
     post:
       tags:
-        - Rentals
+        - Disputes
       summary: User Báo cáo sự cố (Đóng băng đơn thuê)
       security:
         - bearerAuth: []
