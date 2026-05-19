@@ -18,6 +18,7 @@ import {
 } from '../constants/rentalUi';
 import AdminNav from '../components/Admin/AdminNav';
 import Spinner from '../components/Common/Spinner';
+import { formatRentalCode } from '../utils/itemCode';
 import '../styles/MyRentalsPage.css';
 import '../styles/RentalDetailPage.css';
 import '../styles/AdminDisputesPage.css';
@@ -218,7 +219,7 @@ export default function AdminDisputeDetailPage() {
                 Mã tranh chấp <code>{getId(dispute)}</code>
               </p>
               <p className="rental-hero-date">
-                Đơn thuê <code>{getId(rental)}</code> · {formatDate(rental.startDate)} - {formatDate(rental.endDate)}
+                Đơn thuê <code>{formatRentalCode(rental)}</code> · {formatDate(rental.startDate)} - {formatDate(rental.endDate)}
               </p>
 
               <div className="admin-dispute-money-row">
@@ -267,6 +268,7 @@ export default function AdminDisputeDetailPage() {
             <SectionHeader eyebrow="Giao dịch" title="Thông tin đơn thuê" />
             <div className="detail-info-grid admin-dispute-detail-info-grid">
               <InfoItem label="Trạng thái đơn" value={getRentalStatusLabel(rental.status)} />
+              <InfoItem label="Mã đơn thuê" value={formatRentalCode(rental)} />
               <InfoItem label="Trạng thái thanh toán" value={getPaymentStatusLabel(rental.paymentStatus)} />
               <InfoItem label="Trạng thái vật phẩm" value={getItemStatusLabel(item.status)} />
               <InfoItem label="Giá thuê/ngày" value={formatCurrency(item.pricePerDay)} />

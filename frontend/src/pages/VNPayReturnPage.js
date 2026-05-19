@@ -5,6 +5,7 @@ function VNPayReturnPage() {
   const [searchParams] = useSearchParams();
   const status = searchParams.get('status');
   const rentalId = searchParams.get('rentalId');
+  const rentalCode = searchParams.get('rentalCode');
   const responseCode = searchParams.get('responseCode');
   const message = searchParams.get('message');
 
@@ -54,7 +55,7 @@ function VNPayReturnPage() {
 
                 {rentalId && (
                   <p className="mb-2">
-                    <strong>Mã đơn thuê:</strong> {rentalId}
+                    <strong>Mã đơn thuê:</strong> {rentalCode || rentalId}
                   </p>
                 )}
 

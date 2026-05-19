@@ -7,6 +7,7 @@ import {
   statusConfig,
 } from '../constants/rentalUi';
 import Swal from 'sweetalert2';
+import { formatRentalCode } from '../utils/itemCode';
 import '../styles/MyRentalsPage.css';
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -101,7 +102,7 @@ function RentalSummaryCard({ rental, type }) {
       <div className="rental-card rental-card-deleted">
         <div>
           <p className="rental-card-title">Vật phẩm không còn tồn tại</p>
-          <p className="rental-card-meta">Đơn thuê ID: {rental._id}</p>
+          <p className="rental-card-meta">Mã đơn thuê: {formatRentalCode(rental)}</p>
         </div>
         <Link className="btn-xs btn-primary-xs" to={`/my-rentals/${rental._id}`} state={{ type }}>
           Xem chi tiết
@@ -130,6 +131,10 @@ function RentalSummaryCard({ rental, type }) {
         </div>
 
         <div className="rental-card-meta-grid">
+          <div>
+            <span>Mã đơn</span>
+            <strong>{formatRentalCode(rental)}</strong>
+          </div>
           <div>
             <span>Thời gian thuê</span>
             <strong>{formatDateRange(rental.startDate, rental.endDate)}</strong>

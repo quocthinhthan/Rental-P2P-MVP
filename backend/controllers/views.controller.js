@@ -42,6 +42,7 @@ exports.getItemDetailView = async (req, res) => {
 
     const viewData = {
         _id: item._id,
+        code: item.code,
         name: item.name,
         description: item.description,
         category: item.category, // Bổ sung category
@@ -76,7 +77,7 @@ exports.getMyRentalsView = async (req, res) => {
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
           path: 'itemId',
-          select: '_id name pricePerDay images' // Lấy mảng images
+          select: '_id code name pricePerDay images' // Lấy mảng images
       })
       .populate({ // Lấy thông tin chủ sở hữu (owner)
           path: 'ownerId',
@@ -91,7 +92,7 @@ exports.getMyRentalsView = async (req, res) => {
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
           path: 'itemId',
-          select: '_id name pricePerDay images' // Lấy mảng images
+          select: '_id code name pricePerDay images' // Lấy mảng images
       })
       .populate({ // Lấy thông tin người thuê (renter)
           path: 'renterId',
@@ -161,6 +162,7 @@ exports.getMyRentalsView = async (req, res) => {
         // Rào chắn nếu item bị null (do đã bị xóa)
         const itemSummary = rental.itemId ? {
             _id: rental.itemId._id,
+            code: rental.itemId.code,
             name: rental.itemId.name,
             pricePerDay: rental.itemId.pricePerDay,
             mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : ''
@@ -181,6 +183,7 @@ exports.getMyRentalsView = async (req, res) => {
 
         return {
             _id: rental._id,
+            code: rental.code,
             startDate: rental.startDate,
             endDate: rental.endDate,
           rentalFee: rental.rentalFee,
@@ -238,6 +241,7 @@ exports.getMyRentalsView = async (req, res) => {
       asOwner: asOwner.map(r => formatRentalDetail(r, r.renterId)),
       myItems: myItems.map(item => ({
           _id: item._id,
+          code: item.code,
           name: item.name,
           pricePerDay: item.pricePerDay,
           category: item.category,

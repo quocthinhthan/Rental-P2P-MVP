@@ -290,6 +290,7 @@ exports.getTopItems = async (req, res) => {
       {
         $project: {
           _id: '$item._id',
+          code: '$item.code',
           name: '$item.name',
           category: '$item.category',
           status: '$item.status',
@@ -418,7 +419,7 @@ exports.getTopUsers = async (req, res) => {
   }
 };
 
-// GET /api/admin/items?page=1&limit=20&status=&category=&search=&ownerId=
+// GET /api/admin/items?page=1&limit=20&status=&category=&search=&ownerId=&ownerSearch=
 exports.getAdminItems = async (req, res) => {
   try {
     const page = parsePositiveInt(req.query.page, 1, 10000);
@@ -448,67 +449,61 @@ exports.getAdminItems = async (req, res) => {
       match.ownerId = toObjectId(req.query.ownerId);
     }
 
-    const [items, total] = await Promise.all([
+    const ownerSearch = req.query.ownerSearch?.trim() || '';
+
+    // Common lookup stages (used in both data and count pipelines)
+    const ownerLookup = [
+      { $lookup: { from: 'users', localField: 'ownerId', foreignField: '_id', as: 'owner' } },
+      { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
+    ];
+
+    const ownerMatchStage = ownerSearch ? [{
+      $match: {
+        $or: [
+          { 'owner.fullName': { $regex: escapeRegex(ownerSearch), $options: 'i' } },
+          { 'owner.email': { $regex: escapeRegex(ownerSearch), $options: 'i' } }
+        ]
+      }
+    }] : [];
+
+    const projectStage = {
+      $project: {
+        code: 1, name: 1, description: 1, category: 1, images: 1, pricePerDay: 1,
+        baseValue: 1, depositPercentage: 1, address: 1, status: 1,
+        isFeatured: 1, createdAt: 1, updatedAt: 1,
+        rentalCount: { $size: '$rentals' },
+        disputeCount: { $size: '$disputes' },
+        owner: {
+          _id: '$owner._id', fullName: '$owner.fullName', email: '$owner.email',
+          phoneNumber: '$owner.phoneNumber', avatarUrl: '$owner.avatarUrl',
+          trustScore: '$owner.trustScore', isBanned: '$owner.isBanned'
+        }
+      }
+    };
+
+    const [items, countRows] = await Promise.all([
       Item.aggregate([
         { $match: match },
+        ...ownerLookup,
+        ...ownerMatchStage,
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: limit },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'ownerId',
-            foreignField: '_id',
-            as: 'owner'
-          }
-        },
-        { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
-        {
-          $lookup: {
-            from: 'rentals',
-            localField: '_id',
-            foreignField: 'itemId',
-            as: 'rentals'
-          }
-        },
-        {
-          $lookup: {
-            from: 'disputes',
-            localField: 'rentals._id',
-            foreignField: 'rentalId',
-            as: 'disputes'
-          }
-        },
-        {
-          $project: {
-            name: 1,
-            description: 1,
-            category: 1,
-            images: 1,
-            pricePerDay: 1,
-            baseValue: 1,
-            depositPercentage: 1,
-            address: 1,
-            status: 1,
-            isFeatured: 1,
-            createdAt: 1,
-            updatedAt: 1,
-            rentalCount: { $size: '$rentals' },
-            disputeCount: { $size: '$disputes' },
-            owner: {
-              _id: '$owner._id',
-              fullName: '$owner.fullName',
-              email: '$owner.email',
-              phoneNumber: '$owner.phoneNumber',
-              avatarUrl: '$owner.avatarUrl',
-              trustScore: '$owner.trustScore',
-              isBanned: '$owner.isBanned'
-            }
-          }
-        }
+        { $lookup: { from: 'rentals', localField: '_id', foreignField: 'itemId', as: 'rentals' } },
+        { $lookup: { from: 'disputes', localField: 'rentals._id', foreignField: 'rentalId', as: 'disputes' } },
+        projectStage,
       ]),
-      Item.countDocuments(match)
+      ownerSearch
+        ? Item.aggregate([
+          { $match: match },
+          ...ownerLookup,
+          ...ownerMatchStage,
+          { $count: 'total' }
+        ])
+        : Item.countDocuments(match).then((n) => [{ total: n }])
     ]);
+
+    const total = (Array.isArray(countRows) ? countRows[0]?.total : countRows) || 0;
 
     res.status(200).json({
       items,
@@ -516,7 +511,7 @@ exports.getAdminItems = async (req, res) => {
         currentPage: page,
         limitPerPage: limit,
         totalItems: total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
         hasMore: page * limit < total
       }
     });
@@ -526,6 +521,7 @@ exports.getAdminItems = async (req, res) => {
 };
 
 // GET /api/admin/items/:id
+
 exports.getAdminItemDetail = async (req, res) => {
   try {
     if (!isObjectId(req.params.id)) {

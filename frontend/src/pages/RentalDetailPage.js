@@ -5,6 +5,7 @@ import HandoverModal from '../components/Rentals/HandoverModal';
 import SignatureModal from '../components/Rentals/SignatureModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
+import { formatRentalCode } from '../utils/itemCode';
 import {
   disputeStatusConfig,
   penaltyLabels,
@@ -926,7 +927,7 @@ function RentalDetailPage() {
         <div className="myrp-header-breadcrumb">
           <Link to="/my-rentals">Đơn thuê của tôi</Link>
           <span>/</span>
-          <span>{rental.item?.name || rental._id}</span>
+          <span>{rental.item?.name || formatRentalCode(rental)}</span>
         </div>
       </div>
 
@@ -944,7 +945,7 @@ function RentalDetailPage() {
                 </div>
                 <p className="rental-hero-kicker">{isOwnerView ? 'Bạn là chủ đồ' : 'Bạn là người thuê'}</p>
                 <h3>{rental.item?.name || 'Vật phẩm đã thuê'}</h3>
-                <p className="rental-hero-date">{formatDateRange(rental.startDate, rental.endDate)}</p>
+                <p className="rental-hero-date">{formatRentalCode(rental)} · {formatDateRange(rental.startDate, rental.endDate)}</p>
                 <div className="rental-hero-price">
                   <span>Tổng thanh toán</span>
                   <strong>{formatCurrency(rental.totalAmount)}</strong>
@@ -958,6 +959,7 @@ function RentalDetailPage() {
               <SectionHeader eyebrow="Thông tin đơn thuê" title="Chi tiết thuê" />
               <div className="detail-info-grid">
                 <InfoItem label="Vai trò của bạn" value={isOwnerView ? 'Chủ đồ' : 'Người thuê'} />
+                <InfoItem label="Mã đơn thuê" value={formatRentalCode(rental)} />
                 <InfoItem label="Đối tác" value={rental.counterparty?.fullName || 'Chưa có thông tin'} />
                 <InfoItem label="Email đối tác" value={rental.counterparty?.email || 'Chưa có thông tin'} />
                 <InfoItem label="Trạng thái đơn" value={statusConfig[rental.status]?.label || 'Không rõ'} />
