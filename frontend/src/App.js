@@ -23,6 +23,11 @@ import NotFoundPage from './pages/NotFoundPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 import AdminDisputesPage from './pages/AdminDisputesPage';
+import AdminDisputeDetailPage from './pages/AdminDisputeDetailPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminItemsPage from './pages/AdminItemsPage';
+import AdminItemDetailPage from './pages/AdminItemDetailPage';
+import AdminItemReportsPage from './pages/AdminItemReportsPage';
 
 function App() {
   return (
@@ -50,7 +55,12 @@ function App() {
           <Route path="/account" element={<AccountPage />} />
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/items" element={<AdminItemsPage />} />
+          <Route path="/admin/items/:id" element={<AdminItemDetailPage />} />
+          <Route path="/admin/item-reports" element={<AdminItemReportsPage />} />
           <Route path="/admin/disputes" element={<AdminDisputesPage />} />
+          <Route path="/admin/disputes/:disputeId" element={<AdminDisputeDetailPage />} />
           {/* Thêm bất kỳ route nào cần login vào đây */}
         </Route>
       </Routes>

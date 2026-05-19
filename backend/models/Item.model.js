@@ -25,6 +25,7 @@ const ItemSchema = new mongoose.Schema({
     enum: Object.values(ItemStatus),
     default: ItemStatus.AVAILABLE
   },
+  isFeatured: { type: Boolean, default: false },
 }, { timestamps: true });
 
 ItemSchema.index({ location: '2dsphere' });

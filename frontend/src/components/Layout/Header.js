@@ -139,6 +139,24 @@ function Header() {
                         <>
                           <li><hr className="dropdown-divider" /></li>
                           <li>
+                            <Link to="/admin/dashboard" className="custom-dropdown-item">
+                              <i className="fas fa-chart-line me-2 item-icon"></i>
+                              Dashboard admin
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/admin/items" className="custom-dropdown-item">
+                              <i className="fas fa-boxes-stacked me-2 item-icon"></i>
+                              Quản lý sản phẩm
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/admin/item-reports" className="custom-dropdown-item">
+                              <i className="fas fa-flag me-2 item-icon"></i>
+                              Report sản phẩm
+                            </Link>
+                          </li>
+                          <li>
                             <Link to="/admin/disputes" className="custom-dropdown-item">
                               <i className="fas fa-gavel me-2 item-icon"></i>
                               Xử lý tranh chấp

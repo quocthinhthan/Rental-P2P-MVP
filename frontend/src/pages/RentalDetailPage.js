@@ -5,46 +5,15 @@ import HandoverModal from '../components/Rentals/HandoverModal';
 import SignatureModal from '../components/Rentals/SignatureModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
+import {
+  disputeStatusConfig,
+  penaltyLabels,
+  paymentLabels,
+  statusConfig,
+  winnerMessages,
+} from '../constants/rentalUi';
 import '../styles/MyRentalsPage.css';
 import '../styles/RentalDetailPage.css';
-
-const statusConfig = {
-  pending_payment: { label: 'Chờ thanh toán', cls: 'status-pending-payment' },
-  pending_confirmation: { label: 'Chờ xác nhận', cls: 'status-pending-confirm' },
-  confirmed: { label: 'Đã xác nhận', cls: 'status-confirmed' },
-  rejected: { label: 'Đã từ chối', cls: 'status-rejected' },
-  in_progress: { label: 'Đang thuê', cls: 'status-in-progress' },
-  completed: { label: 'Hoàn tất', cls: 'status-completed' },
-  cancelled: { label: 'Đã hủy', cls: 'status-cancelled' },
-  refunded: { label: 'Đã hoàn tiền', cls: 'status-cancelled' },
-  disputed: { label: 'Đang tranh chấp', cls: 'status-disputed' },
-};
-
-const paymentLabels = {
-  pending: 'Chờ thanh toán',
-  escrowed: 'Đã ký quỹ',
-  refunded: 'Đã hoàn tiền',
-};
-
-const disputeStatusConfig = {
-  pending: { label: 'Đang hòa giải', cls: 'dispute-pending' },
-  escalated: { label: 'Đã yêu cầu Admin xử lý', cls: 'dispute-escalated' },
-  withdrawn: { label: 'Khiếu nại đã rút', cls: 'dispute-withdrawn' },
-  resolved: { label: 'Tranh chấp đã giải quyết', cls: 'dispute-resolved' },
-};
-
-const penaltyLabels = {
-  none: 'Không xử lý',
-  warning: 'Cảnh cáo / trừ điểm uy tín',
-  suspension: 'Đình chỉ tạm thời',
-  ban: 'Khóa tài khoản',
-};
-
-const winnerMessages = {
-  renter: 'Admin đã xử lý tranh chấp: người thuê thắng.',
-  owner: 'Admin đã xử lý tranh chấp: chủ đồ thắng.',
-  none: 'Admin đã xử lý tranh chấp: không đủ căn cứ / không bên nào thắng.',
-};
 
 const getId = (value) => {
   if (!value) return '';
@@ -94,12 +63,259 @@ const isCompletedWithinSevenDays = (rental) => {
   return Date.now() - baseDate.getTime() <= 7 * 24 * 60 * 60 * 1000;
 };
 
+const hasPickupProof = (rental) => Array.isArray(rental?.pickupImages) && rental.pickupImages.length > 0;
+
 const canCreateDispute = (rental, dispute) => {
   if (!rental || dispute?.status) return false;
   if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed'].includes(rental.status)) {
     return false;
   }
-  return rental.status === 'confirmed' || rental.status === 'in_progress' || isCompletedWithinSevenDays(rental);
+
+  return hasPickupProof(rental) || rental.status === 'in_progress' || isCompletedWithinSevenDays(rental);
+};
+
+
+const lifecycleStepMeta = [
+  {
+    key: 'payment',
+    label: 'Thanh toán',
+    icon: 'fas fa-credit-card',
+    description: 'Người thuê thanh toán tiền thuê và tiền cọc.',
+  },
+  {
+    key: 'confirmation',
+    label: 'Chờ xác nhận',
+    icon: 'fas fa-clock',
+    description: 'Chủ đồ xem xét và xác nhận yêu cầu thuê.',
+  },
+  {
+    key: 'contract',
+    label: 'Ký hợp đồng',
+    icon: 'fas fa-file-signature',
+    description: 'Hai bên ký hợp đồng điện tử trước khi giao nhận.',
+  },
+  {
+    key: 'handover',
+    label: 'Giao/Nhận đồ',
+    icon: 'fas fa-box-open',
+    description: 'Xác nhận bàn giao vật phẩm kèm hình ảnh minh chứng.',
+  },
+  {
+    key: 'using',
+    label: 'Đang thuê',
+    icon: 'fas fa-calendar-check',
+    description: 'Vật phẩm đang trong thời gian thuê.',
+  },
+  {
+    key: 'completed',
+    label: 'Hoàn tất',
+    icon: 'fas fa-check-circle',
+    description: 'Đơn thuê đã hoàn tất và có thể đánh giá.',
+  },
+];
+
+const hasReturnProof = (rental) => Array.isArray(rental?.returnImages) && rental.returnImages.length > 0;
+
+const isPastRentalEndDate = (rental) => {
+  if (!rental?.endDate) return false;
+  const endDate = new Date(rental.endDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+  return Date.now() > endDate.getTime();
+};
+
+const getPastEndDateHelperText = (rental) => {
+  if (rental?.status === 'completed' || hasReturnProof(rental) || !hasPickupProof(rental) || !isPastRentalEndDate(rental)) {
+    return '';
+  }
+
+  return 'Đơn đã qua ngày thuê, vui lòng hoàn tất/trả đồ.';
+};
+
+const getConfirmedTimelineStatus = (rental, isFullySigned) => {
+  if (hasPickupProof(rental)) return 'in_progress';
+  return isFullySigned ? 'confirmed_ready_for_pickup' : 'confirmed';
+};
+
+const getTimelineStatusAfterDisputeRestore = (rental, dispute, isFullySigned) => {
+  if (!rental) return '';
+
+  if (rental.status === 'completed' || dispute?.previousRentalStatus === 'completed' || hasReturnProof(rental)) {
+    return 'completed';
+  }
+
+  if (
+    rental.status === 'in_progress' ||
+    dispute?.previousRentalStatus === 'in_progress' ||
+    hasPickupProof(rental)
+  ) {
+    return 'in_progress';
+  }
+
+  if (rental.status === 'confirmed' || dispute?.previousRentalStatus === 'confirmed') {
+    return isFullySigned ? 'confirmed_ready_for_pickup' : 'confirmed';
+  }
+
+  return rental.status || dispute?.previousRentalStatus || 'in_progress';
+};
+
+const getEffectiveTimelineStatus = (rental, dispute, isFullySigned) => {
+  if (!rental) return '';
+
+  const hasActiveDispute = ['pending', 'escalated'].includes(dispute?.status);
+
+  if (rental.status === 'disputed' || hasActiveDispute) {
+    return 'disputed_in_progress';
+  }
+
+  if (dispute?.status === 'withdrawn') {
+    return getTimelineStatusAfterDisputeRestore(rental, dispute, isFullySigned);
+  }
+
+  if (dispute?.status === 'resolved') {
+    if (dispute.winner === 'owner' && rental.status === 'completed') {
+      return 'completed';
+    }
+
+    if (dispute.winner === 'renter') {
+      return 'dispute_resolved_at_in_progress';
+    }
+
+    if (dispute.winner === 'none') {
+      return getTimelineStatusAfterDisputeRestore(rental, dispute, isFullySigned);
+    }
+
+    return rental.status;
+  }
+
+  if (rental.status === 'confirmed') {
+    return getConfirmedTimelineStatus(rental, isFullySigned);
+  }
+
+  return rental.status;
+};
+
+const getLifecycleIndex = (status) => {
+  switch (status) {
+    case 'pending_payment':
+      return 0;
+    case 'pending_confirmation':
+      return 1;
+    case 'confirmed':
+      return 2;
+    case 'confirmed_ready_for_pickup':
+      return 3;
+    case 'in_progress':
+    case 'disputed_in_progress':
+    case 'dispute_resolved_at_in_progress':
+      return 4;
+    case 'completed':
+      return 5;
+    case 'refunded':
+      return 4;
+    case 'rejected':
+    case 'cancelled':
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+const getLifecycleSummary = (rental, dispute) => {
+  if (dispute?.status === 'resolved') {
+    const helperText = getPastEndDateHelperText(rental);
+
+    return {
+      badge: 'Tranh chấp đã giải quyết',
+      tone: 'resolved',
+      text: [
+        winnerMessages[dispute.winner] || 'Admin đã xử lý tranh chấp cho đơn thuê này.',
+        helperText,
+      ].filter(Boolean).join(' '),
+    };
+  }
+
+  if (dispute?.status === 'withdrawn') {
+    const helperText = getPastEndDateHelperText(rental);
+
+    return {
+      badge: 'Khiếu nại đã rút',
+      tone: 'neutral',
+      text: [
+        'Người báo cáo đã rút khiếu nại. Giao dịch được khôi phục theo xử lý của hệ thống.',
+        helperText,
+      ].filter(Boolean).join(' '),
+    };
+  }
+
+  if (rental?.status === 'disputed' || ['pending', 'escalated'].includes(dispute?.status)) {
+    return {
+      badge: dispute?.status === 'pending' ? 'Đang hòa giải' : 'Đang tranh chấp',
+      tone: 'dispute',
+      text: dispute?.status === 'escalated'
+        ? 'Tranh chấp đã được chuyển cho Admin xem xét. Các thao tác giao dịch chính đang tạm khóa.'
+        : 'Đơn thuê đang trong thời gian hòa giải. Các thao tác giao dịch chính đang tạm khóa.',
+    };
+  }
+
+  if (rental?.status === 'completed') {
+    return { badge: 'Hoàn tất', tone: 'success', text: 'Đơn thuê đã hoàn tất. Hai bên có thể đánh giá giao dịch.' };
+  }
+
+  if (getPastEndDateHelperText(rental)) {
+    return {
+      badge: statusConfig[rental?.status]?.label || 'Đang thuê',
+      tone: 'active',
+      text: getPastEndDateHelperText(rental),
+    };
+  }
+
+  if (rental?.status === 'rejected') {
+    return { badge: 'Yêu cầu bị từ chối', tone: 'failed', text: 'Chủ đồ đã từ chối yêu cầu thuê này.' };
+  }
+
+  if (rental?.status === 'cancelled') {
+    return { badge: 'Đơn đã hủy', tone: 'failed', text: 'Đơn thuê đã kết thúc ở trạng thái hủy.' };
+  }
+
+  return {
+    badge: statusConfig[rental?.status]?.label || 'Đang xử lý',
+    tone: 'active',
+    text: 'Theo dõi các bước chính từ thanh toán, xác nhận, ký hợp đồng đến hoàn tất đơn thuê.',
+  };
+};
+
+const getRentalTimelineState = (rental, dispute, isFullySigned) => {
+  const effectiveStatus = getEffectiveTimelineStatus(rental, dispute, isFullySigned);
+  const activeIndex = getLifecycleIndex(effectiveStatus);
+  const isTerminalStopped = ['rejected', 'cancelled', 'refunded'].includes(effectiveStatus);
+  const isFullyCompleted = effectiveStatus === 'completed';
+  const isDisputeActive = (
+    ['pending', 'escalated'].includes(dispute?.status) ||
+    (rental?.status === 'disputed' && !['resolved', 'withdrawn'].includes(dispute?.status))
+  );
+  const isResolvedAtInProgress = effectiveStatus === 'dispute_resolved_at_in_progress';
+  const summary = getLifecycleSummary(rental, dispute);
+
+  const steps = lifecycleStepMeta.map((step, index) => {
+    let status = 'pending';
+
+    if (isFullyCompleted) {
+      status = 'completed';
+    } else if (isTerminalStopped && index > activeIndex) {
+      status = 'pending';
+    } else if (isTerminalStopped && index === activeIndex) {
+      status = 'failed';
+    } else if (index < activeIndex) {
+      status = 'completed';
+    } else if (index === activeIndex) {
+      status = isDisputeActive ? 'warning' : 'active';
+      if (isResolvedAtInProgress) status = 'active';
+    }
+
+    return { ...step, status };
+  });
+
+  return { steps, summary, normalizedStatus: effectiveStatus, isDisputeActive };
 };
 
 const getErrorMessage = (error, fallback) => {
@@ -108,6 +324,44 @@ const getErrorMessage = (error, fallback) => {
   }
   return error.response?.data?.message || fallback;
 };
+
+
+function RentalLifecycleTimeline({ rental, dispute, isFullySigned }) {
+  const timeline = getRentalTimelineState(rental, dispute, isFullySigned);
+
+  return (
+    <section className={`rental-detail-panel lifecycle-panel lifecycle-panel-${timeline.summary.tone}`}>
+      <SectionHeader eyebrow="Vòng đời đơn thuê" title="Tiến trình thuê đồ">
+        <span className={`lifecycle-summary-badge is-${timeline.summary.tone}`}>{timeline.summary.badge}</span>
+      </SectionHeader>
+
+      <p className="lifecycle-summary-text">{timeline.summary.text}</p>
+
+      <div className="rental-lifecycle-timeline" aria-label="Timeline vòng đời đơn thuê">
+        {timeline.steps.map((step, index) => (
+          <div key={step.key} className={`lifecycle-step is-${step.status}`}>
+            <div className="lifecycle-step-connector" aria-hidden="true" />
+            <div className="lifecycle-step-icon" aria-hidden="true">
+              <i className={step.icon} />
+            </div>
+            <div className="lifecycle-step-content">
+              <span>Bước {index + 1}</span>
+              <strong>{step.label}</strong>
+              <p>{step.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {timeline.isDisputeActive && (
+        <div className="lifecycle-dispute-callout">
+          <strong>Tranh chấp đang tạm dừng quy trình thuê.</strong>
+          <p>Timeline dừng tại bước phát sinh tranh chấp hoặc bước thuê gần nhất, còn các hành động chính sẽ bị khóa cho đến khi khiếu nại được rút hoặc Admin xử lý.</p>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function StatusBadge({ status }) {
   const cfg = statusConfig[status] || { label: 'Không rõ', cls: 'status-unknown' };
@@ -558,6 +812,25 @@ function RentalDetailPage() {
   const showCreateDispute = canCreateDispute(rental, dispute);
   const canReview = rental?.status === 'completed' && !rental?.review?.hasMyReview;
   const hasBothReviews = Boolean(rental?.review?.hasMyReview && rental?.review?.hasCounterpartyReview);
+  const canPayEscrow = !isDisputed && !isOwnerView && rental?.status === 'pending_payment';
+  const canOwnerConfirmReject = !isDisputed && isOwnerView && rental?.status === 'pending_confirmation';
+  const showContractReadyState = isFullySigned && rental?.status === 'confirmed';
+  const showReviewState = rental?.status === 'completed' && rental?.review?.hasMyReview;
+  const showExistingDisputeState = !showCreateDispute && !isDisputed && Boolean(dispute?.status);
+  const hasVisibleAction = Boolean(
+    canPayEscrow ||
+    canOwnerConfirmReject ||
+    canSignContract ||
+    isWaitingForOtherSignature ||
+    showContractReadyState ||
+    needsSignatureBeforePickup ||
+    canPickup ||
+    canReturn ||
+    canReview ||
+    showReviewState ||
+    showCreateDispute ||
+    showExistingDisputeState
+  );
   const itemImage = rental?.item?.mainImage || 'https://via.placeholder.com/900x600';
 
   const handleOwnerAction = async (action) => {
@@ -679,15 +952,17 @@ function RentalDetailPage() {
               </div>
             </section>
 
+            <RentalLifecycleTimeline rental={rental} dispute={dispute} isFullySigned={isFullySigned} />
+
             <section className="rental-detail-panel">
               <SectionHeader eyebrow="Thông tin đơn thuê" title="Chi tiết thuê" />
               <div className="detail-info-grid">
                 <InfoItem label="Vai trò của bạn" value={isOwnerView ? 'Chủ đồ' : 'Người thuê'} />
                 <InfoItem label="Đối tác" value={rental.counterparty?.fullName || 'Chưa có thông tin'} />
                 <InfoItem label="Email đối tác" value={rental.counterparty?.email || 'Chưa có thông tin'} />
+                <InfoItem label="Trạng thái đơn" value={statusConfig[rental.status]?.label || 'Không rõ'} />
                 <InfoItem label="Ngày bắt đầu" value={formatDate(rental.startDate)} />
                 <InfoItem label="Ngày kết thúc" value={formatDate(rental.endDate)} />
-                <InfoItem label="Trạng thái đơn" value={statusConfig[rental.status]?.label || 'Không rõ'} />
               </div>
               {rental.note ? (
                 <div className="rental-card-note"><strong>Ghi chú:</strong> {rental.note}</div>
@@ -804,13 +1079,13 @@ function RentalDetailPage() {
               )}
 
               <div className="rental-card-actions detail-actions">
-                {!isDisputed && !isOwnerView && rental.status === 'pending_payment' && (
+                {canPayEscrow && (
                   <button className="btn-xs btn-primary-xs" onClick={handlePayEscrow} disabled={Boolean(actionLoading)}>
                     {actionLoading === 'pay' ? 'Đang tạo thanh toán...' : 'Thanh toán VNPay'}
                   </button>
                 )}
 
-                {!isDisputed && isOwnerView && rental.status === 'pending_confirmation' && (
+                {canOwnerConfirmReject && (
                   <>
                     <button className="btn-xs btn-success-xs" onClick={() => handleOwnerAction('confirm')} disabled={Boolean(actionLoading)}>
                       {actionLoading === 'confirm' ? 'Đang chấp nhận...' : 'Chấp nhận cho thuê'}
@@ -831,7 +1106,7 @@ function RentalDetailPage() {
                   <span className="contract-state contract-state-waiting">Bạn đã ký, đang chờ bên còn lại</span>
                 )}
 
-                {isFullySigned && rental.status === 'confirmed' && (
+                {showContractReadyState && (
                   <span className="contract-state contract-state-ready">Hợp đồng đã ký đủ</span>
                 )}
 
@@ -863,7 +1138,7 @@ function RentalDetailPage() {
                   </button>
                 )}
 
-                {rental.status === 'completed' && rental.review?.hasMyReview && (
+                {showReviewState && (
                   <span className={`review-state-chip ${hasBothReviews ? 'is-complete' : 'is-waiting'}`}>
                     {hasBothReviews ? 'Hai bên đã đánh giá' : 'Chờ đối phương đánh giá'}
                   </span>
@@ -875,11 +1150,11 @@ function RentalDetailPage() {
                   </button>
                 )}
 
-                {!showCreateDispute && !isDisputed && dispute?.status && (
+                {showExistingDisputeState && (
                   <span className="contract-state contract-state-waiting">Đơn này đã có tranh chấp liên quan</span>
                 )}
 
-                {!showCreateDispute && !isDisputed && !dispute?.status && !isWaitingForOtherSignature && !canReview && (
+                {!hasVisibleAction && (
                   <span className="contract-state contract-state-neutral">Không có thao tác khả dụng ở trạng thái hiện tại</span>
                 )}
               </div>
@@ -915,3 +1190,4 @@ function RentalDetailPage() {
 }
 
 export default RentalDetailPage;
+

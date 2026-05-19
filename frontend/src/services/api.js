@@ -125,6 +125,8 @@ export const suggestItemPrice = (payload) => api.post('/items/suggest-price', pa
   skipGlobalLoading: true,
 });
 
+export const reportItem = (itemId, payload) => api.post(`/items/${itemId}/report`, payload);
+
 // === Views (BFF) ===
 export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}`);
 
@@ -182,6 +184,48 @@ export const getAllDisputes = async (status) => {
   return response.data;
 };
 
+// === Admin Dashboard ===
+export const getAdminDashboardOverview = () => api.get('/admin/dashboard/overview');
+
+export const getAdminDashboardCharts = (range = '7d') =>
+  api.get(`/admin/dashboard/charts?range=${encodeURIComponent(range)}`);
+
+export const getAdminTopItems = (limit = 10) =>
+  api.get(`/admin/dashboard/top-items?limit=${encodeURIComponent(limit)}`);
+
+export const getAdminTopUsers = (type = 'owners', limit = 10) =>
+  api.get(`/admin/dashboard/top-users?type=${encodeURIComponent(type)}&limit=${encodeURIComponent(limit)}`);
+
+const buildAdminQueryString = (params = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value);
+    }
+  });
+  return query.toString();
+};
+
+// === Admin Product Management ===
+export const getAdminItems = (params = {}) => {
+  const queryString = buildAdminQueryString(params);
+  return api.get(`/admin/items${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getAdminItemDetail = (id) => api.get(`/admin/items/${id}`);
+
+export const updateAdminItemStatus = (id, payload) => api.patch(`/admin/items/${id}/status`, payload);
+
+export const updateAdminItemFeature = (id, payload) => api.patch(`/admin/items/${id}/feature`, payload);
+
+export const getAdminItemReports = (params = {}) => {
+  const queryString = buildAdminQueryString(params);
+  return api.get(`/admin/item-reports${queryString ? `?${queryString}` : ''}`);
+};
+
+export const resolveAdminItemReport = (reportId, payload) =>
+  api.patch(`/admin/item-reports/${reportId}/resolve`, payload);
+
 export const resolveDispute = async (id, resolveData) => {
   const response = await api.patch(`/disputes/${id}/resolve`, resolveData);
   return response.data;
@@ -213,6 +257,7 @@ const apiService = {
   updateItem,
   deleteItem,
   suggestItemPrice,
+  reportItem,
   getItemDetails,
   getMyRentals,
   createReview,
@@ -230,6 +275,16 @@ const apiService = {
   escalateDispute,
   getAllDisputes,
   resolveDispute,
+  getAdminDashboardOverview,
+  getAdminDashboardCharts,
+  getAdminTopItems,
+  getAdminTopUsers,
+  getAdminItems,
+  getAdminItemDetail,
+  updateAdminItemStatus,
+  updateAdminItemFeature,
+  getAdminItemReports,
+  resolveAdminItemReport,
   getBestsellers,
   uploadImages,
 };

@@ -1739,3 +1739,263 @@
     width: 100%;
   }
 }
+
+/* Mini lifecycle timeline in rental cards */
+.rental-mini-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+}
+
+.mini-step {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mini-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: -6px;
+  top: 7px;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.mini-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.mini-step-label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mini-step-done .mini-step-dot,
+.mini-step-done:not(:last-child)::after {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.mini-step-done .mini-step-label {
+  color: #166534;
+}
+
+.mini-step-active .mini-step-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.mini-step-active .mini-step-label {
+  color: #1d4ed8;
+}
+
+.mini-step-warning .mini-step-dot {
+  background: #f97316;
+  border-color: #f97316;
+}
+
+.mini-step-warning .mini-step-label {
+  color: #c2410c;
+}
+
+.mini-step-failed .mini-step-dot {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.mini-step-failed .mini-step-label {
+  color: #991b1b;
+}
+
+.rental-mini-timeline.is-disputed {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.rental-mini-timeline.is-resolved {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+@media (max-width: 700px) {
+  .rental-mini-timeline {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-step:not(:last-child)::after {
+    left: 7px;
+    top: 18px;
+    bottom: -8px;
+    width: 2px;
+    height: auto;
+    right: auto;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   V2 FIX: Mini timeline trong card danh sách
+   - Không để connector line đè lên chữ
+   - Timeline gọn hơn, hiện đại hơn, dễ đọc trên desktop/mobile
+   ════════════════════════════════════════════════════════════════ */
+.rental-mini-timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  padding: 12px 14px 10px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+.mini-step {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 18px auto;
+  justify-items: center;
+  align-items: start;
+  gap: 7px;
+  text-align: center;
+}
+
+.mini-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + 9px);
+  right: calc(-50% + 9px);
+  top: 8px;
+  height: 2px;
+  background: #dbe3ec;
+  z-index: 0;
+  border-radius: 999px;
+}
+
+.mini-step-dot {
+  position: relative;
+  z-index: 2;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  box-shadow: 0 0 0 4px #fff;
+  flex-shrink: 0;
+}
+
+.mini-step-label {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  padding: 0 3px;
+  color: var(--text-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+}
+
+.mini-step-done:not(:last-child)::after {
+  background: #16a34a;
+}
+
+.mini-step-done .mini-step-dot {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.mini-step-done .mini-step-label {
+  color: #166534;
+}
+
+.mini-step-active .mini-step-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.mini-step-active .mini-step-label {
+  color: #1d4ed8;
+}
+
+.mini-step-warning .mini-step-dot {
+  background: #f97316;
+  border-color: #f97316;
+}
+
+.mini-step-warning .mini-step-label {
+  color: #c2410c;
+}
+
+.mini-step-failed .mini-step-dot {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.mini-step-failed .mini-step-label {
+  color: #991b1b;
+}
+
+.rental-mini-timeline.is-disputed {
+  background: linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
+  border-color: #fed7aa;
+}
+
+.rental-mini-timeline.is-resolved {
+  background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
+  border-color: #c7d2fe;
+}
+
+@media (max-width: 700px) {
+  .rental-mini-timeline {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .mini-step {
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-rows: auto;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+    gap: 8px;
+  }
+
+  .mini-step:not(:last-child)::after {
+    left: 8px;
+    top: 19px;
+    bottom: -10px;
+    width: 2px;
+    height: auto;
+    right: auto;
+  }
+
+  .mini-step-label {
+    white-space: normal;
+  }
+}

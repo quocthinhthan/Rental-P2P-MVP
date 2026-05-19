@@ -1,6 +1,8 @@
 // backend/controllers/items.controller.js
 const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
+const ItemReport = require('../models/ItemReport.model');
+const mongoose = require('mongoose');
 
 const DEFAULT_SEARCH_LIMIT = 100;
 const MAX_SEARCH_LIMIT = 200;
@@ -478,6 +480,37 @@ const suggestPrice = async (req, res) => {
   }
 };
 
+// POST /api/items/:id/report
+const reportItem = async (req, res) => {
+  const { reason, evidenceImages } = req.body;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Item ID khong hop le' });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'Vui long nhap ly do bao cao san pham' });
+    }
+
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    const report = await ItemReport.create({
+      itemId: item._id,
+      reporterId: req.user._id,
+      reason: reason.trim(),
+      evidenceImages: Array.isArray(evidenceImages) ? evidenceImages : []
+    });
+
+    res.status(201).json({ message: 'Da gui bao cao san pham', report });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   searchItems,
   createItem,
@@ -486,5 +519,6 @@ module.exports = {
   checkOwner,
   getCategories,
   getBestsellerItems,
-  suggestPrice
+  suggestPrice,
+  reportItem
 };
