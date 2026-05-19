@@ -7,7 +7,7 @@ import {
   getAdminTopUsers
 } from '../services/api';
 import Spinner from '../components/Common/Spinner';
-import AdminNav from '../components/Admin/AdminNav';
+import AdminHero from '../components/Admin/AdminHero';
 import { getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels } from '../constants/rentalUi';
 import '../styles/AdminDisputesPage.css';
@@ -198,14 +198,11 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="admin-dashboard-page admin-shell-page">
-      <section className="admin-disputes-hero">
-        <div className="admin-disputes-hero-copy">
-          <span className="admin-disputes-eyebrow">Bảng điều khiển admin</span>
-          <h1>Tổng quan vận hành</h1>
-          <p>Theo dõi người dùng, sản phẩm, đơn thuê, doanh thu, ký quỹ và rủi ro trên RentalP2P.</p>
-        </div>
-        <AdminNav />
-      </section>
+      <AdminHero
+        eyebrow="Bảng điều khiển admin"
+        title="Tổng quan vận hành"
+        description="Theo dõi người dùng, sản phẩm, đơn thuê, doanh thu, ký quỹ và rủi ro trên RentalP2P."
+      />
 
       {loading ? (
         <div className="admin-dispute-loading"><Spinner /></div>

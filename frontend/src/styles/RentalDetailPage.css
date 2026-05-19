@@ -17,7 +17,7 @@
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
-  --fw-extrabold: 800;
+  --fw-extrabold: 750;
 }
 
 /* ─────────────────────────────────────────
@@ -911,7 +911,7 @@
   display: block;
   margin-bottom: 7px;
   font-size: 0.94rem;
-  font-weight: var(--fw-extrabold);
+  font-weight: var(--fw-bold);
   line-height: 1.35;
 }
 .lifecycle-step-content p {
