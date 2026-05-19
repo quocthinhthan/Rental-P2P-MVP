@@ -1,33 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
+import {
+  disputeStatusConfig,
+  paymentLabels,
+  statusConfig,
+} from '../constants/rentalUi';
 import Swal from 'sweetalert2';
 import '../styles/MyRentalsPage.css';
-
-const statusConfig = {
-  pending_payment: { label: 'Chờ thanh toán', cls: 'status-pending-payment' },
-  pending_confirmation: { label: 'Chờ xác nhận', cls: 'status-pending-confirm' },
-  confirmed: { label: 'Đã xác nhận', cls: 'status-confirmed' },
-  in_progress: { label: 'Đang thuê', cls: 'status-in-progress' },
-  completed: { label: 'Hoàn tất', cls: 'status-completed' },
-  rejected: { label: 'Đã từ chối', cls: 'status-rejected' },
-  cancelled: { label: 'Đã hủy', cls: 'status-cancelled' },
-  refunded: { label: 'Đã hoàn tiền', cls: 'status-cancelled' },
-  disputed: { label: 'Đang tranh chấp', cls: 'status-disputed' },
-};
-
-const disputeStatusConfig = {
-  pending: { label: 'Đang hòa giải', cls: 'dispute-pending' },
-  escalated: { label: 'Đã yêu cầu Admin xử lý', cls: 'dispute-escalated' },
-  withdrawn: { label: 'Khiếu nại đã rút', cls: 'dispute-withdrawn' },
-  resolved: { label: 'Tranh chấp đã giải quyết', cls: 'dispute-resolved' },
-};
-
-const paymentLabels = {
-  pending: 'Chờ thanh toán',
-  escrowed: 'Đã ký quỹ',
-  refunded: 'Đã hoàn tiền',
-};
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -56,6 +36,60 @@ function DisputeMiniBadge({ dispute, rentalStatus }) {
   }
 
   return null;
+}
+
+
+const miniLifecycleSteps = [
+  { key: 'payment', label: 'Thanh toán' },
+  { key: 'confirm', label: 'Xác nhận' },
+  { key: 'contract', label: 'Hợp đồng' },
+  { key: 'handover', label: 'Bàn giao' },
+  { key: 'done', label: 'Hoàn tất' },
+];
+
+const getMiniLifecycleIndex = (rental) => {
+  switch (rental?.status) {
+    case 'pending_payment': return 0;
+    case 'pending_confirmation': return 1;
+    case 'confirmed': return 2;
+    case 'in_progress': return 3;
+    case 'completed':
+    case 'refunded': return 4;
+    case 'rejected':
+    case 'cancelled': return 1;
+    case 'disputed': {
+      const dispute = rental?.dispute || rental?.activeDispute || rental?.latestDispute;
+      const previousStatus = dispute?.previousRentalStatus;
+      return getMiniLifecycleIndex({ status: previousStatus || 'confirmed' });
+    }
+    default: return 0;
+  }
+};
+
+function RentalMiniTimeline({ rental, dispute }) {
+  const activeIndex = getMiniLifecycleIndex(rental);
+  const isFailed = ['rejected', 'cancelled'].includes(rental?.status);
+  const isDisputed = rental?.status === 'disputed' || ['pending', 'escalated'].includes(dispute?.status);
+  const isResolved = dispute?.status === 'resolved';
+
+  return (
+    <div className={`rental-mini-timeline${isDisputed ? ' is-disputed' : ''}${isResolved ? ' is-resolved' : ''}`}>
+      {miniLifecycleSteps.map((step, index) => {
+        let state = 'pending';
+        if (rental?.status === 'completed' || rental?.status === 'refunded') state = 'done';
+        else if (isFailed && index === activeIndex) state = 'failed';
+        else if (index < activeIndex) state = 'done';
+        else if (index === activeIndex) state = isDisputed ? 'warning' : 'active';
+
+        return (
+          <div key={step.key} className={`mini-step mini-step-${state}`} title={step.label}>
+            <span className="mini-step-dot" aria-hidden="true" />
+            <span className="mini-step-label">{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function RentalSummaryCard({ rental, type }) {
@@ -109,6 +143,8 @@ function RentalSummaryCard({ rental, type }) {
             <strong className="rental-card-price">{formatCurrency(rental.totalAmount)}</strong>
           </div>
         </div>
+
+        <RentalMiniTimeline rental={rental} dispute={dispute} />
 
         <div className="rental-card-footer">
           <div className="rental-card-badges">
@@ -333,3 +369,4 @@ function MyRentalsPage() {
 }
 
 export default MyRentalsPage;
+

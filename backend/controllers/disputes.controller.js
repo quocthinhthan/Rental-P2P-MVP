@@ -30,7 +30,7 @@ const canCreateDisputeForRental = (rental) => {
     return false;
   }
 
-  // MVP khong co completedAt, tam dung updatedAt cua rental de cho phep khieu nai sau tra do trong 7 ngay.
+  // MVP không có completedAt, tạm dùng updatedAt của rental để cho phép khiếu nại sau trả đồ trong 7 ngày.
   const completedAt = rental.updatedAt || rental.endDate;
   const completedDisputeDeadline = new Date(completedAt);
   completedDisputeDeadline.setDate(completedDisputeDeadline.getDate() + COMPLETED_DISPUTE_WINDOW_DAYS);
@@ -105,7 +105,7 @@ const applyPenalty = async (userToPenalize, penaltyType) => {
 };
 
 const createDisputeAndFreezeRental = async (disputePayload, rental) => {
-  // MVP fallback: neu MongoDB local khong ho tro transaction/replica set, van chay flow cu nhung giu logic o mot noi.
+  // MVP fallback: nếu MongoDB local không hỗ trợ transaction/replica set, vẫn chạy flow cũ nhưng giữ logic ở một nơi.
   const createWithoutTransaction = async () => {
     const dispute = await Dispute.create(disputePayload);
     rental.status = RentalStatus.DISPUTED;
@@ -140,36 +140,36 @@ const createDisputeAndFreezeRental = async (disputePayload, rental) => {
   }
 };
 
-// [USER] POST /api/disputes - Bao cao su co va dong bang don thue
+// [USER] POST /api/disputes - Báo cáo sự cố và đóng băng đơn thuê
 exports.createDispute = async (req, res) => {
   const { rentalId, reason, evidenceImages } = req.body;
   const reporterId = req.user._id;
 
   try {
     if (!mongoose.Types.ObjectId.isValid(rentalId)) {
-      return res.status(400).json({ message: 'Ma don thue khong hop le' });
+      return res.status(400).json({ message: 'Mã đơn thuê không hợp lệ' });
     }
 
     if (!reason) {
-      return res.status(400).json({ message: 'Vui long nhap ly do khieu nai' });
+      return res.status(400).json({ message: 'Vui lòng nhập lý do khiếu nại' });
     }
 
     const rental = await Rental.findById(rentalId);
     if (!rental) {
-      return res.status(404).json({ message: 'Khong tim thay don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn thuê' });
     }
 
     if (!isRentalParty(rental, reporterId)) {
-      return res.status(403).json({ message: 'Ban khong thuoc giao dich nay' });
+      return res.status(403).json({ message: 'Bạn không thuộc giao dịch này' });
     }
 
     if (rental.status === RentalStatus.DISPUTED) {
-      return res.status(400).json({ message: 'Don thue dang trong trang thai tranh chap' });
+      return res.status(400).json({ message: 'Đơn thuê đang trong trạng thái tranh chấp' });
     }
 
     if (!canCreateDisputeForRental(rental)) {
       return res.status(400).json({
-        message: 'Chi co the tao tranh chap cho don da xac nhan, dang dien ra, hoac vua hoan tat trong 7 ngay'
+        message: 'Chỉ có thể tạo tranh chấp cho đơn đã xác nhận, đang diễn ra, hoặc vừa hoàn tất trong 7 ngày'
       });
     }
 
@@ -179,18 +179,18 @@ exports.createDispute = async (req, res) => {
     });
 
     if (activeDispute) {
-      return res.status(400).json({ message: 'Don thue dang co khieu nai chua xu ly' });
+      return res.status(400).json({ message: 'Đơn thuê đang có khiếu nại chưa xử lý' });
     }
 
     const item = await Item.findById(rental.itemId);
     if (!item) {
-      return res.status(404).json({ message: 'Khong tim thay tai san cua don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy tài sản của đơn thuê' });
     }
 
     const now = new Date();
     const mediationEndsAt = new Date(now.getTime() + MEDIATION_WINDOW_HOURS * 60 * 60 * 1000);
 
-    // Luu snapshot truoc khi freeze de withdraw/resolve none co the restore chinh xac.
+    // Lưu snapshot trước khi freeze để withdraw/resolve none có thể restore chính xác.
     const dispute = await createDisputeAndFreezeRental({
       rentalId,
       reporterId,
@@ -203,22 +203,22 @@ exports.createDispute = async (req, res) => {
     }, rental);
 
     res.status(201).json({
-      message: 'Da bao cao su co. Don thue da bi dong bang trong thoi gian hoa giai.',
+      message: 'Đã báo cáo sự cố. Đơn thuê đã bị đóng băng trong thời gian hòa giải.',
       dispute
     });
   } catch (error) {
-    res.status(500).json({ message: 'Loi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
 
-// [ADMIN] GET /api/disputes - Xem tat ca su co
+// [ADMIN] GET /api/disputes - Xem tất cả sự cố
 exports.getAllDisputes = async (req, res) => {
   try {
     const filter = {};
 
     if (req.query.status) {
       if (!Object.values(DisputeStatus).includes(req.query.status)) {
-        return res.status(400).json({ message: 'Trang thai tranh chap khong hop le' });
+        return res.status(400).json({ message: 'Trạng thái tranh chấp không hợp lệ' });
       }
       filter.status = req.query.status;
     }
@@ -240,33 +240,33 @@ exports.getAllDisputes = async (req, res) => {
 
     res.status(200).json(disputes);
   } catch (error) {
-    res.status(500).json({ message: 'Loi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
 
-// [USER] PATCH /api/disputes/:id/escalate - Yeu cau admin can thiep sau 48h
+// [USER] PATCH /api/disputes/:id/escalate - Yêu cầu admin can thiệp sau 48 giờ
 exports.escalateDispute = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Ma tranh chap khong hop le' });
+      return res.status(400).json({ message: 'Mã tranh chấp không hợp lệ' });
     }
 
     const dispute = await Dispute.findById(req.params.id);
     if (!dispute) {
-      return res.status(404).json({ message: 'Khong tim thay su co' });
+      return res.status(404).json({ message: 'Không tìm thấy sự cố' });
     }
 
     const rental = await Rental.findById(dispute.rentalId);
     if (!rental) {
-      return res.status(404).json({ message: 'Khong tim thay don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn thuê' });
     }
 
     if (!isRentalParty(rental, req.user._id)) {
-      return res.status(403).json({ message: 'Chi nguoi thue hoac chu do trong giao dich moi duoc escalate' });
+      return res.status(403).json({ message: 'Chỉ người thuê hoặc chủ đồ trong giao dịch mới được yêu cầu can thiệp' });
     }
 
     if (dispute.status !== DisputeStatus.PENDING) {
-      return res.status(400).json({ message: 'Chi co the escalate khieu nai dang trong giai doan hoa giai' });
+      return res.status(400).json({ message: 'Chỉ có thể yêu cầu can thiệp khiếu nại đang trong giai đoạn hòa giải' });
     }
 
     const now = new Date();
@@ -274,7 +274,7 @@ exports.escalateDispute = async (req, res) => {
 
     if (now < mediationEndsAt) {
       return res.status(400).json({
-        message: 'Chi co the yeu cau Admin can thiep sau khi het 48 gio hoa giai',
+        message: 'Chỉ có thể yêu cầu admin can thiệp sau khi hết 48 giờ hòa giải',
         mediationEndsAt
       });
     }
@@ -285,15 +285,15 @@ exports.escalateDispute = async (req, res) => {
     await dispute.save();
 
     res.status(200).json({
-      message: 'Da escalate tranh chap. Admin se xem xet va dua ra phan quyet.',
+      message: 'Đã chuyển tranh chấp lên admin. Admin sẽ xem xét và đưa ra phán quyết.',
       dispute
     });
   } catch (error) {
-    res.status(500).json({ message: 'Loi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
 
-// [ADMIN] PATCH /api/disputes/:id/resolve - Phan quyet cuoi cung
+// [ADMIN] PATCH /api/disputes/:id/resolve - Phán quyết cuối cùng
 exports.resolveDispute = async (req, res) => {
   const { id } = req.params;
   const { adminDecision, winner, penalizeUserId } = req.body;
@@ -301,62 +301,62 @@ exports.resolveDispute = async (req, res) => {
 
   try {
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Ma tranh chap khong hop le' });
+      return res.status(400).json({ message: 'Mã tranh chấp không hợp lệ' });
     }
 
     if (!adminDecision) {
-      return res.status(400).json({ message: 'Vui long nhap phan quyet cua Admin' });
+      return res.status(400).json({ message: 'Vui lòng nhập phán quyết của admin' });
     }
 
     if (!Object.values(DisputeWinner).includes(winner)) {
-      return res.status(400).json({ message: 'Winner phai la renter, owner hoac none' });
+      return res.status(400).json({ message: 'Người thắng phải là người thuê, chủ sở hữu hoặc không có ai' });
     }
 
     if (!Object.values(PenaltyType).includes(penaltyType)) {
-      return res.status(400).json({ message: 'Loai che tai khong hop le' });
+      return res.status(400).json({ message: 'Loại chế tài không hợp lệ' });
     }
 
     if (winner === DisputeWinner.NONE && penaltyType !== PenaltyType.NONE) {
-      return res.status(400).json({ message: 'winner = none chi duoc di kem penaltyType = none' });
+      return res.status(400).json({ message: 'winner = none chỉ được đi kèm penaltyType = none' });
     }
 
     const dispute = await Dispute.findById(id);
     if (!dispute) {
-      return res.status(404).json({ message: 'Khong tim thay ho so su co' });
+      return res.status(404).json({ message: 'Không tìm thấy hồ sơ sự cố' });
     }
 
     if (dispute.status === DisputeStatus.RESOLVED) {
-      return res.status(400).json({ message: 'Tranh chap nay da duoc giai quyet' });
+      return res.status(400).json({ message: 'Tranh chấp này đã được giải quyết' });
     }
 
     if (dispute.status === DisputeStatus.WITHDRAWN) {
-      return res.status(400).json({ message: 'Khieu nai da duoc rut, khong the resolve' });
+      return res.status(400).json({ message: 'Khiếu nại đã được rút, không thể giải quyết' });
     }
 
     const rental = await Rental.findById(dispute.rentalId);
     if (!rental) {
-      return res.status(404).json({ message: 'Khong tim thay don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn thuê' });
     }
 
     const item = await Item.findById(rental.itemId);
     if (!item) {
-      return res.status(404).json({ message: 'Khong tim thay tai san cua don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy tài sản của đơn thuê' });
     }
 
     let userToPenalize = null;
     if (penaltyType !== PenaltyType.NONE) {
       if (!penalizeUserId || !mongoose.Types.ObjectId.isValid(penalizeUserId)) {
-        return res.status(400).json({ message: 'penalizeUserId la bat buoc khi co che tai' });
+        return res.status(400).json({ message: 'penalizeUserId là bắt buộc khi có chế tài' });
       }
 
-      // MVP chi cho phat nguoi lien quan truc tiep den rental tranh chap.
+      // MVP chỉ cho phạt người liên quan trực tiếp đến rental tranh chấp.
       if (!rental.renterId.equals(penalizeUserId) && !rental.ownerId.equals(penalizeUserId)) {
-        return res.status(400).json({ message: 'Chi co the phat renter hoac owner cua don thue nay' });
+        return res.status(400).json({ message: 'Chỉ có thể phạt người thuê hoặc chủ sở hữu của đơn thuê này' });
       }
 
       userToPenalize = await User.findById(penalizeUserId);
       if (!userToPenalize) {
-        return res.status(404).json({ message: 'Khong tim thay nguoi bi ap dung che tai' });
+        return res.status(404).json({ message: 'Không tìm thấy người bị áp dụng chế tài' });
       }
     }
 
@@ -368,7 +368,7 @@ exports.resolveDispute = async (req, res) => {
         rentalUpdate.paymentStatus = PaymentStatus.REFUNDED;
       }
 
-      // paymentStatus the hien da hoan tien; rental.status the hien don bi huy/ket thuc theo dispute.
+      // paymentStatus thể hiện đã hoàn tiền; rental.status thể hiện đơn bị hủy/kết thúc theo dispute.
       rentalUpdate.status = Object.prototype.hasOwnProperty.call(RentalStatus, 'REFUNDED')
         ? RentalStatus.REFUNDED
         : RentalStatus.CANCELLED;
@@ -396,57 +396,57 @@ exports.resolveDispute = async (req, res) => {
     dispute.resolvedAt = new Date();
     await dispute.save();
 
-    res.status(200).json({ message: 'Da giai quyet xong tranh chap', dispute });
+    res.status(200).json({ message: 'Đã giải quyết xong tranh chấp', dispute });
   } catch (error) {
-    res.status(500).json({ message: 'Loi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
 
-// [USER] PATCH /api/disputes/:id/withdraw - Nguoi dung tu rut khieu nai
+// [USER] PATCH /api/disputes/:id/withdraw - Người dùng tự rút khiếu nại
 exports.withdrawDispute = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Ma tranh chap khong hop le' });
+      return res.status(400).json({ message: 'Mã tranh chấp không hợp lệ' });
     }
 
     const dispute = await Dispute.findById(req.params.id);
     if (!dispute) {
-      return res.status(404).json({ message: 'Khong tim thay su co' });
+      return res.status(404).json({ message: 'Không tìm thấy sự cố' });
     }
 
     if (dispute.reporterId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Chi nguoi tao bao cao moi co quyen rut khieu nai.' });
+      return res.status(403).json({ message: 'Chỉ người tạo báo cáo mới có quyền rút khiếu nại.' });
     }
 
     if (!ACTIVE_DISPUTE_STATUSES.includes(dispute.status)) {
-      return res.status(400).json({ message: 'Su co nay da duoc xu ly hoac da duoc rut, khong the rut.' });
+      return res.status(400).json({ message: 'Sự cố này đã được xử lý hoặc đã được rút, không thể rút.' });
     }
 
     const rental = await Rental.findById(dispute.rentalId);
     if (!rental) {
-      return res.status(404).json({ message: 'Khong tim thay don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn thuê' });
     }
 
     const item = await Item.findById(rental.itemId);
     if (!item) {
-      return res.status(404).json({ message: 'Khong tim thay tai san cua don thue' });
+      return res.status(404).json({ message: 'Không tìm thấy tài sản của đơn thuê' });
     }
 
     const restored = getRestoreStatuses(dispute, rental);
 
-    // Rut khieu nai phai dua rental/item thoat DISPUTED theo snapshot da luu.
+    // Rút khiếu nại phải đưa rental/item thoát DISPUTED theo snapshot đã lưu.
     dispute.status = DisputeStatus.WITHDRAWN;
-    dispute.adminDecision = 'Nguoi khieu nai da rut don. Giao dich duoc khoi phuc ve trang thai truoc tranh chap.';
+    dispute.adminDecision = 'Người khiếu nại đã rút đơn, giao dịch được khôi phục trạng thái trước khi có tranh chấp.';
     await dispute.save();
 
     await Rental.findByIdAndUpdate(rental._id, { status: restored.rentalStatus });
     await Item.findByIdAndUpdate(item._id, { status: restored.itemStatus });
 
     res.status(200).json({
-      message: `Da rut khieu nai. Trang thai don thue: ${restored.rentalStatus}, trang thai item: ${restored.itemStatus}`,
+      message: `Đã rút khiếu nại. Trạng thái đơn thuê: ${restored.rentalStatus}, trạng thái item: ${restored.itemStatus}`,
       dispute
     });
   } catch (error) {
-    res.status(500).json({ message: 'Loi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
