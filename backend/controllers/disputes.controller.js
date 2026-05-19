@@ -7,6 +7,7 @@ const User = require('../models/User.model');
 const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 const { DisputeStatus, PenaltyType, DisputeWinner } = require('../enums/dispute.enum');
 const { ItemStatus } = require('../enums/item.enum');
+const { recalculateUserTrustScore } = require('../services/trustScore.service');
 
 const MEDIATION_WINDOW_HOURS = 48;
 const SUSPENSION_DAYS = 7;
@@ -83,17 +84,14 @@ const applyPenalty = async (userToPenalize, penaltyType) => {
 
   switch (penaltyType) {
     case PenaltyType.WARNING:
-      userToPenalize.trustScore -= 20;
       break;
     case PenaltyType.SUSPENSION: {
       const suspendedUntil = new Date();
       suspendedUntil.setDate(suspendedUntil.getDate() + SUSPENSION_DAYS);
-      userToPenalize.trustScore -= 50;
       userToPenalize.suspendedUntil = suspendedUntil;
       break;
     }
     case PenaltyType.BAN:
-      userToPenalize.trustScore = -100;
       userToPenalize.isBanned = true;
       break;
     default:
@@ -396,6 +394,19 @@ exports.resolveDispute = async (req, res) => {
     dispute.resolvedAt = new Date();
     await dispute.save();
 
+    const usersToRecalculate = new Set([
+      rental.renterId.toString(),
+      rental.ownerId.toString()
+    ]);
+
+    if (penaltyType !== PenaltyType.NONE && penalizeUserId) {
+      usersToRecalculate.add(penalizeUserId.toString());
+    }
+
+    await Promise.all(
+      Array.from(usersToRecalculate).map((userId) => recalculateUserTrustScore(userId))
+    );
+
     res.status(200).json({ message: 'Đã giải quyết xong tranh chấp', dispute });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
@@ -441,6 +452,11 @@ exports.withdrawDispute = async (req, res) => {
 
     await Rental.findByIdAndUpdate(rental._id, { status: restored.rentalStatus });
     await Item.findByIdAndUpdate(item._id, { status: restored.itemStatus });
+
+    await Promise.all([
+      recalculateUserTrustScore(rental.renterId),
+      recalculateUserTrustScore(rental.ownerId)
+    ]);
 
     res.status(200).json({
       message: `Đã rút khiếu nại. Trạng thái đơn thuê: ${restored.rentalStatus}, trạng thái item: ${restored.itemStatus}`,

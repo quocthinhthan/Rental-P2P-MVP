@@ -12,6 +12,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const qs = require('qs');
 const { saveWithUniqueCode } = require('../utils/codeGenerator');
+const { recalculateUserTrustScore } = require('../services/trustScore.service');
 
 const sortObject = (obj) => {
   const sorted = {};
@@ -401,6 +402,11 @@ exports.completeRental = async (req, res) => {
         },
         { new: true }
       );
+
+      await Promise.all([
+        recalculateUserTrustScore(rental.renterId),
+        recalculateUserTrustScore(rental.ownerId)
+      ]);
 
       
       res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });

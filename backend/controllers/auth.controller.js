@@ -4,6 +4,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 const crypto = require('crypto');
 const { publishToQueue } = require('../config/rabbitmq');
+const {
+  recalculateUserTrustScore,
+  getTrustLevelFromScore
+} = require('../services/trustScore.service');
 
 
 // Hàm trợ giúp để tạo token
@@ -56,6 +60,7 @@ exports.updateProfile = async (req, res) => {
     // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.
 
     const updatedUser = await user.save();
+    const updatedTrustUser = await recalculateUserTrustScore(updatedUser._id);
 
     res.status(200).json({
       _id: updatedUser._id,
@@ -64,7 +69,9 @@ exports.updateProfile = async (req, res) => {
       phoneNumber: updatedUser.phoneNumber,
       address: updatedUser.address,
       avatarUrl: updatedUser.avatarUrl,
-      ekycStatus: updatedUser.ekycStatus
+      ekycStatus: updatedUser.ekycStatus,
+      trustScore: updatedTrustUser?.trustScore,
+      trustLevel: updatedTrustUser ? getTrustLevelFromScore(updatedTrustUser.trustScore) : undefined
     });
   } else {
     res.status(404).json({ message: 'Không tìm thấy User' });
@@ -159,10 +166,13 @@ exports.verifyEKYC = async (req, res) => {
     // >>> THÊM DÒNG NÀY: Ghi đè tên ảo bằng tên thật trên CCCD <<<
     user.fullName = realName; 
     await user.save();
+    const updatedTrustUser = await recalculateUserTrustScore(user._id);
 
     res.status(200).json({ 
       message: 'Xác thực danh tính thành công! Hồ sơ của bạn đã được cập nhật theo CCCD.',
       ekycStatus: user.ekycStatus,
+      trustScore: updatedTrustUser?.trustScore,
+      trustLevel: updatedTrustUser ? getTrustLevelFromScore(updatedTrustUser.trustScore) : undefined,
       extractedData: { 
         idNumber: realIdNumber, 
         fullName: realName // Trả về tên thật cho Frontend biết mà cập nhật giao diện
