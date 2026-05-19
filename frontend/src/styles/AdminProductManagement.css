@@ -372,6 +372,16 @@
   color: #64748b;
 }
 
+.aip-pill--pending {
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.air-pill--waiting {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 /* ── ACTION BUTTONS ── */
 .aip-actions {
   display: inline-flex;
@@ -498,10 +508,96 @@
   font-size: 0.85rem;
 }
 
+/* Admin item reports */
+.air-stat-row {
+  max-width: 1240px;
+  margin: 0 auto 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.air-stat-card {
+  min-height: 88px;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.air-stat-card span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.air-stat-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.air-filter-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(180px, 240px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.air-refresh-btn {
+  justify-content: center;
+}
+
+.air-table {
+  min-width: 1180px;
+}
+
+.air-report-reason {
+  min-width: 210px;
+}
+
+.air-report-reason strong {
+  display: block;
+  max-width: 260px;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.air-report-reason span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.air-item-link {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.air-item-link:hover {
+  color: #0d6efd;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1199.98px) {
   .aip-filter-panel,
-  .aip-table-panel {
+  .aip-table-panel,
+  .air-stat-row {
     margin-left: 16px;
     margin-right: 16px;
     max-width: none;
@@ -509,6 +605,10 @@
 
   .aip-filter-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .air-stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -518,10 +618,16 @@
   }
 
   .aip-filter-panel,
-  .aip-table-panel {
+  .aip-table-panel,
+  .air-stat-row {
     margin-left: 12px;
     margin-right: 12px;
     border-radius: 10px;
+  }
+
+  .air-stat-row,
+  .air-filter-form {
+    grid-template-columns: 1fr;
   }
 
   .aip-filter-actions {

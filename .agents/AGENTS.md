@@ -43,6 +43,7 @@ The rental lifecycle is:
 7. Return is recorded with proof images.
 8. Rental is completed.
 
+
 ## Business Rules
 
 - Pickup is allowed only after the contract is fully signed.
@@ -100,3 +101,43 @@ Before changing rental-related frontend behavior:
 6. Make the smallest compatible change.
 7. Run the most relevant available checks.
 
+## Agent Self-Update Rule
+
+Agents should keep this file useful as persistent project context.
+
+After completing a task, the agent should review whether the work introduced important long-term context that future agents need to know.
+
+Update this file only when the change affects future development, such as:
+
+- new backend APIs, routes, models, enums, or permissions
+- new frontend pages, major components, admin sections, or route structure
+- important business rules or status transitions
+- important integration details, request payloads, response shapes, or auth behavior
+- project conventions that future agents should follow
+- known pitfalls, constraints, or out-of-scope areas
+
+Do NOT update this file for:
+
+- small bug fixes
+- visual tweaks
+- copy/text changes
+- one-off implementation details
+- temporary debugging notes
+- files changed list
+- commit summaries
+- noisy changelog entries
+
+When updating this file:
+
+- keep entries concise and stable
+- prefer updating existing sections over appending duplicate notes
+- do not include speculation
+- do not document unfinished work as completed
+- do not touch the `mobile/` directory notes unless the user explicitly changes that scope
+- preserve the existing structure and wording as much as possible
+
+If a task adds meaningful new APIs or flows, update the relevant section in this file before reporting completion.
+
+Account Admin:
+Email: thanquocthinh112@gmail.com
+Password: 123456

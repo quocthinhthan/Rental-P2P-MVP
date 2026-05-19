@@ -191,9 +191,9 @@ body:has(.admin-disputes-page) .nav-bar {
   min-width: 24px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(100, 116, 139, 0.12);
+  background: rgba(12, 170, 3, 0.12);
   color: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
