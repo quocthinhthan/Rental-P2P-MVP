@@ -10,6 +10,7 @@ import Spinner from '../components/Common/Spinner';
 import AdminHero from '../components/Admin/AdminHero';
 import { getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels } from '../constants/rentalUi';
+import { TrustBadge } from '../components/Trust/TrustBadge';
 import '../styles/AdminDisputesPage.css';
 import '../styles/AdminDashboardPage.css';
 
@@ -45,14 +46,6 @@ const getChartLabelStep = (count) => {
   if (count > 45) return 7;
   if (count > 20) return 4;
   return 1;
-};
-
-const getTrustScoreStyle = (score) => {
-  const s = Number(score || 0);
-  if (s >= 50) return { background: '#dcfce7', color: '#166534' };
-  if (s >= 0) return { background: '#dbeafe', color: '#1d4ed8' };
-  if (s >= -10) return { background: '#fef3c7', color: '#92400e' };
-  return { background: '#fee2e2', color: '#991b1b' };
 };
 
 const RANK_MEDALS = ['🥇', '🥈', '🥉'];
@@ -324,9 +317,7 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {topUsers.map((user, index) => {
-                      const trustStyle = getTrustScoreStyle(user.trustScore);
-                      return (
+                    {topUsers.map((user, index) => (
                         <tr key={user._id}>
                           <td style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem' }}>
                             {index < 3 ? RANK_MEDALS[index] : index + 1}
@@ -345,20 +336,13 @@ export default function AdminDashboardPage() {
                               : <span style={{ color: '#94a3b8' }}>0</span>}
                           </td>
                           <td className="text-end">
-                            <span style={{
-                              ...trustStyle,
-                              display: 'inline-block',
-                              padding: '2px 9px',
-                              borderRadius: '999px',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                            }}>
-                              {formatNumber(user.trustScore)}
-                            </span>
+                            <div className="admin-trust-cell">
+                              <TrustBadge user={user} />
+                              <span>{formatNumber(user.trustScore)}/100</span>
+                            </div>
                           </td>
                         </tr>
-                      );
-                    })}
+                    ))}
                   </tbody>
                 </table>
                 {topUsers.length === 0 && <div className="admin-compact-empty">Chưa có người dùng phù hợp bộ lọc.</div>}

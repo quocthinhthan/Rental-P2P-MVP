@@ -166,6 +166,47 @@
   font-weight: var(--fw-bold);
 }
 
+.counterparty-trust-panel.is-owner-reviewing-renter {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 58%);
+  border-color: #bbf7d0;
+}
+
+.counterparty-trust-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.counterparty-trust-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+  flex: 0 0 auto;
+}
+
+.counterparty-trust-main {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 8px;
+}
+
+.counterparty-trust-main strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: var(--fw-bold);
+}
+
+.counterparty-trust-main span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
 /* ─────────────────────────────────────────
    4. SHARED CHIPS & NOTICES (Gộp trùng lặp)
    ───────────────────────────────────────── */
@@ -1083,5 +1124,10 @@
 
   .rental-modal {
     padding: 18px;
+  }
+
+  .counterparty-trust-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
