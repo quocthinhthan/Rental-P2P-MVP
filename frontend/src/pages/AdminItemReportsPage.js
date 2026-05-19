@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { getAdminItemReports, resolveAdminItemReport } from '../services/api';
 import Spinner from '../components/Common/Spinner';
-import AdminNav from '../components/Admin/AdminNav';
+import AdminHero from '../components/Admin/AdminHero';
 import { formatDateTime, getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels } from '../constants/rentalUi';
 import { formatItemCode } from '../utils/itemCode';
@@ -151,14 +151,11 @@ export default function AdminItemReportsPage() {
 
   return (
     <main className="admin-products-page admin-shell-page">
-      <section className="admin-disputes-hero">
-        <div className="admin-disputes-hero-copy">
-          <span className="admin-disputes-eyebrow">Quản trị hệ thống</span>
-          <h1>Báo cáo sản phẩm</h1>
-          <p>Theo dõi phản ánh từ người dùng, kiểm tra sản phẩm và chủ sở hữu trước khi quyết định hướng xử lý.</p>
-        </div>
-        <AdminNav />
-      </section>
+      <AdminHero
+        eyebrow="Quản trị hệ thống"
+        title="Báo cáo sản phẩm"
+        description="Theo dõi phản ánh từ người dùng, kiểm tra sản phẩm và chủ sở hữu trước khi quyết định hướng xử lý."
+      />
 
       <section className="air-stat-row">
         <div className="air-stat-card">

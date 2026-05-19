@@ -18,134 +18,7 @@ body:has(.admin-item-detail-page) .nav-bar {
 }
 
 /* ── HERO BANNER ── */
-.admin-disputes-hero {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px clamp(20px, 4vw, 52px);
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
-  margin-bottom: 28px;
-}
-
-.admin-disputes-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 90% 50%, rgba(13, 110, 253, 0.05) 0%, transparent 55%),
-    radial-gradient(ellipse at 5% 80%, rgba(32, 201, 151, 0.04) 0%, transparent 45%);
-  pointer-events: none;
-}
-
-.admin-disputes-hero::after { display: none; }
-
-.admin-disputes-hero-copy {
-  flex: 1 1 auto;
-  min-width: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.admin-disputes-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: #0d6efd;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.admin-disputes-eyebrow::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #20c997;
-  box-shadow: 0 0 0 4px rgba(32, 201, 151, 0.2);
-  animation: pulse-dot 2s infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(32, 201, 151, 0.2); }
-  50% { box-shadow: 0 0 0 7px rgba(32, 201, 151, 0.08); }
-}
-
-.admin-disputes-hero h1 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.admin-disputes-hero p {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
 /* ── HERO ACTIONS (AdminNav wrapper) ── */
-.admin-hero-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  position: relative;
-  z-index: 1;
-}
-
-.admin-section-nav {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.admin-section-nav-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 0.86rem;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.admin-section-nav-link i {
-  font-size: 0.82rem;
-}
-
-.admin-section-nav-link:hover {
-  border-color: #0d6efd;
-  background: #eff6ff;
-  color: #0d6efd;
-}
-
-.admin-section-nav-link.is-active {
-  border-color: #0d6efd;
-  background: #0d6efd;
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(13, 110, 253, 0.28);
-}
-
 /* ── LAYOUT CONTAINER ── */
 .admin-kpi-grid,
 .admin-chart-toolbar,
@@ -751,42 +624,15 @@ body:has(.admin-item-detail-page) .nav-bar {
   .admin-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .admin-section-nav {
-    gap: 6px;
-  }
-
-  .admin-section-nav-link {
-    gap: 7px;
-    padding: 0 12px;
-    font-size: 0.84rem;
-  }
 }
 
 @media (max-width: 991.98px) {
-  .admin-disputes-hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .admin-section-nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
   .admin-chart-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767.98px) {
-  .admin-disputes-hero {
-    padding: 24px 20px;
-    margin-bottom: 20px;
-  }
-
-  .admin-disputes-hero h1 { font-size: 1.5rem; }
-
   .admin-kpi-grid,
   .admin-chart-toolbar,
   .admin-chart-grid,

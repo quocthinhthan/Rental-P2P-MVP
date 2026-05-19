@@ -7,7 +7,7 @@ import {
   updateAdminItemStatus
 } from '../services/api';
 import Spinner from '../components/Common/Spinner';
-import AdminNav from '../components/Admin/AdminNav';
+import AdminHero from '../components/Admin/AdminHero';
 import { getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels } from '../constants/rentalUi';
 import { formatItemCode } from '../utils/itemCode';
@@ -159,14 +159,11 @@ export default function AdminItemsPage() {
 
   return (
     <main className="admin-products-page admin-shell-page">
-      <section className="admin-disputes-hero">
-        <div className="admin-disputes-hero-copy">
-          <span className="admin-disputes-eyebrow">Quản trị hệ thống</span>
-          <h1>Quản lý sản phẩm</h1>
-          <p>Rà soát sản phẩm, trạng thái hiển thị, nổi bật, số đơn thuê và tín hiệu rủi ro.</p>
-        </div>
-        <AdminNav />
-      </section>
+      <AdminHero
+        eyebrow="Quản trị hệ thống"
+        title="Quản lý sản phẩm"
+        description="Rà soát sản phẩm, trạng thái hiển thị, nổi bật, số đơn thuê và tín hiệu rủi ro."
+      />
 
       {/* ── FILTER PANEL ── */}
       <section className="aip-filter-panel">

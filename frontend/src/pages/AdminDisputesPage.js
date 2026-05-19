@@ -13,7 +13,7 @@ import {
   itemStatusLabels,
   statusConfig
 } from '../constants/rentalUi';
-import AdminNav from '../components/Admin/AdminNav';
+import AdminHero from '../components/Admin/AdminHero';
 import { formatRentalCode } from '../utils/itemCode';
 import '../styles/AdminDisputesPage.css';
 import '../styles/AdminDashboardPage.css';
@@ -135,20 +135,11 @@ export default function AdminDisputesPage() {
 
   return (
     <main className="admin-disputes-page">
-      <section className="admin-disputes-hero">
-        <div className="admin-disputes-hero-copy">
-          <span className="admin-disputes-eyebrow">Bảng điều phối tranh chấp</span>
-          <h1>Quản lý tranh chấp</h1>
-          <p>Ưu tiên hồ sơ cần Admin xử lý, rà soát bằng chứng và ra quyết định cuối cùng cho giao dịch thuê.</p>
-        </div>
-        <div className="admin-hero-actions">
-          <AdminNav />
-          <button type="button" className="admin-dispute-refresh-btn" onClick={() => fetchDisputes()}>
-            <i className="fas fa-sync-alt"></i>
-            Làm mới
-          </button>
-        </div>
-      </section>
+      <AdminHero
+        eyebrow="Bảng điều phối tranh chấp"
+        title="Quản lý tranh chấp"
+        description="Ưu tiên hồ sơ cần Admin xử lý, rà soát bằng chứng và quyết định cuối cùng cho giao dịch thuê."
+      />
 
       <section className="admin-dispute-stat-strip" aria-label="Tổng quan tranh chấp">
         <div className="admin-dispute-stat-card is-total">
