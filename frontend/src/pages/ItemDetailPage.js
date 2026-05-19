@@ -12,6 +12,7 @@ import {
   getDetailThumbImage,
   getRelatedItemImage
 } from '../utils/cloudinaryImage';
+import { formatItemCode } from '../utils/itemCode';
 
 /* ─────────────────────────────────────────
    Helper: star renderer
@@ -398,7 +399,7 @@ function ItemDetailPage() {
               <span className="idp-category-badge">
                 <i className="fa fa-tag" style={{ fontSize: '.65rem' }} /> {item.category || 'Khác'}
               </span>
-              <span className="idp-code">#{item._id.slice(-6).toUpperCase()}</span>
+              <span className="idp-code">{formatItemCode(item)}</span>
               {ownerTrustScore !== null && (
                 <span className="d-flex align-items-center gap-1" style={{ fontSize: '.82rem' }}>
                   <i className="fa fa-star text-warning" />

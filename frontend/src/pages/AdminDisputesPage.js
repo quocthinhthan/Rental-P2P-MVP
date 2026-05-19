@@ -5,7 +5,6 @@ import Spinner from '../components/Common/Spinner';
 import Swal from 'sweetalert2';
 import {
   getErrorMessage,
-  getId,
   getName,
   formatDateTime,
   WINNER_LABELS
@@ -15,6 +14,7 @@ import {
   statusConfig
 } from '../constants/rentalUi';
 import AdminNav from '../components/Admin/AdminNav';
+import { formatRentalCode } from '../utils/itemCode';
 import '../styles/AdminDisputesPage.css';
 import '../styles/AdminDashboardPage.css';
 
@@ -56,7 +56,7 @@ function DisputeCard({ dispute }) {
           <div>
             <h3>{item.name || 'Vật phẩm không rõ'}</h3>
             <p>
-              Mã đơn thuê <code>{getId(rental) || 'N/A'}</code>
+              Mã đơn thuê <code>{formatRentalCode(rental)}</code>
             </p>
           </div>
         </div>

@@ -10,6 +10,7 @@ import Spinner from '../components/Common/Spinner';
 import AdminNav from '../components/Admin/AdminNav';
 import { formatDateTime, getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels, statusConfig } from '../constants/rentalUi';
+import { formatItemCode, formatRentalCode } from '../utils/itemCode';
 import '../styles/MyRentalsPage.css';
 import '../styles/RentalDetailPage.css';
 import '../styles/AdminDisputesPage.css';
@@ -154,7 +155,10 @@ export default function AdminItemDetailPage() {
               </div>
               <p className="rental-hero-kicker">Chi tiết sản phẩm</p>
               <h3>{item.name || 'Sản phẩm không rõ'}</h3>
-              <p className="rental-hero-date">{item.category || '-'} · {formatCurrency(item.pricePerDay)} / ngày</p>
+              <p className="rental-hero-date">
+                <span className="aip-item-code" style={{ marginRight: 10, fontWeight: 700 }}>{formatItemCode(item)}</span>
+                {item.category || '-'} · {formatCurrency(item.pricePerDay)} / ngày
+              </p>
               {hasActiveRental && <div className="admin-lifecycle-warning"><i className="fas fa-triangle-exclamation"></i>Sản phẩm đang có rental active, không nên đổi sang available/delisted.</div>}
             </div>
           </section>
@@ -162,14 +166,15 @@ export default function AdminItemDetailPage() {
           <section className="rental-detail-panel">
             <div className="detail-section-header"><div><p className="section-kicker">Stats</p><h3>Hiệu suất sản phẩm</h3></div></div>
             <div className="detail-info-grid admin-dispute-detail-info-grid">
+              <InfoItem label="Mã sản phẩm" value={formatItemCode(item)} />
               <InfoItem label="Đơn thuê" value={stats.rentalCount} />
               <InfoItem label="Doanh thu" value={formatCurrency(stats.revenue)} />
-              <InfoItem label="Commission" value={formatCurrency(stats.commissionAmount)} />
-              <InfoItem label="Deposit" value={formatCurrency(stats.depositAmount)} />
-              <InfoItem label="Dispute" value={stats.disputeCount} />
-              <InfoItem label="Report" value={stats.reportCount} />
-              <InfoItem label="Review" value={stats.reviewCount} />
-              <InfoItem label="Base value" value={formatCurrency(item.baseValue)} />
+              <InfoItem label="Hoa hồng" value={formatCurrency(stats.commissionAmount)} />
+              <InfoItem label="Tiền cọc" value={formatCurrency(stats.depositAmount)} />
+              <InfoItem label="Tranh chấp" value={stats.disputeCount} />
+              <InfoItem label="Báo cáo" value={stats.reportCount} />
+              <InfoItem label="Đánh giá" value={stats.reviewCount} />
+              <InfoItem label="Giá trị gốc" value={formatCurrency(item.baseValue)} />
               <InfoItem label="Địa chỉ" value={item.address} />
             </div>
           </section>
@@ -193,7 +198,7 @@ export default function AdminItemDetailPage() {
                 <thead><tr><th>Mã đơn</th><th>Người thuê</th><th>Trạng thái</th><th>Thời gian</th><th className="text-end">Phí thuê</th></tr></thead>
                 <tbody>{rentals.map((rental) => (
                   <tr key={rental._id}>
-                    <td><code>{rental._id}</code></td>
+                    <td><code>{formatRentalCode(rental)}</code></td>
                     <td>{getName(rental.renterId)}</td>
                     <td><span className={`status-badge ${statusConfig[rental.status]?.cls || 'status-unknown'}`}>{statusConfig[rental.status]?.label || rental.status}</span></td>
                     <td>{formatDateTime(rental.startDate)} - {formatDateTime(rental.endDate)}</td>

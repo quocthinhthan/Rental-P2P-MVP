@@ -234,7 +234,7 @@ exports.getAllDisputes = async (req, res) => {
         populate: [
           { path: 'renterId', select: 'fullName email phoneNumber phone trustScore' },
           { path: 'ownerId', select: 'fullName email phoneNumber phone trustScore' },
-          { path: 'itemId', select: 'name images status ownerId pricePerDay baseValue' }
+          { path: 'itemId', select: 'code name images status ownerId pricePerDay baseValue' }
         ]
       });
 

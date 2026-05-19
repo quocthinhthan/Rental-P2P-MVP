@@ -1,3 +1,17 @@
+# Ignored / Out-of-Scope Directories
+
+The repository contains a `mobile/` directory for the Flutter mobile app.
+
+This directory is owned by another teammate and is OUT OF SCOPE for this agent.
+
+Agents must NOT:
+- read files inside `mobile/` unless explicitly instructed
+- modify files inside `mobile/`
+- refactor, rename, move, delete, or format anything inside `mobile/`
+- include `mobile/` in broad code changes, searches, lint fixes, or cleanup tasks
+
+All current work should focus only on the web/backend MVP unless the user explicitly says otherwise.
+
 # Rental P2P MVP - Repository Context
 
 This repository is a web platform for peer-to-peer personal item rentals. Users can act as both renters and owners.

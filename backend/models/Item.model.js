@@ -1,8 +1,10 @@
 // backend/models/Item.model.js
 const mongoose = require('mongoose');
 const { ItemStatus } = require('../enums/item.enum');
+const { generateUniqueCode } = require('../utils/codeGenerator');
 
 const ItemSchema = new mongoose.Schema({
+  code: { type: String, trim: true, uppercase: true, immutable: true },
   name: { type: String, required: true },
   description: { type: String },
   category: { type: String, default: 'Khác' },
@@ -28,6 +30,18 @@ const ItemSchema = new mongoose.Schema({
   isFeatured: { type: Boolean, default: false },
 }, { timestamps: true });
 
+ItemSchema.index({ code: 1 }, { unique: true, sparse: true });
 ItemSchema.index({ location: '2dsphere' });
+
+ItemSchema.pre('validate', async function ensureItemCode(next) {
+  try {
+    if (!this.code) {
+      this.code = await generateUniqueCode(this.constructor, { prefix: 'SP' });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model('Item', ItemSchema);
