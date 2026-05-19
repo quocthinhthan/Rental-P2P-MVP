@@ -962,9 +962,9 @@ function RentalDetailPage() {
                 <InfoItem label="Mã đơn thuê" value={formatRentalCode(rental)} />
                 <InfoItem label="Đối tác" value={rental.counterparty?.fullName || 'Chưa có thông tin'} />
                 <InfoItem label="Email đối tác" value={rental.counterparty?.email || 'Chưa có thông tin'} />
-                <InfoItem label="Trạng thái đơn" value={statusConfig[rental.status]?.label || 'Không rõ'} />
                 <InfoItem label="Ngày bắt đầu" value={formatDate(rental.startDate)} />
                 <InfoItem label="Ngày kết thúc" value={formatDate(rental.endDate)} />
+                <InfoItem label="Trạng thái đơn" value={statusConfig[rental.status]?.label || 'Không rõ'} />
               </div>
               {rental.note ? (
                 <div className="rental-card-note"><strong>Ghi chú:</strong> {rental.note}</div>

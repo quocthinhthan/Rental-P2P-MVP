@@ -106,7 +106,8 @@ body:has(.admin-item-detail-page) .nav-bar {
 
 .admin-section-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   gap: 8px;
   justify-content: flex-end;
 }
@@ -124,6 +125,7 @@ body:has(.admin-item-detail-page) .nav-bar {
   font-size: 0.86rem;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -749,6 +751,16 @@ body:has(.admin-item-detail-page) .nav-bar {
   .admin-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .admin-section-nav {
+    gap: 6px;
+  }
+
+  .admin-section-nav-link {
+    gap: 7px;
+    padding: 0 12px;
+    font-size: 0.84rem;
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -758,6 +770,7 @@ body:has(.admin-item-detail-page) .nav-bar {
   }
 
   .admin-section-nav {
+    flex-wrap: wrap;
     justify-content: flex-start;
   }
 
