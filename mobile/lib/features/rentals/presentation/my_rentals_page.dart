@@ -330,16 +330,12 @@ class _RentalCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeLight,
-                          borderRadius: BorderRadius.circular(10),
+                        // Thumbnail with real image
+                        _ItemThumbnail(
+                          imageUrl: rental.itemMainImage,
+                          size: 56,
+                          statusColor: _statusColor,
                         ),
-                        child: const Icon(Icons.inventory_2_outlined,
-                            color: AppColors.orange, size: 22),
-                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -526,16 +522,11 @@ class _MyItemsView extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      // Icon / Thumbnail
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.inventory_2_outlined,
-                            color: AppColors.orange, size: 26),
+                      // Real image thumbnail
+                      _ItemThumbnail(
+                        imageUrl: item.mainImage,
+                        size: 60,
+                        statusColor: statusColor,
                       ),
                       const SizedBox(width: 12),
                       // Name + price
@@ -584,6 +575,82 @@ class _MyItemsView extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// ─── Reusable thumbnail widget ────────────────────────────────────────────────
+
+class _ItemThumbnail extends StatelessWidget {
+  const _ItemThumbnail({
+    required this.imageUrl,
+    required this.size,
+    required this.statusColor,
+  });
+
+  final String imageUrl;
+  final double size;
+  final Color statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: imageUrl.isEmpty
+              ? statusColor.withValues(alpha: 0.25)
+              : AppColors.line,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl.isEmpty
+          ? Container(
+              color: statusColor.withValues(alpha: 0.08),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: statusColor,
+                size: size * 0.42,
+              ),
+            )
+          : Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: statusColor.withValues(alpha: 0.08),
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: statusColor,
+                  size: size * 0.42,
+                ),
+              ),
+              loadingBuilder: (_, child, prog) {
+                if (prog == null) return child;
+                return Container(
+                  color: AppColors.page,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

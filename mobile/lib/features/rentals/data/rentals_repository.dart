@@ -51,7 +51,7 @@ class RentalsRepository {
   }
 
   Future<String> createPaymentUrl(String rentalId) async {
-    final result = await api.post('/rentals/$rentalId/create-vnpay-url', {});
+    final result = await api.post('/rentals/$rentalId/create-vnpay-url', {'source': 'mobile'});
     return (result as Map)['paymentUrl'].toString();
   }
 

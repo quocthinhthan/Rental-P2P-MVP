@@ -154,7 +154,9 @@ exports.createVNPayUrl = async (req, res) => {
       vnp_OrderInfo: 'Thanh toan ky quy don thue ' + rental._id,
       vnp_OrderType: 'other',
       vnp_Amount: amount,
-      vnp_ReturnUrl: process.env.VNP_RETURN_URL,
+      vnp_ReturnUrl: req.body.source === 'mobile' 
+          ? `${process.env.VNP_RETURN_URL}?source=mobile` 
+          : process.env.VNP_RETURN_URL,
       vnp_IpAddr: getClientIp(req),
       vnp_CreateDate: formatDateForVNPay(new Date())
     };
@@ -184,9 +186,17 @@ exports.handleVNPayReturn = async (req, res) => {
       return res.status(500).json({ message: MESSAGES.PAYMENT.VNPAY_CONFIG_MISSING, missing: ['VNP_HASH_SECRET'] });
     }
 
-    let vnpParams = { ...req.query };
+    let vnpParams = {};
+    const source = req.query.source;
+    
+    // Chỉ lấy các tham số bắt đầu bằng vnp_ để xác thực chữ ký (tránh lỗi do thêm source=mobile)
+    for (const key in req.query) {
+      if (key.startsWith('vnp_')) {
+        vnpParams[key] = req.query[key];
+      }
+    }
+    
     const secureHash = vnpParams.vnp_SecureHash;
-
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;
 
@@ -198,7 +208,10 @@ exports.handleVNPayReturn = async (req, res) => {
       .update(Buffer.from(signData, 'utf-8'))
       .digest('hex');
 
+    const isMobile = source === 'mobile';
+
     if (!secureHash || secureHash.toLowerCase() !== signed.toLowerCase()) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_SIGNATURE_INVALID));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.PAYMENT.VNPAY_SIGNATURE_INVALID
@@ -207,6 +220,7 @@ exports.handleVNPayReturn = async (req, res) => {
 
     const rentalId = vnpParams.vnp_TxnRef;
     if (!mongoose.Types.ObjectId.isValid(rentalId)) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_TRANSACTION_INVALID));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.PAYMENT.VNPAY_TRANSACTION_INVALID
@@ -215,6 +229,7 @@ exports.handleVNPayReturn = async (req, res) => {
 
     const rental = await Rental.findById(rentalId);
     if (!rental) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.RENTAL.NOT_FOUND));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.RENTAL.NOT_FOUND
@@ -235,12 +250,14 @@ exports.handleVNPayReturn = async (req, res) => {
         });
       }
 
+      if (isMobile) return res.send(renderMobileResponse(true, 'Thanh toán thành công!'));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'success',
         rentalId: rental._id.toString()
       }));
     }
 
+    if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED));
     return res.redirect(buildFrontendVNPayReturnUrl({
       status: 'failed',
       rentalId: rental._id.toString(),
@@ -248,8 +265,37 @@ exports.handleVNPayReturn = async (req, res) => {
       message: MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED
     }));
   } catch (error) {
+    if (req.query.source === 'mobile') return res.send(renderMobileResponse(false, error.message));
     res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
+};
+
+const renderMobileResponse = (success, message) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Đang quay lại ứng dụng...</title>
+      <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f2f2f6; text-align: center; padding: 20px; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #f97316; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { color: #8e8e93; font-size: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="spinner"></div>
+      <p>Đang quay lại ứng dụng...</p>
+      <script>
+        setTimeout(() => {
+          window.close();
+        }, 500);
+      </script>
+    </body>
+    </html>
+  `;
 };
 
 // Middleware kiểm tra chủ sở hữu item (cho confirm/reject)

@@ -77,22 +77,138 @@ class _ItemsPageState extends State<ItemsPage> {
     final filtered = _filteredItems;
 
     return Scaffold(
+      backgroundColor: AppColors.page,
       body: RefreshIndicator(
         onRefresh: loadItems,
         color: AppColors.orange,
         child: CustomScrollView(
           slivers: [
-            // Immersive header (no SafeArea — extends into status bar)
-            SliverToBoxAdapter(
-              child: _MarketplaceHeader(
-                search: search,
-                onSearch: loadItems,
+            // Sticky Header with Search
+            SliverAppBar(
+              pinned: true,
+              floating: true,
+              elevation: 4,
+              shadowColor: Colors.black.withValues(alpha: 0.2),
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xffee4d2d), Color(0xffff7143)],
+                  ),
+                ),
+              ),
+              titleSpacing: 16,
+              title: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.storefront_rounded,
+                        color: AppColors.orange, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Rental P2P',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                    ),
+                  ),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.notifications_outlined,
+                          color: Colors.white, size: 18),
+                      onPressed: loadItems,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(64),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 12),
+                        const Icon(Icons.search_rounded,
+                            color: AppColors.muted, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: search,
+                            decoration: const InputDecoration(
+                              hintText: 'Tìm máy ảnh, lều, laptop...',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 0, vertical: 12),
+                            ),
+                            style: const TextStyle(fontSize: 14),
+                            onSubmitted: (_) => loadItems(),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.all(5),
+                          child: FilledButton(
+                            onPressed: loadItems,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.orange,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
+                              minimumSize: const Size(0, 34),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                            ),
+                            child: const Text('Tìm',
+                                style: TextStyle(fontSize: 13)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
 
-            // Category chips
+            // Banner Carousel
+            const SliverToBoxAdapter(
+              child: _BannerCarousel(),
+            ),
+
+            // Grid Categories
             SliverToBoxAdapter(
-              child: _CategoryRow(
+              child: _CategoryGrid(
                 selected: _selectedCategory,
                 onSelect: (i) => setState(() => _selectedCategory = i),
               ),
@@ -100,14 +216,14 @@ class _ItemsPageState extends State<ItemsPage> {
 
             // Section title
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         _selectedCategory == 0
-                            ? 'Gợi ý hôm nay'
+                            ? '🔥 Gợi ý hôm nay'
                             : _kCategories[_selectedCategory].$1,
                         style: Theme.of(context)
                             .textTheme
@@ -200,146 +316,133 @@ class _ItemsPageState extends State<ItemsPage> {
   }
 }
 
-// ─── Header ────────────────────────────────────────────────────────────────
+// ─── Banner Carousel ─────────────────────────────────────────────────────────
 
-class _MarketplaceHeader extends StatelessWidget {
-  const _MarketplaceHeader({
-    required this.search,
-    required this.onSearch,
-  });
+class _BannerCarousel extends StatefulWidget {
+  const _BannerCarousel();
 
-  final TextEditingController search;
-  final VoidCallback onSearch;
+  @override
+  State<_BannerCarousel> createState() => _BannerCarouselState();
+}
+
+class _BannerCarouselState extends State<_BannerCarousel> {
+  final _pageCtrl = PageController(viewportFraction: 0.92);
+  int _current = 0;
+
+  final _banners = const [
+    (
+      'Giảm 50% lần đầu',
+      'Nhập mã NEW50 cho đơn đầu tiên',
+      [Color(0xff4facfe), Color(0xff00f2fe)],
+      Icons.local_offer_rounded
+    ),
+    (
+      'Thuê đồ công nghệ',
+      'Macbook, Camera giá sinh viên',
+      [Color(0xfff6d365), Color(0xfffda085)],
+      Icons.laptop_mac_rounded
+    ),
+    (
+      'Vi vu cuối tuần',
+      'Lều trại, flycam sẵn sàng',
+      [Color(0xffa18cd1), Color(0xfffbc2eb)],
+      Icons.flight_takeoff_rounded
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xffee4d2d), Color(0xffff7143)],
-        ),
-      ),
-      padding: EdgeInsets.fromLTRB(16, top + 12, 16, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 130,
+          child: PageView.builder(
+            controller: _pageCtrl,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemCount: _banners.length,
+            itemBuilder: (context, i) {
+              final b = _banners[i];
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.storefront_rounded,
-                    color: AppColors.orange, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Rental P2P',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.3,
-                          ),
-                    ),
-                    Text(
-                      'Thuê đồ cá nhân nhanh & an toàn',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                    ),
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: b.$3,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: b.$3[0].withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
                   ],
                 ),
-              ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.notifications_outlined,
-                      color: Colors.white, size: 20),
-                  onPressed: onSearch,
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Search bar
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(Icons.search_rounded, color: AppColors.muted, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: search,
-                    decoration: const InputDecoration(
-                      hintText: 'Tìm máy ảnh, lều, laptop...',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-                    ),
-                    style: const TextStyle(fontSize: 14),
-                    onSubmitted: (_) => onSearch(),
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.all(5),
-                  child: FilledButton(
-                    onPressed: onSearch,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.orange,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      minimumSize: const Size(0, 34),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            b.$1,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            b.$2,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: const Text('Tìm', style: TextStyle(fontSize: 13)),
-                  ),
+                    Icon(b.$4, size: 50, color: Colors.white.withValues(alpha: 0.8)),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (i) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == _current ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i == _current
+                    ? AppColors.orange
+                    : AppColors.line,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 4),
+      ],
     );
   }
 }
 
-// ─── Category Row ───────────────────────────────────────────────────────────
+// ─── Category Grid ──────────────────────────────────────────────────────────
 
-class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.selected, required this.onSelect});
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid({required this.selected, required this.onSelect});
 
   final int selected;
   final ValueChanged<int> onSelect;
@@ -348,52 +451,59 @@ class _CategoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      height: 76,
-      child: ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.only(top: 8),
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        itemCount: _kCategories.length,
-        itemBuilder: (context, index) {
-          final (label, icon) = _kCategories[index];
-          final isSelected = selected == index;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: List.generate(_kCategories.length, (index) {
+            final (label, icon) = _kCategories[index];
+            final isSelected = selected == index;
+            return GestureDetector(
               onTap: () => onSelect(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.orange : AppColors.page,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? AppColors.orange : AppColors.line,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              child: Container(
+                width: 72,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
                   children: [
-                    Icon(
-                      icon,
-                      size: 15,
-                      color: isSelected ? Colors.white : AppColors.muted,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.orange : AppColors.page,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? AppColors.orange : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 24,
+                        color: isSelected ? Colors.white : AppColors.ink,
+                      ),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(height: 8),
                     Text(
                       label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : AppColors.ink,
+                        fontSize: 11,
+                        height: 1.2,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                        color: isSelected ? AppColors.orange : AppColors.ink,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          );
-        },
+            );
+          }),
+        ),
       ),
     );
   }

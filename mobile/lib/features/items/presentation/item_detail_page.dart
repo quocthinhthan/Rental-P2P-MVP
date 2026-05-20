@@ -32,11 +32,18 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
   ItemDetail? item;
   bool loading = true;
   int _imageIndex = 0;
+  final _pageCtrl = PageController();
 
   @override
   void initState() {
     super.initState();
     loadDetail();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> loadDetail() async {
@@ -209,22 +216,34 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
           // Immersive image
           SliverAppBar(
             automaticallyImplyLeading: false,
-            expandedHeight: 280,
+            expandedHeight: 300,
             pinned: false,
             floating: false,
-            backgroundColor: AppColors.orangeLight,
+            backgroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Light background behind image
+                  Container(color: Colors.white),
                   if (images.isNotEmpty)
                     PageView.builder(
+                      controller: _pageCtrl,
                       itemCount: images.length,
                       onPageChanged: (i) => setState(() => _imageIndex = i),
                       itemBuilder: (context, i) => Image.network(
                         images[i],
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => _ImageFallback(),
+                        loadingBuilder: (_, child, prog) {
+                          if (prog == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.orange,
+                              strokeWidth: 2,
+                            ),
+                          );
+                        },
                       ),
                     )
                   else
@@ -235,20 +254,42 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 80,
+                      height: 60,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.3),
+                            Colors.black.withValues(alpha: 0.55),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  // Dots indicator
+                  // Image count pill top-right
+                  if (images.length > 1)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_imageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Dots indicator bottom
                   if (images.length > 1)
                     Positioned(
                       bottom: 12,
@@ -258,14 +299,14 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(images.length, (i) {
                           return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 220),
                             margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: i == _imageIndex ? 18 : 6,
+                            width: i == _imageIndex ? 20 : 6,
                             height: 6,
                             decoration: BoxDecoration(
                               color: i == _imageIndex
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.5),
+                                  ? AppColors.orange
+                                  : Colors.white.withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           );
@@ -276,6 +317,58 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               ),
             ),
           ),
+
+          // Thumbnail strip (when multiple images)
+          if (images.length > 1)
+            SliverToBoxAdapter(
+              child: Container(
+                color: Colors.white,
+                height: 64,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  itemCount: images.length,
+                  itemBuilder: (_, i) => GestureDetector(
+                    onTap: () {
+                      setState(() => _imageIndex = i);
+                      _pageCtrl.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      margin: const EdgeInsets.only(right: 8),
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: i == _imageIndex
+                              ? AppColors.orange
+                              : AppColors.line,
+                          width: i == _imageIndex ? 2 : 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          images[i],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppColors.orangeLight,
+                            child: const Icon(Icons.image_outlined,
+                                size: 18, color: AppColors.orange),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Content
           SliverToBoxAdapter(

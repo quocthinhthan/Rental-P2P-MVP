@@ -167,12 +167,14 @@ class MyItemData {
     required this.name,
     required this.pricePerDay,
     required this.status,
+    required this.mainImage,
   });
 
   final String id;
   final String name;
   final num pricePerDay;
   final String status;
+  final String mainImage;
 
   factory MyItemData.fromJson(Map<String, dynamic> json) {
     return MyItemData(
@@ -182,6 +184,7 @@ class MyItemData {
           ? json['pricePerDay'] as num
           : num.tryParse(textOf(json['pricePerDay'])) ?? 0,
       status: textOf(json['status']),
+      mainImage: textOf(json['mainImage']),
     );
   }
 }

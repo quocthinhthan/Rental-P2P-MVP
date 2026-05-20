@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:rental_p2p_mobile/core/utils/open_url.dart';
 import 'package:rental_p2p_mobile/core/theme/app_theme.dart';
@@ -26,6 +27,7 @@ class RentalDetailPage extends StatefulWidget {
 class _RentalDetailPageState extends State<RentalDetailPage>
     with SingleTickerProviderStateMixin {
   RentalCardData? rental;
+  bool isOwner = false;
   List<ChatMessage> messages = [];
   bool loading = true;
   bool chatLoading = false;
@@ -53,7 +55,11 @@ class _RentalDetailPageState extends State<RentalDetailPage>
       final view = await widget.repository.getMyRentals();
       final all = [...view.asRenter, ...view.asOwner];
       final found = all.where((r) => r.id == widget.rentalId).firstOrNull;
-      setState(() => rental = found);
+      final ownerFlag = view.asOwner.any((r) => r.id == widget.rentalId);
+      setState(() {
+        rental = found;
+        isOwner = ownerFlag;
+      });
       await _loadChat();
     } catch (e) {
       if (mounted) showError(context, e);
@@ -86,6 +92,31 @@ class _RentalDetailPageState extends State<RentalDetailPage>
     try {
       final url = await widget.repository.createPaymentUrl(widget.rentalId);
       await openUrl(url);
+      
+      if (mounted) {
+        final success = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => _PaymentPollingDialog(
+            rentalId: widget.rentalId,
+            repository: widget.repository,
+          ),
+        );
+        
+        if (success == true) {
+          await _load();
+          if (mounted) {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const _PaymentResultPage(
+                  success: true,
+                  message: 'Thanh toán thành công! Đơn thuê đã được cập nhật.',
+                ),
+              ),
+            );
+          }
+        }
+      }
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -215,8 +246,8 @@ class _RentalDetailPageState extends State<RentalDetailPage>
             onSign: r.status == 'confirmed' ? () => _doAction('sign') : null,
             onPickup: r.status == 'confirmed' ? () => _doAction('pickup') : null,
             onComplete: r.status == 'in_progress' ? () => _doAction('complete') : null,
-            onConfirm: r.status == 'pending_confirmation' ? () => _doAction('confirm') : null,
-            onReject: r.status == 'pending_confirmation' ? () => _doAction('reject') : null,
+            onConfirm: (r.status == 'pending_confirmation' && isOwner) ? () => _doAction('confirm') : null,
+            onReject: (r.status == 'pending_confirmation' && isOwner) ? () => _doAction('reject') : null,
             onDispute: ['confirmed', 'in_progress'].contains(r.status)
                 ? () => _doAction('dispute')
                 : null,
@@ -739,5 +770,141 @@ class _InfoRow extends StatelessWidget {
             color: valueColor ?? AppColors.ink)),
       ])),
     ]);
+  }
+}
+
+// ─── Polling Dialog ──────────────────────────────────────────────────────────
+
+class _PaymentPollingDialog extends StatefulWidget {
+  const _PaymentPollingDialog({required this.rentalId, required this.repository});
+  final String rentalId;
+  final RentalsRepository repository;
+
+  @override
+  State<_PaymentPollingDialog> createState() => _PaymentPollingDialogState();
+}
+
+class _PaymentPollingDialogState extends State<_PaymentPollingDialog> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      try {
+        final view = await widget.repository.getMyRentals();
+        final all = [...view.asRenter, ...view.asOwner];
+        final r = all.where((item) => item.id == widget.rentalId).firstOrNull;
+        if (r != null && r.status != 'pending_payment') {
+          timer.cancel();
+          if (mounted) Navigator.of(context).pop(true);
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.all(32),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: AppColors.orange),
+          const SizedBox(height: 24),
+          const Text(
+            'Đang chờ thanh toán...',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Vui lòng hoàn tất thanh toán trên trình duyệt. Màn hình này sẽ tự động đóng khi thanh toán thành công.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.muted),
+          ),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.of(context).pop(false);
+            },
+            child: const Text('Hủy', style: TextStyle(color: AppColors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Payment Result Page ─────────────────────────────────────────────────────
+
+class _PaymentResultPage extends StatelessWidget {
+  const _PaymentResultPage({required this.success, required this.message});
+  final bool success;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = success ? AppColors.green : AppColors.red;
+    final icon = success ? Icons.check_circle_rounded : Icons.cancel_rounded;
+    final title = success ? 'Thành công' : 'Thất bại';
+
+    return Scaffold(
+      backgroundColor: AppColors.page,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 10))
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 80, color: color),
+                const SizedBox(height: 16),
+                Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color)),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: AppColors.muted, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(success),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    child: const Text('Quay lại đơn thuê'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
