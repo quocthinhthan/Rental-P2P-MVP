@@ -7,6 +7,8 @@ import {
   statusConfig,
 } from '../constants/rentalUi';
 import Swal from 'sweetalert2';
+import { formatRentalCode } from '../utils/itemCode';
+import UserTrustSummary from '../components/Trust/TrustBadge';
 import '../styles/MyRentalsPage.css';
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
@@ -95,13 +97,16 @@ function RentalMiniTimeline({ rental, dispute }) {
 function RentalSummaryCard({ rental, type }) {
   const isOwner = type === 'asOwner';
   const dispute = rental.dispute || rental.activeDispute || null;
+  const counterparty = isOwner
+    ? (rental.renter || rental.counterparty)
+    : (rental.owner || rental.counterparty);
 
   if (!rental.item) {
     return (
       <div className="rental-card rental-card-deleted">
         <div>
           <p className="rental-card-title">Vật phẩm không còn tồn tại</p>
-          <p className="rental-card-meta">Đơn thuê ID: {rental._id}</p>
+          <p className="rental-card-meta">Mã đơn thuê: {formatRentalCode(rental)}</p>
         </div>
         <Link className="btn-xs btn-primary-xs" to={`/my-rentals/${rental._id}`} state={{ type }}>
           Xem chi tiết
@@ -131,18 +136,44 @@ function RentalSummaryCard({ rental, type }) {
 
         <div className="rental-card-meta-grid">
           <div>
+            <span>Mã đơn</span>
+            <strong>{formatRentalCode(rental)}</strong>
+          </div>
+          <div>
             <span>Thời gian thuê</span>
             <strong>{formatDateRange(rental.startDate, rental.endDate)}</strong>
           </div>
           <div>
             <span>{isOwner ? 'Người thuê' : 'Chủ sở hữu'}</span>
-            <strong>{rental.counterparty?.fullName || 'Chưa có thông tin'}</strong>
+            <strong>{counterparty?.fullName || rental.counterparty?.fullName || 'Chưa có thông tin'}</strong>
           </div>
           <div>
             <span>Tổng thanh toán</span>
             <strong className="rental-card-price">{formatCurrency(rental.totalAmount)}</strong>
           </div>
         </div>
+
+        {counterparty?.fullName && (
+          <div className={`rental-counterparty-trust${isOwner ? ' is-owner-decision' : ''}`}>
+            <img
+              src={counterparty.avatarUrl || 'https://via.placeholder.com/40'}
+              alt={counterparty.fullName}
+              className="rental-counterparty-avatar"
+            />
+            <div className="rental-counterparty-copy">
+              <span>{isOwner ? 'Độ tin cậy người thuê' : 'Uy tín chủ sở hữu'}</span>
+              <strong>{counterparty.fullName}</strong>
+              <UserTrustSummary user={counterparty} compact />
+            </div>
+            <Link
+              className="rental-counterparty-profile"
+              to={`/users/${counterparty._id}/profile`}
+              title="Xem hồ sơ công khai"
+            >
+              <i className="fas fa-arrow-right" />
+            </Link>
+          </div>
+        )}
 
         <RentalMiniTimeline rental={rental} dispute={dispute} />
 

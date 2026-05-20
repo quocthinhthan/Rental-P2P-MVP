@@ -141,19 +141,19 @@ function Header() {
                           <li>
                             <Link to="/admin/dashboard" className="custom-dropdown-item">
                               <i className="fas fa-chart-line me-2 item-icon"></i>
-                              Dashboard admin
+                              Tổng quan admin
                             </Link>
                           </li>
                           <li>
                             <Link to="/admin/items" className="custom-dropdown-item">
-                              <i className="fas fa-boxes-stacked me-2 item-icon"></i>
+                              <i className="fas fa-boxes me-2 item-icon"></i>
                               Quản lý sản phẩm
                             </Link>
                           </li>
                           <li>
                             <Link to="/admin/item-reports" className="custom-dropdown-item">
                               <i className="fas fa-flag me-2 item-icon"></i>
-                              Report sản phẩm
+                              Báo cáo sản phẩm
                             </Link>
                           </li>
                           <li>

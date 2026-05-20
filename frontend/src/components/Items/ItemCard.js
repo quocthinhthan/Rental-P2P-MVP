@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getItemStatusI18nKey, ItemStatus } from '../../constants/enums';
 import { getItemCardImage } from '../../utils/cloudinaryImage';
+import UserTrustSummary from '../Trust/TrustBadge';
+import '../../styles/ItemCard.css';
 
 function ItemCard({ item }) {
   const { t } = useTranslation();
@@ -19,6 +21,7 @@ function ItemCard({ item }) {
   const priceValue = Number(item.pricePerDay);
   const hasValidPrice = Number.isFinite(priceValue);
   const priceLabel = hasValidPrice ? priceValue.toLocaleString('vi-VN') : 'Liên hệ';
+  const owner = item.owner || item.ownerId;
 
   return (
     <div className="col-md-6 col-lg-4 col-xl-3 mb-4">
@@ -80,6 +83,20 @@ function ItemCard({ item }) {
                 <div className="small text-muted mt-2">
                   <i className="fas fa-location-dot text-primary me-1"></i>
                   Cách bạn {distanceLabel} km
+                </div>
+              )}
+
+              {owner?.fullName && (
+                <div className="item-card-owner-trust mt-3">
+                  <img
+                    src={owner.avatarUrl || 'https://via.placeholder.com/32'}
+                    alt={owner.fullName}
+                    className="item-card-owner-avatar"
+                  />
+                  <div className="item-card-owner-copy">
+                    <span className="item-card-owner-name">{owner.fullName}</span>
+                    <UserTrustSummary user={owner} compact />
+                  </div>
                 </div>
               )}
             </div>

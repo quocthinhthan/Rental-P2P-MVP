@@ -38,6 +38,7 @@ app.use('/api/items', require('./routes/items.routes'));
 app.use('/api/rentals', require('./routes/rentals.routes')); // (Mới)
 app.use('/api/views', require('./routes/views.routes'));
 app.use('/api/admin', require('./routes/admin.routes')); // (Mới)
+app.use('/api/users', require('./routes/users.routes'));
 
 // THÊM DÒNG MỚI NÀY
 app.use('/api/upload', require('./routes/upload.routes'));

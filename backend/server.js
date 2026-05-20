@@ -86,6 +86,7 @@ const rentalRoutes = require('./routes/rentals.routes');
 const viewRoutes = require('./routes/views.routes');
 const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const userRoutes = require('./routes/users.routes');
 
 const reviewRoutes = require('./routes/reviews.routes');
 
@@ -97,6 +98,7 @@ app.use('/api/rentals', rentalRoutes);
 app.use('/api/views', viewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewRoutes);
 
 app.use('/api/disputes', disputeRoutes);

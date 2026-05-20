@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
+const { generateUniqueCode } = require('../utils/codeGenerator');
 
 const RentalSchema = new mongoose.Schema({
+  code: { type: String, trim: true, uppercase: true, immutable: true },
   itemId: { 
     type: mongoose.Schema.Types.ObjectId, 
     required: true, 
@@ -43,5 +45,18 @@ const RentalSchema = new mongoose.Schema({
     default: RentalStatus.PENDING_PAYMENT
   }
 }, { timestamps: true });
+
+RentalSchema.index({ code: 1 }, { unique: true, sparse: true });
+
+RentalSchema.pre('validate', async function ensureRentalCode(next) {
+  try {
+    if (!this.code) {
+      this.code = await generateUniqueCode(this.constructor, { prefix: 'RT' });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model('Rental', RentalSchema);

@@ -7,9 +7,10 @@ import {
   getAdminTopUsers
 } from '../services/api';
 import Spinner from '../components/Common/Spinner';
-import AdminNav from '../components/Admin/AdminNav';
+import AdminHero from '../components/Admin/AdminHero';
 import { getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels } from '../constants/rentalUi';
+import { TrustBadge } from '../components/Trust/TrustBadge';
 import '../styles/AdminDisputesPage.css';
 import '../styles/AdminDashboardPage.css';
 
@@ -33,11 +34,26 @@ const formatDate = (value) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
 };
+const formatFullDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const getChartLabelStep = (count) => {
+  if (count > 75) return 10;
+  if (count > 45) return 7;
+  if (count > 20) return 4;
+  return 1;
+};
+
+const RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
 function KpiCard({ icon, label, value, tone, hint }) {
   return (
     <div className={`admin-kpi-card is-${tone || 'primary'}`}>
-      <span className="admin-kpi-icon"><i className={icon}></i></span>
+      <span className="admin-kpi-icon"><i className={icon} /></span>
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
@@ -47,32 +63,54 @@ function KpiCard({ icon, label, value, tone, hint }) {
   );
 }
 
-function MiniChart({ title, rows, valueKey, formatter = formatNumber, tone = 'primary' }) {
+function MiniChart({ title, rows, valueKey, formatter = formatNumber, tone = 'primary', unitLabel = 'giá trị' }) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const max = Math.max(...safeRows.map((row) => Number(row?.[valueKey] || 0)), 1);
+  const labelStep = getChartLabelStep(safeRows.length);
+  const total = safeRows.reduce((sum, row) => sum + Number(row?.[valueKey] || 0), 0);
+  const average = safeRows.length ? total / safeRows.length : 0;
 
   return (
     <section className="admin-chart-panel">
       <div className="admin-panel-heading">
-        <h3>{title}</h3>
+        <div>
+          <h3>{title}</h3>
+          <span>{safeRows.length ? `${formatNumber(safeRows.length)} ngày dữ liệu` : 'Chưa có dữ liệu'}</span>
+        </div>
+        <div className="admin-chart-summary">
+          <strong>{formatter(total)}</strong>
+          <span>TB {formatter(average)} / ngày</span>
+        </div>
       </div>
       {safeRows.length === 0 ? (
         <div className="admin-compact-empty">Chưa có dữ liệu biểu đồ.</div>
       ) : (
-        <div className="admin-mini-chart" style={{ '--bar-count': safeRows.length }}>
-          {safeRows.map((row) => {
-            const value = Number(row?.[valueKey] || 0);
-            return (
-              <div className="admin-chart-bar-wrap" key={`${title}-${row.date}`}>
+        <div className="admin-chart-scroll" aria-label={`${title} theo ngày`}>
+          <div className="admin-chart-y-axis" aria-hidden="true">
+            <span>{formatter(max)}</span>
+            <span>{formatter(max / 2)}</span>
+            <span>0</span>
+          </div>
+          <div className="admin-mini-chart" style={{ '--bar-count': safeRows.length }}>
+            {safeRows.map((row, index) => {
+              const value = Number(row?.[valueKey] || 0);
+              const showLabel = index === 0 || index === safeRows.length - 1 || index % labelStep === 0;
+              const suffix = unitLabel ? ` ${unitLabel}` : '';
+              return (
                 <div
-                  className={`admin-chart-bar is-${tone}`}
-                  style={{ height: `${Math.max((value / max) * 100, value > 0 ? 8 : 2)}%` }}
-                  title={`${formatDate(row.date)}: ${formatter(value)}`}
-                />
-                <span>{formatDate(row.date)}</span>
-              </div>
-            );
-          })}
+                  className="admin-chart-bar-wrap"
+                  key={`${title}-${row.date || index}`}
+                  data-tooltip={`${formatFullDate(row.date)} • ${formatter(value)}${suffix}`}
+                >
+                  <div
+                    className={`admin-chart-bar is-${tone}`}
+                    style={{ height: `${Math.max((value / max) * 100, value > 0 ? 8 : 2)}%` }}
+                  />
+                  <span className={showLabel ? '' : 'is-muted-label'}>{showLabel ? formatDate(row.date) : ''}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>
@@ -134,33 +172,30 @@ export default function AdminDashboardPage() {
         const response = await getAdminTopUsers(userType, 10);
         setTopUsers(Array.isArray(response.data?.users) ? response.data.users : []);
       } catch (error) {
-        Swal.fire('Lỗi!', getErrorMessage(error, 'Không thể tải top user.'), 'error');
+        Swal.fire('Lỗi!', getErrorMessage(error, 'Không thể tải top người dùng.'), 'error');
       }
     };
     if (!loading) fetchUsers();
   }, [userType, loading]);
 
   const kpis = useMemo(() => ([
-    { icon: 'fas fa-users', label: 'Users', value: formatNumber(overview?.users?.total), hint: `${formatNumber(overview?.users?.banned)} bị ban`, tone: 'primary' },
-    { icon: 'fas fa-box-open', label: 'Items', value: formatNumber(overview?.items?.total), hint: `${formatNumber(overview?.items?.available)} available`, tone: 'info' },
-    { icon: 'fas fa-receipt', label: 'Rentals', value: formatNumber(overview?.rentals?.total), hint: 'Tổng đơn thuê', tone: 'success' },
-    { icon: 'fas fa-coins', label: 'Doanh thu', value: formatCurrency(overview?.finance?.rentalFee), hint: 'Rental fee', tone: 'warning' },
-    { icon: 'fas fa-percent', label: 'Commission', value: formatCurrency(overview?.finance?.commissionAmount), hint: 'Phí nền tảng', tone: 'primary' },
-    { icon: 'fas fa-shield-halved', label: 'Đặt cọc giữ', value: formatCurrency(overview?.finance?.heldDepositAmount), hint: 'Escrow active', tone: 'info' },
-    { icon: 'fas fa-gavel', label: 'Disputes', value: formatNumber(overview?.disputes?.total), hint: `${formatNumber(overview?.disputes?.escalated)} escalated`, tone: 'danger' },
-    { icon: 'fas fa-user-slash', label: 'Banned users', value: formatNumber(overview?.users?.banned), hint: 'Tài khoản bị khóa', tone: 'danger' },
+    { icon: 'fas fa-users', label: 'Người dùng', value: formatNumber(overview?.users?.total), hint: `${formatNumber(overview?.users?.banned)} bị khóa`, tone: 'primary' },
+    { icon: 'fas fa-box-open', label: 'Sản phẩm', value: formatNumber(overview?.items?.total), hint: `${formatNumber(overview?.items?.available)} đang cho thuê`, tone: 'info' },
+    { icon: 'fas fa-receipt', label: 'Đơn thuê', value: formatNumber(overview?.rentals?.total), hint: 'Tổng đơn thuê', tone: 'success' },
+    { icon: 'fas fa-coins', label: 'Doanh thu', value: formatCurrency(overview?.finance?.rentalFee), hint: 'Phí thuê', tone: 'warning' },
+    { icon: 'fas fa-percent', label: 'Hoa hồng', value: formatCurrency(overview?.finance?.commissionAmount), hint: 'Phí nền tảng', tone: 'primary' },
+    { icon: 'fas fa-hand-holding-usd', label: 'Đặt cọc giữ', value: formatCurrency(overview?.finance?.heldDepositAmount), hint: 'Ký quỹ đang giữ', tone: 'info' },
+    { icon: 'fas fa-gavel', label: 'Tranh chấp', value: formatNumber(overview?.disputes?.total), hint: `${formatNumber(overview?.disputes?.escalated)} đã chuyển admin`, tone: 'danger' },
+    { icon: 'fas fa-user-slash', label: 'Tài khoản khóa', value: formatNumber(overview?.users?.banned), hint: 'Người dùng bị hạn chế', tone: 'danger' },
   ]), [overview]);
 
   return (
     <main className="admin-dashboard-page admin-shell-page">
-      <section className="admin-disputes-hero">
-        <div className="admin-disputes-hero-copy">
-          <span className="admin-disputes-eyebrow">Admin Dashboard</span>
-          <h1>Tổng quan vận hành</h1>
-          <p>Theo dõi người dùng, sản phẩm, đơn thuê, doanh thu, ký quỹ và rủi ro trên RentalP2P.</p>
-        </div>
-        <AdminNav />
-      </section>
+      <AdminHero
+        eyebrow="Bảng điều khiển admin"
+        title="Tổng quan vận hành"
+        description="Theo dõi người dùng, sản phẩm, đơn thuê, doanh thu, ký quỹ và rủi ro trên RentalP2P."
+      />
 
       {loading ? (
         <div className="admin-dispute-loading"><Spinner /></div>
@@ -174,6 +209,7 @@ export default function AdminDashboardPage() {
             <div>
               <span className="admin-section-label">Biểu đồ</span>
               <strong>Xu hướng theo ngày</strong>
+              <small>Rê chuột lên từng cột để xem ngày và giá trị cụ thể.</small>
             </div>
             <div className="admin-segmented-control">
               {RANGE_OPTIONS.map((option) => (
@@ -193,42 +229,57 @@ export default function AdminDashboardPage() {
             <div className="admin-dispute-loading"><Spinner /></div>
           ) : (
             <section className="admin-chart-grid">
-              <MiniChart title="Đơn thuê" rows={charts?.rentalsByDay} valueKey="count" tone="primary" />
+              <MiniChart title="Đơn thuê" rows={charts?.rentalsByDay} valueKey="count" tone="primary" unitLabel="đơn" />
               <MiniChart title="Doanh thu" rows={charts?.revenueByDay} valueKey="rentalFee" formatter={formatCurrency} tone="success" />
-              <MiniChart title="User mới" rows={charts?.usersByDay} valueKey="count" tone="info" />
-              <MiniChart title="Tranh chấp" rows={charts?.disputesByDay} valueKey="count" tone="danger" />
+              <MiniChart title="Người dùng mới" rows={charts?.usersByDay} valueKey="count" tone="info" unitLabel="người dùng" />
+              <MiniChart title="Tranh chấp" rows={charts?.disputesByDay} valueKey="count" tone="danger" unitLabel="tranh chấp" />
             </section>
           )}
 
           <section className="admin-dashboard-tables">
+            {/* Top items table */}
             <div className="admin-table-panel">
               <div className="admin-panel-heading">
-                <h3>Top sản phẩm</h3>
+                <div>
+                  <h3>Top sản phẩm</h3>
+                  <span>Xếp hạng theo số đơn thuê</span>
+                </div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: 36 }}>#</th>
                       <th>Sản phẩm</th>
                       <th>Trạng thái</th>
                       <th className="text-end">Đơn thuê</th>
                       <th className="text-end">Doanh thu</th>
-                      <th className="text-end">Dispute</th>
+                      <th className="text-end">Tranh chấp</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topItems.map((item) => (
+                    {topItems.map((item, index) => (
                       <tr key={item._id}>
+                        <td style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem' }}>
+                          {index < 3 ? RANK_MEDALS[index] : index + 1}
+                        </td>
                         <td>
                           <div className="admin-table-entity">
                             <img src={item.mainImage || '/img/product-1.png'} alt={item.name || 'Sản phẩm'} />
-                            <div><strong>{item.name || 'Không rõ'}</strong><span>{item.category || '-'}</span></div>
+                            <div>
+                              <strong>{item.name || 'Không rõ'}</strong>
+                              <span>{item.category || '-'}</span>
+                            </div>
                           </div>
                         </td>
                         <td><span className={`admin-status-pill is-${item.status}`}>{itemStatusLabels[item.status] || item.status || '-'}</span></td>
                         <td className="text-end">{formatNumber(item.rentalCount)}</td>
                         <td className="text-end">{formatCurrency(item.revenue)}</td>
-                        <td className="text-end">{formatNumber(item.disputeCount)}</td>
+                        <td className="text-end">
+                          {item.disputeCount > 0
+                            ? <span style={{ color: '#dc2626', fontWeight: 700 }}>{formatNumber(item.disputeCount)}</span>
+                            : <span style={{ color: '#94a3b8' }}>0</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -237,9 +288,13 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Top users table */}
             <div className="admin-table-panel">
               <div className="admin-panel-heading">
-                <h3>Top user</h3>
+                <div>
+                  <h3>Top người dùng</h3>
+                  <span>Thống kê theo vai trò</span>
+                </div>
                 <div className="admin-segmented-control is-small">
                   {USER_TABS.map((tab) => (
                     <button key={tab.value} type="button" className={userType === tab.value ? 'is-active' : ''} onClick={() => setUserType(tab.value)}>
@@ -252,32 +307,45 @@ export default function AdminDashboardPage() {
                 <table className="admin-data-table">
                   <thead>
                     <tr>
-                      <th>User</th>
-                      <th className="text-end">Items</th>
-                      <th className="text-end">Owner rentals</th>
-                      <th className="text-end">Renter rentals</th>
-                      <th className="text-end">Dispute</th>
-                      <th className="text-end">Trust</th>
+                      <th style={{ width: 36 }}>#</th>
+                      <th>Người dùng</th>
+                      <th className="text-end">Sản phẩm</th>
+                      <th className="text-end">Đơn chủ</th>
+                      <th className="text-end">Đơn thuê</th>
+                      <th className="text-end">Tranh chấp</th>
+                      <th className="text-end">Điểm tin cậy</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topUsers.map((user) => (
-                      <tr key={user._id}>
-                        <td>
-                          <strong>{getName(user)}</strong>
-                          <span className="admin-muted-line">{user.email || '-'}</span>
-                          {user.isBanned && <span className="admin-status-pill is-danger ms-2">Banned</span>}
-                        </td>
-                        <td className="text-end">{formatNumber(user.itemCount)}</td>
-                        <td className="text-end">{formatNumber(user.ownerRentalCount)}</td>
-                        <td className="text-end">{formatNumber(user.renterRentalCount)}</td>
-                        <td className="text-end">{formatNumber(user.disputeCount)}</td>
-                        <td className="text-end">{formatNumber(user.trustScore)}</td>
-                      </tr>
+                    {topUsers.map((user, index) => (
+                        <tr key={user._id}>
+                          <td style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.82rem' }}>
+                            {index < 3 ? RANK_MEDALS[index] : index + 1}
+                          </td>
+                          <td>
+                            <strong>{getName(user)}</strong>
+                            <span className="admin-muted-line">{user.email || '-'}</span>
+                            {user.isBanned && <span className="admin-status-pill is-danger ms-2">Đã khóa</span>}
+                          </td>
+                          <td className="text-end">{formatNumber(user.itemCount)}</td>
+                          <td className="text-end">{formatNumber(user.ownerRentalCount)}</td>
+                          <td className="text-end">{formatNumber(user.renterRentalCount)}</td>
+                          <td className="text-end">
+                            {user.disputeCount > 0
+                              ? <span style={{ color: '#dc2626', fontWeight: 700 }}>{formatNumber(user.disputeCount)}</span>
+                              : <span style={{ color: '#94a3b8' }}>0</span>}
+                          </td>
+                          <td className="text-end">
+                            <div className="admin-trust-cell">
+                              <TrustBadge user={user} />
+                              <span>{formatNumber(user.trustScore)}/100</span>
+                            </div>
+                          </td>
+                        </tr>
                     ))}
                   </tbody>
                 </table>
-                {topUsers.length === 0 && <div className="admin-compact-empty">Chưa có user phù hợp bộ lọc.</div>}
+                {topUsers.length === 0 && <div className="admin-compact-empty">Chưa có người dùng phù hợp bộ lọc.</div>}
               </div>
             </div>
           </section>

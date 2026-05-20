@@ -7,6 +7,10 @@ const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
 const { RentalStatus } = require('../enums/rental.enum');
 const mongoose = require('mongoose');
+const {
+  getTrustLevelFromScore,
+  toSafeUserTrustSummary
+} = require('../services/trustScore.service');
 
 // GET /api/views/item-details/:id
 exports.getItemDetailView = async (req, res) => {
@@ -16,7 +20,7 @@ exports.getItemDetailView = async (req, res) => {
 
   try {
     const item = await Item.findById(req.params.id)
-      .populate('ownerId', 'fullName avatarUrl phoneNumber _id'); 
+      .populate('ownerId', 'fullName avatarUrl phoneNumber _id ekycStatus averageRating totalReviews trustScore'); 
 
     if (!item) {
       return res.status(404).json({ message: MESSAGES.ITEM.NOT_FOUND });
@@ -42,6 +46,7 @@ exports.getItemDetailView = async (req, res) => {
 
     const viewData = {
         _id: item._id,
+        code: item.code,
         name: item.name,
         description: item.description,
         category: item.category, // Bổ sung category
@@ -55,7 +60,10 @@ exports.getItemDetailView = async (req, res) => {
           lng: item.location.coordinates[0],
           lat: item.location.coordinates[1]
         } : null,
-        owner: item.ownerId,
+        owner: item.ownerId ? {
+          ...toSafeUserTrustSummary(item.ownerId),
+          phoneNumber: item.ownerId.phoneNumber
+        } : null,
         bookedDates: confirmedRentals 
     };
 
@@ -76,11 +84,15 @@ exports.getMyRentalsView = async (req, res) => {
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
           path: 'itemId',
-          select: '_id name pricePerDay images' // Lấy mảng images
+          select: '_id code name pricePerDay images' // Lấy mảng images
       })
       .populate({ // Lấy thông tin chủ sở hữu (owner)
           path: 'ownerId',
-          select: '_id fullName email'
+          select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'renterId',
+          select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
       });
 
     // 2. Lấy các đơn tôi là chủ (asOwner)
@@ -91,11 +103,15 @@ exports.getMyRentalsView = async (req, res) => {
       .sort({ createdAt: -1 }) // >>> THÊM: Sắp xếp kết quả mới nhất lên đầu
       .populate({ // Populate vật phẩm
           path: 'itemId',
-          select: '_id name pricePerDay images' // Lấy mảng images
+          select: '_id code name pricePerDay images' // Lấy mảng images
       })
       .populate({ // Lấy thông tin người thuê (renter)
           path: 'renterId',
-          select: '_id fullName email'
+          select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'ownerId',
+          select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
       });
     
     // 3. Lấy các vật phẩm tôi đã đăng (myItems)
@@ -156,18 +172,41 @@ exports.getMyRentalsView = async (req, res) => {
       };
     };
 
+    const formatCounterparty = (counterparty) => {
+      if (!counterparty) return null;
+      if (!counterparty.fullName) return null;
+
+      const trustScore = typeof counterparty.trustScore === 'number' ? counterparty.trustScore : 50;
+
+      return {
+        _id: counterparty._id,
+        fullName: counterparty.fullName,
+        email: counterparty.email,
+        avatarUrl: counterparty.avatarUrl || '',
+        ekycStatus: counterparty.ekycStatus,
+        averageRating: counterparty.averageRating || 0,
+        totalReviews: counterparty.totalReviews || 0,
+        trustScore,
+        trustLevel: getTrustLevelFromScore(trustScore)
+      };
+    };
+
     // 4. Hàm helper để định dạng lại rental
     const formatRentalDetail = (rental, counterparty) => {
         // Rào chắn nếu item bị null (do đã bị xóa)
         const itemSummary = rental.itemId ? {
             _id: rental.itemId._id,
+            code: rental.itemId.code,
             name: rental.itemId.name,
             pricePerDay: rental.itemId.pricePerDay,
             mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : ''
         } : null;
         const rentalKey = rental._id.toString();
         const reviewerKey = userId.toString();
-        const counterpartyKey = counterparty?._id?.toString();
+        const counterpartySummary = formatCounterparty(counterparty);
+        const renterSummary = formatCounterparty(rental.renterId);
+        const ownerSummary = formatCounterparty(rental.ownerId);
+        const counterpartyKey = counterpartySummary?._id?.toString();
         const myReview = reviewByRentalAndReviewer[`${rentalKey}:${reviewerKey}`] || null;
         const counterpartyReview = counterpartyKey
           ? reviewByRentalAndReviewer[`${rentalKey}:${counterpartyKey}`] || null
@@ -181,6 +220,7 @@ exports.getMyRentalsView = async (req, res) => {
 
         return {
             _id: rental._id,
+            code: rental.code,
             startDate: rental.startDate,
             endDate: rental.endDate,
           rentalFee: rental.rentalFee,
@@ -207,7 +247,9 @@ exports.getMyRentalsView = async (req, res) => {
             } : null,
             isFullySigned: Boolean(contract?.isFullySigned),
             item: itemSummary,
-            counterparty: counterparty,
+            counterparty: counterpartySummary,
+            renter: renterSummary,
+            owner: ownerSummary,
             dispute: formatDisputeDetail(dispute),
             review: {
               status: reviewStatus,
@@ -238,6 +280,7 @@ exports.getMyRentalsView = async (req, res) => {
       asOwner: asOwner.map(r => formatRentalDetail(r, r.renterId)),
       myItems: myItems.map(item => ({
           _id: item._id,
+          code: item.code,
           name: item.name,
           pricePerDay: item.pricePerDay,
           category: item.category,

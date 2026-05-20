@@ -3,6 +3,8 @@ const Item = require('../models/Item.model');
 const Rental = require('../models/Rental.model');
 const ItemReport = require('../models/ItemReport.model');
 const mongoose = require('mongoose');
+const { saveWithUniqueCode } = require('../utils/codeGenerator');
+const { getTrustLevelFromScore } = require('../services/trustScore.service');
 
 const DEFAULT_SEARCH_LIMIT = 100;
 const MAX_SEARCH_LIMIT = 200;
@@ -20,6 +22,23 @@ const clampNumber = (value, defaultValue, min, max) => {
 const trimSearchText = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, MAX_SEARCH_TEXT_LENGTH);
+};
+
+const formatOwnerSummary = (owner) => {
+  if (!owner) return null;
+  if (!owner._id && !owner.fullName) return null;
+  const trustScore = typeof owner.trustScore === 'number' ? owner.trustScore : 50;
+
+  return {
+    _id: owner._id,
+    fullName: owner.fullName,
+    avatarUrl: owner.avatarUrl || '',
+    ekycStatus: owner.ekycStatus,
+    averageRating: owner.averageRating || 0,
+    totalReviews: owner.totalReviews || 0,
+    trustScore,
+    trustLevel: owner.trustLevel || getTrustLevelFromScore(trustScore)
+  };
 };
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
@@ -93,12 +112,14 @@ const searchItems = async (req, res) => {
 
       const projectFields = {
         _id: 1,
+        code: 1,
         name: 1,
         category: 1,
         address: 1,
         pricePerDay: 1,
         status: 1,
         images: 1,
+        ownerId: 1,
         distance: 1
       };
 
@@ -117,13 +138,36 @@ const searchItems = async (req, res) => {
             query: query // Đẩy toàn bộ filter (name, status, exclude...) vào đây
           }
         },
-        { $project: projectFields },
-        { $limit: resultLimit }
+        { $limit: resultLimit },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'ownerId',
+            foreignField: '_id',
+            as: 'owner'
+          }
+        },
+        { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            ...projectFields,
+            owner: {
+              _id: '$owner._id',
+              fullName: '$owner.fullName',
+              avatarUrl: '$owner.avatarUrl',
+              ekycStatus: '$owner.ekycStatus',
+              averageRating: '$owner.averageRating',
+              totalReviews: '$owner.totalReviews',
+              trustScore: '$owner.trustScore'
+            }
+          }
+        }
       ]);
     } else {
       // 4. FALLBACK: NẾU KHÔNG CÓ TỌA ĐỘ, DÙNG FIND BÌNH THƯỜNG
       items = await Item.find(query)
-        .select('_id name category address pricePerDay images status')
+        .select('_id code name category address pricePerDay images status ownerId')
+        .populate('ownerId', '_id fullName avatarUrl ekycStatus averageRating totalReviews trustScore')
         .sort({ createdAt: -1 })
         .limit(resultLimit);
     }
@@ -132,12 +176,14 @@ const searchItems = async (req, res) => {
     const itemSummaries = items.map(item => {
       const summary = {
         _id: item._id,
+        code: item.code,
         name: item.name,
         category: item.category,
         address: item.address,
         pricePerDay: item.pricePerDay,
         status: item.status,
         mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
+        owner: formatOwnerSummary(item.owner || item.ownerId),
         // Mặc định chỉ trả khoảng cách; map picker mới yêu cầu thêm mapLocation.
         distance: item.distance !== undefined && item.distance !== null ? parseFloat((item.distance / 1000).toFixed(1)) : null 
       };
@@ -183,7 +229,7 @@ const createItem = async (req, res) => {
       name, description, category, pricePerDay, address, images, baseValue, depositPercentage, location,
       ownerId: req.user.id
     });
-    const createdItem = await item.save();
+    const createdItem = await saveWithUniqueCode(item, { prefix: 'SP' });
     res.status(201).json(createdItem);
   } catch (error) {
     res.status(400).json({ message: 'Bad request', error: error.message });
@@ -321,9 +367,10 @@ const getBestsellerItems = async (req, res) => {
       const fallback = await Item.find({ status: { $ne: 'delisted' } })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('_id name category pricePerDay images address');
+        .select('_id code name category pricePerDay images address');
       return res.status(200).json(fallback.map(item => ({
         _id: item._id,
+        code: item.code,
         name: item.name,
         category: item.category,
         pricePerDay: item.pricePerDay,
@@ -334,7 +381,7 @@ const getBestsellerItems = async (req, res) => {
 
     const itemIds = rentalsAgg.map(r => r._id);
     const items = await Item.find({ _id: { $in: itemIds }, status: { $ne: 'delisted' } })
-      .select('_id name category pricePerDay images address');
+      .select('_id code name category pricePerDay images address');
 
     // Map rentalCount vào từng item, giữ thứ tự sort
     const countMap = {};
@@ -343,6 +390,7 @@ const getBestsellerItems = async (req, res) => {
     const result = items
       .map(item => ({
         _id: item._id,
+        code: item.code,
         name: item.name,
         category: item.category,
         pricePerDay: item.pricePerDay,

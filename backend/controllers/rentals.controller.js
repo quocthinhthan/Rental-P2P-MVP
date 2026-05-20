@@ -11,6 +11,8 @@ const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const qs = require('qs');
+const { saveWithUniqueCode } = require('../utils/codeGenerator');
+const { recalculateUserTrustScore } = require('../services/trustScore.service');
 
 const sortObject = (obj) => {
   const sorted = {};
@@ -89,7 +91,7 @@ exports.createRentalRequest = async (req, res) => {
     const payoutAmount = rentalFee - commissionAmount;
     const totalAmount = rentalFee + depositAmount;
 
-    const rental = await Rental.create({
+    const rental = new Rental({
       itemId,
       renterId,
       ownerId: item.ownerId,
@@ -105,8 +107,9 @@ exports.createRentalRequest = async (req, res) => {
       note,
       status: RentalStatus.PENDING_PAYMENT
     });
+    const createdRental = await saveWithUniqueCode(rental, { prefix: 'RT' });
 
-    res.status(201).json(rental);
+    res.status(201).json(createdRental);
   } catch (error) {
     res.status(400).json({ message: MESSAGES.COMMON.BAD_REQUEST, error: error.message });
   }
@@ -151,7 +154,7 @@ exports.createVNPayUrl = async (req, res) => {
       vnp_Locale: 'vn',
       vnp_CurrCode: 'VND',
       vnp_TxnRef: rental._id.toString(),
-      vnp_OrderInfo: 'Thanh toan ky quy don thue ' + rental._id,
+      vnp_OrderInfo: 'Thanh toan ky quy don thue ' + (rental.code || rental._id),
       vnp_OrderType: 'other',
       vnp_Amount: amount,
       vnp_ReturnUrl: req.body.source === 'mobile' 
@@ -253,7 +256,8 @@ exports.handleVNPayReturn = async (req, res) => {
       if (isMobile) return res.send(renderMobileResponse(true, 'Thanh toán thành công!'));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'success',
-        rentalId: rental._id.toString()
+        rentalId: rental._id.toString(),
+        rentalCode: rental.code || ''
       }));
     }
 
@@ -261,6 +265,7 @@ exports.handleVNPayReturn = async (req, res) => {
     return res.redirect(buildFrontendVNPayReturnUrl({
       status: 'failed',
       rentalId: rental._id.toString(),
+      rentalCode: rental.code || '',
       responseCode: vnpParams.vnp_ResponseCode,
       message: MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED
     }));
@@ -443,6 +448,11 @@ exports.completeRental = async (req, res) => {
         },
         { new: true }
       );
+
+      await Promise.all([
+        recalculateUserTrustScore(rental.renterId),
+        recalculateUserTrustScore(rental.ownerId)
+      ]);
 
       
       res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });

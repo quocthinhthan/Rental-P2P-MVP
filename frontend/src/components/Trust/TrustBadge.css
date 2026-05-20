@@ -1,0 +1,111 @@
+.trust-badge,
+.verification-badge,
+.rating-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.trust-badge i,
+.verification-badge i,
+.rating-summary i {
+  font-size: 0.74rem;
+}
+
+.trust-badge--md {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+
+.trust-badge--very-high,
+.trust-badge--high {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.trust-badge--medium {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.trust-badge--limited {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.trust-badge--low {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.trust-badge--very-low {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.verification-badge.is-verified {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.verification-badge.is-unverified {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.rating-summary {
+  padding-inline: 0;
+  color: #334155;
+  background: transparent;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.rating-summary i {
+  color: #f59e0b;
+}
+
+.rating-summary strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.rating-summary.is-muted {
+  color: #64748b;
+}
+
+.user-trust-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-trust-summary.is-compact {
+  gap: 6px;
+}
+
+@media (max-width: 520px) {
+  .trust-badge,
+  .verification-badge,
+  .rating-summary {
+    white-space: normal;
+  }
+}

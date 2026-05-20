@@ -21,6 +21,7 @@ import PostItemPage from './pages/PostItemPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
+import PublicUserProfilePage from './pages/PublicUserProfilePage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminDisputeDetailPage from './pages/AdminDisputeDetailPage';
@@ -40,6 +41,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/items/:itemId" element={<ItemDetailPage />} />
+        <Route path="/users/:userId/profile" element={<PublicUserProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

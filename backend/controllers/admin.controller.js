@@ -11,8 +11,13 @@ const { ItemStatus } = require('../enums/item.enum');
 const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 const { DisputeStatus } = require('../enums/dispute.enum');
 const { ItemReportStatus, ItemReportAction } = require('../models/ItemReport.model');
+const {
+  recalculateUserTrustScore,
+  getTrustLevelFromScore
+} = require('../services/trustScore.service');
 
 const MAX_LIMIT = 100;
+const RISKY_TRUST_SCORE_THRESHOLD = 40;
 const DASHBOARD_RANGES = {
   '7d': 7,
   '30d': 30,
@@ -107,7 +112,7 @@ exports.getAllUsers = async (req, res) => {
 
 // PATCH /api/admin/users/:id/status
 exports.updateUserStatus = async (req, res) => {
-  const { isBanned } = req.body;
+  const { isBanned, suspendedUntil } = req.body;
 
   try {
     if (!isObjectId(req.params.id)) {
@@ -123,9 +128,16 @@ exports.updateUserStatus = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const before = { isBanned: user.isBanned };
+    const before = { isBanned: user.isBanned, suspendedUntil: user.suspendedUntil, trustScore: user.trustScore };
     user.isBanned = isBanned;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'suspendedUntil')) {
+      user.suspendedUntil = suspendedUntil ? new Date(suspendedUntil) : null;
+      if (suspendedUntil && Number.isNaN(user.suspendedUntil.getTime())) {
+        return res.status(400).json({ message: 'suspendedUntil khong hop le' });
+      }
+    }
     await user.save();
+    const updatedTrustUser = await recalculateUserTrustScore(user._id);
 
     await createAuditLog({
       req,
@@ -133,10 +145,17 @@ exports.updateUserStatus = async (req, res) => {
       targetType: 'User',
       targetId: user._id,
       before,
-      after: { isBanned: user.isBanned }
+      after: {
+        isBanned: user.isBanned,
+        suspendedUntil: user.suspendedUntil,
+        trustScore: updatedTrustUser?.trustScore
+      }
     });
 
-    res.status(200).json({ message: 'User status updated' });
+    res.status(200).json({
+      message: 'User status updated',
+      user: updatedTrustUser
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -290,6 +309,7 @@ exports.getTopItems = async (req, res) => {
       {
         $project: {
           _id: '$item._id',
+          code: '$item.code',
           name: '$item.name',
           category: '$item.category',
           status: '$item.status',
@@ -392,7 +412,7 @@ exports.getTopUsers = async (req, res) => {
           ? { $or: [{ itemCount: { $gt: 0 } }, { ownerRentalCount: { $gt: 0 } }] }
           : type === 'renters'
             ? { renterRentalCount: { $gt: 0 } }
-            : { $or: [{ disputeCount: { $gt: 0 } }, { isBanned: true }, { trustScore: { $lt: 3 } }] }
+            : { $or: [{ disputeCount: { $gt: 1 } }, { isBanned: true }, { trustScore: { $lt: RISKY_TRUST_SCORE_THRESHOLD } }] }
       },
       {
         $project: {
@@ -404,6 +424,7 @@ exports.getTopUsers = async (req, res) => {
           ownerDisputes: 0,
           renterDisputes: 0,
           idCardImages: 0,
+          idCardNumber: 0,
           resetPasswordToken: 0,
           resetPasswordExpire: 0
         }
@@ -412,13 +433,20 @@ exports.getTopUsers = async (req, res) => {
       { $limit: limit }
     ]);
 
-    res.status(200).json({ type, users });
+    res.status(200).json({
+      type,
+      riskyThreshold: type === 'risky' ? RISKY_TRUST_SCORE_THRESHOLD : undefined,
+      users: users.map((user) => ({
+        ...user,
+        trustLevel: getTrustLevelFromScore(user.trustScore ?? 50)
+      }))
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// GET /api/admin/items?page=1&limit=20&status=&category=&search=&ownerId=
+// GET /api/admin/items?page=1&limit=20&status=&category=&search=&ownerId=&ownerSearch=
 exports.getAdminItems = async (req, res) => {
   try {
     const page = parsePositiveInt(req.query.page, 1, 10000);
@@ -448,67 +476,61 @@ exports.getAdminItems = async (req, res) => {
       match.ownerId = toObjectId(req.query.ownerId);
     }
 
-    const [items, total] = await Promise.all([
+    const ownerSearch = req.query.ownerSearch?.trim() || '';
+
+    // Common lookup stages (used in both data and count pipelines)
+    const ownerLookup = [
+      { $lookup: { from: 'users', localField: 'ownerId', foreignField: '_id', as: 'owner' } },
+      { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
+    ];
+
+    const ownerMatchStage = ownerSearch ? [{
+      $match: {
+        $or: [
+          { 'owner.fullName': { $regex: escapeRegex(ownerSearch), $options: 'i' } },
+          { 'owner.email': { $regex: escapeRegex(ownerSearch), $options: 'i' } }
+        ]
+      }
+    }] : [];
+
+    const projectStage = {
+      $project: {
+        code: 1, name: 1, description: 1, category: 1, images: 1, pricePerDay: 1,
+        baseValue: 1, depositPercentage: 1, address: 1, status: 1,
+        isFeatured: 1, createdAt: 1, updatedAt: 1,
+        rentalCount: { $size: '$rentals' },
+        disputeCount: { $size: '$disputes' },
+        owner: {
+          _id: '$owner._id', fullName: '$owner.fullName', email: '$owner.email',
+          phoneNumber: '$owner.phoneNumber', avatarUrl: '$owner.avatarUrl',
+          trustScore: '$owner.trustScore', isBanned: '$owner.isBanned'
+        }
+      }
+    };
+
+    const [items, countRows] = await Promise.all([
       Item.aggregate([
         { $match: match },
+        ...ownerLookup,
+        ...ownerMatchStage,
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: limit },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'ownerId',
-            foreignField: '_id',
-            as: 'owner'
-          }
-        },
-        { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
-        {
-          $lookup: {
-            from: 'rentals',
-            localField: '_id',
-            foreignField: 'itemId',
-            as: 'rentals'
-          }
-        },
-        {
-          $lookup: {
-            from: 'disputes',
-            localField: 'rentals._id',
-            foreignField: 'rentalId',
-            as: 'disputes'
-          }
-        },
-        {
-          $project: {
-            name: 1,
-            description: 1,
-            category: 1,
-            images: 1,
-            pricePerDay: 1,
-            baseValue: 1,
-            depositPercentage: 1,
-            address: 1,
-            status: 1,
-            isFeatured: 1,
-            createdAt: 1,
-            updatedAt: 1,
-            rentalCount: { $size: '$rentals' },
-            disputeCount: { $size: '$disputes' },
-            owner: {
-              _id: '$owner._id',
-              fullName: '$owner.fullName',
-              email: '$owner.email',
-              phoneNumber: '$owner.phoneNumber',
-              avatarUrl: '$owner.avatarUrl',
-              trustScore: '$owner.trustScore',
-              isBanned: '$owner.isBanned'
-            }
-          }
-        }
+        { $lookup: { from: 'rentals', localField: '_id', foreignField: 'itemId', as: 'rentals' } },
+        { $lookup: { from: 'disputes', localField: 'rentals._id', foreignField: 'rentalId', as: 'disputes' } },
+        projectStage,
       ]),
-      Item.countDocuments(match)
+      ownerSearch
+        ? Item.aggregate([
+          { $match: match },
+          ...ownerLookup,
+          ...ownerMatchStage,
+          { $count: 'total' }
+        ])
+        : Item.countDocuments(match).then((n) => [{ total: n }])
     ]);
+
+    const total = (Array.isArray(countRows) ? countRows[0]?.total : countRows) || 0;
 
     res.status(200).json({
       items,
@@ -516,7 +538,7 @@ exports.getAdminItems = async (req, res) => {
         currentPage: page,
         limitPerPage: limit,
         totalItems: total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
         hasMore: page * limit < total
       }
     });
@@ -526,6 +548,7 @@ exports.getAdminItems = async (req, res) => {
 };
 
 // GET /api/admin/items/:id
+
 exports.getAdminItemDetail = async (req, res) => {
   try {
     if (!isObjectId(req.params.id)) {
@@ -771,22 +794,16 @@ exports.resolveItemReport = async (req, res) => {
       await item.save();
     }
 
-    if (action === ItemReportAction.WARN_OWNER && owner) {
-      owner.trustScore = Math.max(-100, (owner.trustScore || 0) - 10);
-      await owner.save();
-    }
-
-    if (action === ItemReportAction.BAN_ITEM && owner) {
-      owner.trustScore = Math.max(-100, (owner.trustScore || 0) - 30);
-      await owner.save();
-    }
-
     report.status = ItemReportStatus.RESOLVED;
     report.action = action;
     report.resolutionNote = resolutionNote;
     report.resolvedBy = req.user._id;
     report.resolvedAt = new Date();
     await report.save();
+
+    const updatedOwner = owner
+      ? await recalculateUserTrustScore(owner._id)
+      : null;
 
     await createAuditLog({
       req,
@@ -798,14 +815,14 @@ exports.resolveItemReport = async (req, res) => {
         reportStatus: report.status,
         action: report.action,
         itemStatus: item.status,
-        ownerTrustScore: owner?.trustScore,
+        ownerTrustScore: updatedOwner?.trustScore,
         ownerIsBanned: owner?.isBanned
       },
       reason: resolutionNote,
       metadata: { itemId: item._id }
     });
 
-    res.status(200).json({ message: 'Item report resolved', report });
+    res.status(200).json({ message: 'Item report resolved', report, owner: updatedOwner });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

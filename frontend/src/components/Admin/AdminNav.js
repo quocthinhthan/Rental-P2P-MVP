@@ -1,16 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import '../../styles/AdminHero.css';
 
 export default function AdminNav() {
   const links = [
-    { to: '/admin/dashboard', icon: 'fas fa-chart-line', label: 'Dashboard' },
+    { to: '/admin/dashboard', icon: 'fas fa-chart-line', label: 'Tổng quan' },
     { to: '/admin/items', icon: 'fas fa-boxes-stacked', label: 'Sản phẩm' },
-    { to: '/admin/item-reports', icon: 'fas fa-flag', label: 'Report sản phẩm' },
+    { to: '/admin/item-reports', icon: 'fas fa-flag', label: 'Báo cáo sản phẩm' },
     { to: '/admin/disputes', icon: 'fas fa-gavel', label: 'Tranh chấp' },
   ];
 
   return (
-    <nav className="admin-section-nav" aria-label="Admin navigation">
+    <nav className="admin-section-nav" aria-label="Điều hướng admin">
       {links.map((link) => (
         <NavLink
           key={link.to}
