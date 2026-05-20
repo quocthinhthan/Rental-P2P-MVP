@@ -88,6 +88,9 @@ When touching these APIs from the frontend:
 - Backend is authoritative for required proof images.
 - Backend contract generation after owner confirmation is expected behavior.
 - Before frontend changes, inspect backend implementation for the relevant action.
+- TrustScore is a 0-100 reliability/risk score, not review stars. Keep review aggregates in `averageRating` and `totalReviews`, derive `trustLevel` from `trustScore`, and use `backend/services/trustScore.service.js` for recalculation.
+- Do not directly add/subtract `trustScore` in controllers. Persist source events such as public reviews, completed rentals, resolved disputes, item report actions, eKYC changes, or admin account status changes, then call `recalculateUserTrustScore`.
+- Public user summaries should avoid sensitive fields. `GET /api/users/:id/profile` returns safe profile, trust/rating fields, public reviews, and public owner items.
 
 ## Safe Change Checklist
 
@@ -139,5 +142,8 @@ When updating this file:
 If a task adds meaningful new APIs or flows, update the relevant section in this file before reporting completion.
 
 Account Admin:
-Email: thanquocthinh112@gmail.com
-Password: 123456
+- Email: thanquocthinh112@gmail.com
+- Password: 123456
+Account User (renter and owner):
+- Email: thinhskyduck@gmail.com
+- Password: 123456

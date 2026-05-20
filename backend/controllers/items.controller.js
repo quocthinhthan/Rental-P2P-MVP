@@ -4,6 +4,7 @@ const Rental = require('../models/Rental.model');
 const ItemReport = require('../models/ItemReport.model');
 const mongoose = require('mongoose');
 const { saveWithUniqueCode } = require('../utils/codeGenerator');
+const { getTrustLevelFromScore } = require('../services/trustScore.service');
 
 const DEFAULT_SEARCH_LIMIT = 100;
 const MAX_SEARCH_LIMIT = 200;
@@ -21,6 +22,23 @@ const clampNumber = (value, defaultValue, min, max) => {
 const trimSearchText = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, MAX_SEARCH_TEXT_LENGTH);
+};
+
+const formatOwnerSummary = (owner) => {
+  if (!owner) return null;
+  if (!owner._id && !owner.fullName) return null;
+  const trustScore = typeof owner.trustScore === 'number' ? owner.trustScore : 50;
+
+  return {
+    _id: owner._id,
+    fullName: owner.fullName,
+    avatarUrl: owner.avatarUrl || '',
+    ekycStatus: owner.ekycStatus,
+    averageRating: owner.averageRating || 0,
+    totalReviews: owner.totalReviews || 0,
+    trustScore,
+    trustLevel: owner.trustLevel || getTrustLevelFromScore(trustScore)
+  };
 };
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
@@ -101,6 +119,7 @@ const searchItems = async (req, res) => {
         pricePerDay: 1,
         status: 1,
         images: 1,
+        ownerId: 1,
         distance: 1
       };
 
@@ -119,13 +138,36 @@ const searchItems = async (req, res) => {
             query: query // Đẩy toàn bộ filter (name, status, exclude...) vào đây
           }
         },
-        { $project: projectFields },
-        { $limit: resultLimit }
+        { $limit: resultLimit },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'ownerId',
+            foreignField: '_id',
+            as: 'owner'
+          }
+        },
+        { $unwind: { path: '$owner', preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            ...projectFields,
+            owner: {
+              _id: '$owner._id',
+              fullName: '$owner.fullName',
+              avatarUrl: '$owner.avatarUrl',
+              ekycStatus: '$owner.ekycStatus',
+              averageRating: '$owner.averageRating',
+              totalReviews: '$owner.totalReviews',
+              trustScore: '$owner.trustScore'
+            }
+          }
+        }
       ]);
     } else {
       // 4. FALLBACK: NẾU KHÔNG CÓ TỌA ĐỘ, DÙNG FIND BÌNH THƯỜNG
       items = await Item.find(query)
-        .select('_id code name category address pricePerDay images status')
+        .select('_id code name category address pricePerDay images status ownerId')
+        .populate('ownerId', '_id fullName avatarUrl ekycStatus averageRating totalReviews trustScore')
         .sort({ createdAt: -1 })
         .limit(resultLimit);
     }
@@ -141,6 +183,7 @@ const searchItems = async (req, res) => {
         pricePerDay: item.pricePerDay,
         status: item.status,
         mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
+        owner: formatOwnerSummary(item.owner || item.ownerId),
         // Mặc định chỉ trả khoảng cách; map picker mới yêu cầu thêm mapLocation.
         distance: item.distance !== undefined && item.distance !== null ? parseFloat((item.distance / 1000).toFixed(1)) : null 
       };

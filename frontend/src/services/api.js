@@ -162,6 +162,9 @@ export const completeRental = (rentalId, returnImages) =>
 
 export const getMe = () => api.get('/auth/me');
 
+// === Users ===
+export const getPublicUserProfile = (userId) => api.get(`/users/${userId}/profile`);
+
 // === Upload ===
 export const uploadImage = (file) => {
   const formData = new FormData();
@@ -250,6 +253,7 @@ const apiService = {
   uploadImage,
   deleteImage,
   getMe,
+  getPublicUserProfile,
   getItems,
   getNearbyMapItems,
   getCategories,

@@ -13,6 +13,7 @@ import {
   getRelatedItemImage
 } from '../utils/cloudinaryImage';
 import { formatItemCode } from '../utils/itemCode';
+import UserTrustSummary, { RatingSummary, TrustBadge } from '../components/Trust/TrustBadge';
 
 /* ─────────────────────────────────────────
    Helper: star renderer
@@ -55,6 +56,11 @@ function ProdCard({ item }) {
               className="idp-prod-owner-avatar"
             />
             <span>{item.owner.fullName}</span>
+            <RatingSummary
+              averageRating={item.owner.averageRating}
+              totalReviews={item.owner.totalReviews}
+              muted
+            />
           </div>
         )}
         <Link to={`/items/${item._id}`} className="idp-prod-name">{item.name}</Link>
@@ -150,7 +156,7 @@ function ItemDetailPage() {
 
   /* ── state: reviews ── */
   const [ownerReviews, setOwnerReviews]         = useState([]);
-  const [ownerTrustScore, setOwnerTrustScore]   = useState(null);
+  const [ownerAverageRating, setOwnerAverageRating] = useState(null);
   const [ownerTotalReviews, setOwnerTotalReviews] = useState(0);
   const [reviewLoading, setReviewLoading]       = useState(false);
   const [reviewError, setReviewError]           = useState(null);
@@ -248,7 +254,7 @@ function ItemDetailPage() {
       setReviewError(null);
       try {
         const res = await apiService.getUserReviews(ownerId, 1, 5);
-        setOwnerTrustScore(res.data.trustScore);
+        setOwnerAverageRating(res.data.averageRating ?? item?.owner?.averageRating ?? 0);
         setOwnerTotalReviews(res.data.totalReviews || 0);
         setOwnerReviews(res.data.reviews || []);
       } catch {
@@ -259,7 +265,7 @@ function ItemDetailPage() {
     };
 
     fetchOwnerReviews();
-  }, [item?.owner?._id]);
+  }, [item?.owner?._id, item?.owner?.averageRating]);
 
   /* ─────────────────────────────────────
      Hash → review tab
@@ -331,6 +337,11 @@ function ItemDetailPage() {
   const depositPercentage = Number(item.depositPercentage ?? 100);
   const baseValue = Number(item.baseValue ?? 0);
   const depositAmount = (baseValue * depositPercentage) / 100;
+  const ownerProfile = item.owner ? {
+    ...item.owner,
+    averageRating: ownerAverageRating ?? item.owner.averageRating ?? 0,
+    totalReviews: ownerTotalReviews || item.owner.totalReviews || 0
+  } : null;
 
   /* ─────────────────────────────────────
      RENDER
@@ -400,13 +411,12 @@ function ItemDetailPage() {
                 <i className="fa fa-tag" style={{ fontSize: '.65rem' }} /> {item.category || 'Khác'}
               </span>
               <span className="idp-code">{formatItemCode(item)}</span>
-              {ownerTrustScore !== null && (
-                <span className="d-flex align-items-center gap-1" style={{ fontSize: '.82rem' }}>
-                  <i className="fa fa-star text-warning" />
-                  <strong>{ownerTrustScore.toFixed(1)}</strong>
-                  <span className="text-muted">({ownerTotalReviews} đánh giá)</span>
-                </span>
-              )}
+              <RatingSummary
+                averageRating={ownerProfile?.averageRating}
+                totalReviews={ownerProfile?.totalReviews}
+                muted
+              />
+              {ownerProfile && <TrustBadge user={ownerProfile} />}
             </div>
 
             <div className="mb-4">
@@ -511,17 +521,22 @@ function ItemDetailPage() {
                 <div className="idp-owner-section-label">
                   <i className="fa fa-user-circle" /> Được cho thuê bởi
                 </div>
-                <div className="d-flex align-items-center gap-3">
+                <div className="d-flex align-items-start gap-3">
                   <div className="idp-owner-avatar-wrap">
                     <img
                       src={item.owner?.avatarUrl || 'https://thanquocthinh.id.vn/_next/image?url=%2Favatar.jpg&w=384&q=75'}
                       alt={item.owner?.fullName}
                       className="idp-owner-avatar"
                     />
-                    <span className="idp-owner-verified"><i className="fas fa-check" /></span>
+                    {ownerProfile?.ekycStatus === 'verified' && (
+                      <span className="idp-owner-verified"><i className="fas fa-check" /></span>
+                    )}
                   </div>
-                  <div>
+                  <div className="idp-owner-content">
                     <p className="idp-owner-name">{item.owner?.fullName || 'Người dùng ẩn danh'}</p>
+                    {ownerProfile && (
+                      <UserTrustSummary user={ownerProfile} className="idp-owner-trust-row" />
+                    )}
                     <div className="idp-owner-meta">
                       <div className="idp-owner-meta-row">
                         <i className="fas fa-map-marker-alt text-primary" />
@@ -540,6 +555,11 @@ function ItemDetailPage() {
                         )}
                       </div>
                     </div>
+                    {item.owner?._id && (
+                      <Link to={`/users/${item.owner._id}/profile`} className="idp-owner-profile-link">
+                        Xem hồ sơ <i className="fa fa-arrow-right" />
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -599,12 +619,12 @@ function ItemDetailPage() {
                     <div className="col-lg-4">
                       <div className="idp-review-score-box">
                         <div className="idp-review-score-num">
-                          {ownerTrustScore !== null ? ownerTrustScore.toFixed(1) : '--'}
+                          {ownerAverageRating !== null && ownerTotalReviews > 0 ? ownerAverageRating.toFixed(1) : '--'}
                         </div>
                         <div className="idp-review-stars">
-                          {ownerTrustScore !== null ? renderStars(Math.round(ownerTrustScore)) : renderStars(0)}
+                          {ownerAverageRating !== null ? renderStars(Math.round(ownerAverageRating)) : renderStars(0)}
                         </div>
-                        <p className="idp-review-count">{ownerTotalReviews} đánh giá từ cộng đồng</p>
+                        <p className="idp-review-count">{ownerTotalReviews} đánh giá công khai về chủ sở hữu</p>
                         {!isLoggedIn && (
                           <div className="alert alert-light border mt-3 mb-0 small">
                             Đăng nhập để thuê và gửi đánh giá.

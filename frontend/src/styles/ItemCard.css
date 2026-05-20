@@ -1,0 +1,62 @@
+.item-card-owner-trust {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  background: #fbfdff;
+  text-align: left;
+}
+
+.item-card-owner-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  flex: 0 0 auto;
+}
+
+.item-card-owner-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.item-card-owner-name {
+  color: #1f2937;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-card-owner-trust .user-trust-summary {
+  gap: 4px;
+}
+
+.item-card-owner-trust .verification-badge {
+  display: none;
+}
+
+.item-card-owner-trust .trust-badge,
+.item-card-owner-trust .rating-summary {
+  min-height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.72rem;
+}
+
+.item-card-owner-trust .trust-badge {
+  color: #166534;
+}
+
+@media (max-width: 575.98px) {
+  .item-card-owner-trust {
+    padding: 9px;
+  }
+}

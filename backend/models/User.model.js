@@ -12,7 +12,8 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   isBanned: { type: Boolean, default: false },
   suspendedUntil: { type: Date, default: null },
-  trustScore: { type: Number, default: 0 },
+  trustScore: { type: Number, default: 50, min: 0, max: 100 },
+  averageRating: { type: Number, default: 0, min: 0, max: 5 },
   totalReviews: { type: Number, default: 0 },
   ekycStatus: { 
     type: String, 

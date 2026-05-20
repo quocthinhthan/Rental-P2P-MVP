@@ -130,6 +130,69 @@
 .rental-card-meta-grid strong { display: block; color: var(--text-primary); font-size: .9rem; line-height: 1.35; overflow-wrap: anywhere; }
 .rental-card-meta-grid .rental-card-price { color: var(--brand); font-size: 1rem; font-weight: 700; }
 
+.rental-counterparty-trust {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rental-counterparty-trust.is-owner-decision {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  border-color: #bbf7d0;
+}
+
+.rental-counterparty-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  flex: 0 0 auto;
+}
+
+.rental-counterparty-copy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 3px;
+}
+
+.rental-counterparty-copy > span {
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rental-counterparty-copy > strong {
+  color: var(--text-primary);
+  font-size: .9rem;
+  line-height: 1.25;
+}
+
+.rental-counterparty-profile {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--brand);
+  border: 1px solid #dbeafe;
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+
+.rental-counterparty-profile:hover {
+  background: var(--brand);
+  color: #ffffff;
+}
+
 .rental-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; }
 .rental-card-badges { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .rental-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }

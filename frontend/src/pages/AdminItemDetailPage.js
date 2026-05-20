@@ -11,6 +11,7 @@ import AdminNav from '../components/Admin/AdminNav';
 import { formatDateTime, getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
 import { itemStatusLabels, statusConfig } from '../constants/rentalUi';
 import { formatItemCode, formatRentalCode } from '../utils/itemCode';
+import UserTrustSummary from '../components/Trust/TrustBadge';
 import '../styles/MyRentalsPage.css';
 import '../styles/RentalDetailPage.css';
 import '../styles/AdminDisputesPage.css';
@@ -173,7 +174,7 @@ export default function AdminItemDetailPage() {
               <InfoItem label="Tiền cọc" value={formatCurrency(stats.depositAmount)} />
               <InfoItem label="Tranh chấp" value={stats.disputeCount} />
               <InfoItem label="Báo cáo" value={stats.reportCount} />
-              <InfoItem label="Đánh giá" value={stats.reviewCount} />
+              <InfoItem label="Review chủ" value={stats.reviewCount} />
               <InfoItem label="Giá trị gốc" value={formatCurrency(item.baseValue)} />
               <InfoItem label="Địa chỉ" value={item.address} />
             </div>
@@ -181,11 +182,15 @@ export default function AdminItemDetailPage() {
 
           <section className="rental-detail-panel">
             <div className="detail-section-header"><div><p className="section-kicker">Owner</p><h3>Thông tin chủ đồ</h3></div></div>
+            <div className="admin-owner-trust-summary">
+              <UserTrustSummary user={owner} />
+              <span>{Number(owner.trustScore ?? 50).toLocaleString('vi-VN')}/100</span>
+            </div>
             <div className="detail-info-grid admin-dispute-detail-info-grid">
               <InfoItem label="Tên" value={getName(owner)} />
               <InfoItem label="Email" value={owner.email} />
               <InfoItem label="Số điện thoại" value={owner.phoneNumber || owner.phone} />
-              <InfoItem label="Trust score" value={owner.trustScore} />
+              <InfoItem label="eKYC" value={owner.ekycStatus || '-'} />
               <InfoItem label="Banned" value={owner.isBanned ? 'Có' : 'Không'} />
               <InfoItem label="Owner ID" value={getId(owner)} />
             </div>
@@ -215,7 +220,7 @@ export default function AdminItemDetailPage() {
             <div className="admin-signal-grid">
               <div><h4>Reports</h4>{reports.map((report) => <p key={report._id}><strong>{report.status}</strong> · {report.reason || report.resolutionNote || '-'}</p>)}{reports.length === 0 && <p>Chưa có report.</p>}</div>
               <div><h4>Disputes</h4>{disputes.map((dispute) => <p key={dispute._id}><strong>{dispute.status}</strong> · {dispute.reason || '-'}</p>)}{disputes.length === 0 && <p>Chưa có tranh chấp.</p>}</div>
-              <div><h4>Reviews</h4>{reviews.map((review) => <p key={review._id}><strong>{review.rating || 0}/5</strong> · {review.comment || '-'}</p>)}{reviews.length === 0 && <p>Chưa có review.</p>}</div>
+              <div><h4>Reviews về chủ</h4>{reviews.map((review) => <p key={review._id}><strong>{review.rating || 0}/5</strong> · {review.comment || '-'}</p>)}{reviews.length === 0 && <p>Chưa có review.</p>}</div>
             </div>
           </section>
         </main>

@@ -6,6 +6,7 @@ import SignatureModal from '../components/Rentals/SignatureModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { formatRentalCode } from '../utils/itemCode';
+import UserTrustSummary from '../components/Trust/TrustBadge';
 import {
   disputeStatusConfig,
   penaltyLabels,
@@ -833,6 +834,9 @@ function RentalDetailPage() {
     showExistingDisputeState
   );
   const itemImage = rental?.item?.mainImage || 'https://via.placeholder.com/900x600';
+  const counterparty = isOwnerView
+    ? (rental?.renter || rental?.counterparty)
+    : (rental?.owner || rental?.counterparty);
 
   const handleOwnerAction = async (action) => {
     try {
@@ -954,6 +958,32 @@ function RentalDetailPage() {
             </section>
 
             <RentalLifecycleTimeline rental={rental} dispute={dispute} isFullySigned={isFullySigned} />
+
+            {counterparty?.fullName && (
+              <section className={`rental-detail-panel counterparty-trust-panel${isOwnerView ? ' is-owner-reviewing-renter' : ''}`}>
+                <SectionHeader
+                  eyebrow={isOwnerView ? 'Đánh giá người thuê' : 'Đối tác giao dịch'}
+                  title={isOwnerView ? 'Bạn có thể xem độ tin cậy trước khi xác nhận' : 'Thông tin uy tín của chủ sở hữu'}
+                />
+                <div className="counterparty-trust-card">
+                  <img
+                    src={counterparty.avatarUrl || 'https://via.placeholder.com/72'}
+                    alt={counterparty.fullName}
+                    className="counterparty-trust-avatar"
+                  />
+                  <div className="counterparty-trust-main">
+                    <div>
+                      <strong>{counterparty.fullName}</strong>
+                      <span>{isOwnerView ? 'Người gửi yêu cầu thuê' : 'Chủ sở hữu vật phẩm'}</span>
+                    </div>
+                    <UserTrustSummary user={counterparty} />
+                  </div>
+                  <Link to={`/users/${counterparty._id}/profile`} className="btn-xs btn-ghost-xs">
+                    Xem hồ sơ
+                  </Link>
+                </div>
+              </section>
+            )}
 
             <section className="rental-detail-panel">
               <SectionHeader eyebrow="Thông tin đơn thuê" title="Chi tiết thuê" />
