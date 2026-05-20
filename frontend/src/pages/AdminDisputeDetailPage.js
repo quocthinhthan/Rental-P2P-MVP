@@ -18,6 +18,7 @@ import {
 } from '../constants/rentalUi';
 import AdminNav from '../components/Admin/AdminNav';
 import Spinner from '../components/Common/Spinner';
+import RentalChatPanel from '../components/Rentals/RentalChatPanel';
 import { formatRentalCode } from '../utils/itemCode';
 import '../styles/MyRentalsPage.css';
 import '../styles/RentalDetailPage.css';
@@ -293,6 +294,7 @@ export default function AdminDisputeDetailPage() {
               <PartyCard title="Người báo cáo" user={reporter} icon="fas fa-flag" />
             </div>
           </section>
+          <RentalChatPanel rental={rental} mode="admin-readonly" />
         </main>
 
         <aside className="rental-detail-sidebar">

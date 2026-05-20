@@ -6,6 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 
@@ -13,6 +14,13 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
 
 const { connectRabbitMQ } = require('./config/rabbitmq'); // >>> THÊM: Import hàm kết nối RabbitMQ
+
+const User = require('./models/User.model');
+const Message = require('./models/Message.model');
+const {
+  authorizeChatRead,
+  authorizeChatWrite
+} = require('./services/chatAuthorization.service');
 
 const app = express();
 
@@ -25,30 +33,84 @@ const io = new Server(server, {
 });
 
 // Lắng nghe các sự kiện Real-time
+io.use(async (socket, next) => {
+  try {
+    const authHeader = socket.handshake.headers?.authorization || '';
+    const headerToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '';
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token || headerToken;
+
+    if (!token) {
+      return next(new Error('Unauthorized, no token'));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return next(new Error('Tai khoan khong ton tai'));
+    }
+
+    if (user.isBanned) {
+      return next(new Error('Tai khoan da bi khoa'));
+    }
+
+    if (user.suspendedUntil && new Date() < new Date(user.suspendedUntil)) {
+      return next(new Error('Tai khoan dang bi dinh chi'));
+    }
+
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error('Unauthorized, token failed'));
+  }
+});
+
 io.on('connection', (socket) => {
   console.log(`[SOCKET] User connected: ${socket.id}`);
 
   // 1. Tham gia vào phòng chat của 1 Đơn thuê
-  socket.on('join_rental_room', (rentalId) => {
-    socket.join(rentalId);
-    console.log(`User ${socket.id} joined room: ${rentalId}`);
+  socket.on('join_rental_room', async (rentalId) => {
+    try {
+      const { error } = await authorizeChatRead(rentalId, socket.user);
+      if (error) {
+        socket.emit('chat_error', { message: error.message });
+        return;
+      }
+
+      socket.join(rentalId.toString());
+      console.log(`User ${socket.id} joined room: ${rentalId}`);
+    } catch (error) {
+      socket.emit('chat_error', { message: 'Khong the tham gia phong chat' });
+    }
   });
 
   // 2. Lắng nghe tin nhắn mới
   socket.on('send_message', async (data) => {
     // data FE gửi lên sẽ có dạng: { rentalId, senderId, content }
     try {
-      const Message = require('./models/Message.model');
+      const rentalId = data?.rentalId;
+      const content = typeof data?.content === 'string' ? data.content.trim() : '';
+
+      if (!content) {
+        socket.emit('chat_error', { message: 'Noi dung tin nhan khong duoc de trong' });
+        return;
+      }
+
+      const { error } = await authorizeChatWrite(rentalId, socket.user);
+      if (error) {
+        socket.emit('chat_error', { message: error.message });
+        return;
+      }
       
       // Lưu vào Database để làm bằng chứng sau này
       const savedMessage = await Message.create({
-        rentalId: data.rentalId,
-        senderId: data.senderId,
-        content: data.content
+        rentalId,
+        senderId: socket.user._id,
+        content
       });
 
       // Phát (Broadcast) tin nhắn đó lại cho tất cả những ai đang trong phòng (bao gồm cả người gửi để hiển thị)
-      io.to(data.rentalId).emit('receive_message', savedMessage);
+      io.to(rentalId.toString()).emit('receive_message', savedMessage);
       
     } catch (error) {
       console.error('[SOCKET] Lỗi lưu tin nhắn:', error);

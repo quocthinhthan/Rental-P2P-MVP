@@ -261,6 +261,7 @@
 .review-error,
 .myrp-error,
 .penalty-box.is-current-user {
+  margin-top: 12px;
   background: #fee2e2;
   border: 1px solid #fecaca;
   color: #991b1b;
@@ -1043,6 +1044,164 @@
 /* ─────────────────────────────────────────
    10. RESPONSIVE BREAKPOINTS (Gộp tất cả)
    ───────────────────────────────────────── */
+.rental-chat-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.rental-chat-panel .detail-section-header {
+  align-items: center;
+}
+
+.rental-chat-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+.rental-chat-state.is-online {
+  border-color: #bbf7d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.rental-chat-state.is-readonly {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.rental-chat-context {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.rental-chat-context i {
+  color: var(--brand);
+}
+
+.rental-chat-messages {
+  min-height: 260px;
+  max-height: 430px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.96)),
+    #ffffff;
+}
+
+.rental-chat-message {
+  display: flex;
+  width: 100%;
+}
+
+.rental-chat-message.is-mine {
+  justify-content: flex-end;
+}
+
+.rental-chat-message.is-theirs {
+  justify-content: flex-start;
+}
+
+.rental-chat-bubble {
+  max-width: min(72%, 520px);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.rental-chat-message.is-mine .rental-chat-bubble {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.rental-chat-panel.is-readonly .rental-chat-message.is-owner .rental-chat-bubble {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.rental-chat-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.rental-chat-meta strong {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: var(--fw-bold);
+}
+
+.rental-chat-meta span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.rental-chat-bubble p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rental-chat-error {
+  padding: 9px 11px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.82rem;
+}
+
+.rental-chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.rental-chat-form input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.rental-chat-form input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1);
+}
+
 @media (max-width: 1100px) {
   .rental-lifecycle-timeline {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1129,5 +1288,13 @@
   .counterparty-trust-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .rental-chat-bubble {
+    max-width: 88%;
+  }
+
+  .rental-chat-form {
+    grid-template-columns: 1fr;
   }
 }

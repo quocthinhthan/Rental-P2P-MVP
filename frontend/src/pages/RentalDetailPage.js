@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import HandoverModal from '../components/Rentals/HandoverModal';
+import RentalChatPanel from '../components/Rentals/RentalChatPanel';
 import SignatureModal from '../components/Rentals/SignatureModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
@@ -1050,6 +1051,8 @@ function RentalDetailPage() {
             </section>
 
             <DisputePanel rental={rental} type={type} currentUser={user} onRefresh={loadRental} />
+
+            <RentalChatPanel rental={rental} currentUser={user} />
 
             <section className="rental-detail-panel">
               <SectionHeader eyebrow="Đánh giá" title="Phản hồi sau thuê">
