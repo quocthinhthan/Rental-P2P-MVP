@@ -142,7 +142,7 @@ function ReportItemModal({ isOpen, itemId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="rental-modal-backdrop" role="dialog" aria-modal="true">
+    <div className="rental-modal-backdrop report-modal-backdrop" role="dialog" aria-modal="true">
       <div className="rental-modal report-item-modal">
         {/* Header */}
         <div className="rental-modal-header">
