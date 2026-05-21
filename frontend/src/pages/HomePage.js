@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ItemList from '../components/Items/ItemList';
+import ItemCard from '../components/Items/ItemCard';
 import apiService from '../services/api';
 import '../styles/homepage.css';
 import { getMiniItemImage } from '../utils/cloudinaryImage';
@@ -9,11 +10,16 @@ function HomePage() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [bestsellers, setBestsellers] = useState([]);
+  const [featuredItems, setFeaturedItems] = useState([]);
 
-  // Fetch bestsellers
+  // Fetch bestsellers & featured items
   useEffect(() => {
     apiService.getBestsellers(3)
       .then(res => setBestsellers(res.data || []))
+      .catch(() => {});
+      
+    apiService.getItems({ isFeatured: true, limit: 4 })
+      .then(res => setFeaturedItems(res.data || []))
       .catch(() => {});
   }, []);
 
@@ -315,6 +321,156 @@ function HomePage() {
       </div>
       {/* Products Offer End */}
 
+      {/* Featured Products Spotlight Start */}
+      {featuredItems.length > 0 && (
+        <div className="container-fluid featured-spotlight pt-5 pb-0">
+          <div className="container py-0">
+            <div className="mx-auto text-center mb-5" style={{ maxWidth: '700px' }}>
+              <span className="badge badge-spotlight-vip mb-3 shadow-sm">
+                🌟 Đề xuất uy tín
+              </span>
+              <h1 className="display-5 fw-bold mb-2 text-dark">Sản Phẩm Nổi Bật</h1>
+              <p className="text-muted mb-0">
+                Các sản phẩm được tài trợ và có độ tin cậy vượt trội, cam kết chất lượng dịch vụ tốt nhất.
+              </p>
+            </div>
+            <div className="row g-4">
+              {featuredItems.map(item => (
+                <ItemCard key={item._id} item={item} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Featured Products Spotlight End */}
+
+      {/* Bestseller Products Start */}
+      <div className="container-fluid products pt-5 pb-5 bg-white">
+        <div className="container products-mini pt-0 pb-4">
+          <div className="mx-auto text-center mb-5" style={{ maxWidth: '700px' }}>
+            <h4 className="text-primary mb-4 border-bottom border-primary border-2 d-inline-block p-2 title-border-radius wow fadeInUp" data-wow-delay="0.1s">
+              Những Sản Phẩm Được Thuê Nhiều Nhất
+            </h4>
+            <p className="mb-0 wow fadeInUp" data-wow-delay="0.2s">
+              Khám phá danh sách các món đồ đang hot và được cộng đồng ưu chuộng thuê nhất. Chất lượng đảm bảo, giá thuê hợp lý!
+            </p>
+          </div>
+          <div className="row g-4">
+            {bestsellers.length === 0 ? (
+              [1, 2, 3].map(n => (
+                <div key={n} className="col-md-6 col-lg-6 col-xl-4">
+                  <div className="products-mini-item border rounded" style={{ opacity: 0.4 }}>
+                    <div className="row g-0">
+                      <div className="col-5">
+                        <div className="products-mini-img border-end h-100 position-relative bg-light" style={{ minHeight: 120 }} />
+                      </div>
+                      <div className="col-7">
+                        <div className="products-mini-content p-3">
+                           <div className="bg-light rounded mb-2" style={{ height: 14, width: '60%' }} />
+                           <div className="bg-light rounded mb-3" style={{ height: 20, width: '80%' }} />
+                           <div className="bg-light rounded" style={{ height: 18, width: '50%' }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="products-mini-add border-top p-3 bg-light" style={{ height: 72 }} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              bestsellers.map((item, idx) => {
+                const imageSources = getMiniItemImage(item.mainImage || '/img/product-3.png');
+
+                return (
+                  <div key={item._id} className="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay={`${0.1 + idx * 0.2}s`}>
+                    <div className="products-mini-item border rounded">
+                      <div className="row g-0">
+                        <div className="col-5">
+                          <div className="products-mini-img border-end h-100 position-relative">
+                            <img
+                              src={imageSources.src}
+                              srcSet={imageSources.srcSet}
+                              sizes={imageSources.sizes}
+                              className="img-fluid w-100 h-100"
+                              style={{ objectFit: 'cover', backfaceVisibility: 'hidden' }}
+                              alt={item.name}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            {item.rentalCount > 0 && (
+                              <span className="products-mini-popular-badge shadow-sm">
+                                🔥 Hot
+                              </span>
+                            )}
+                            <div className="products-mini-icon rounded-circle bg-primary">
+                              <Link to={`/items/${item._id}`}><i className="fa fa-eye fa-1x text-white" /></Link>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-7">
+                          <div className="products-mini-content p-3">
+                            <Link to={`/shop?category=${encodeURIComponent(item.category || '')}`} className="d-block mb-2 text-muted">
+                              {item.category || 'Khác'}
+                            </Link>
+                            <Link to={`/items/${item._id}`} className="d-block h5 mb-2">{item.name}</Link>
+                            <span className="text-primary fw-bold fs-5 d-block">
+                              {Number(item.pricePerDay).toLocaleString('vi-VN')}đ/ngày
+                            </span>
+                            {item.rentalCount > 0 && (
+                              <small className="text-muted">
+                                <i className="fas fa-fire text-danger me-1" />
+                                {item.rentalCount} lượt thuê
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="products-mini-add border-top p-3 bg-light">
+                        <Link to={`/items/${item._id}`} className="btn btn-primary border-secondary rounded-pill py-2 px-4 w-100 mb-3">
+                          <i className="fas fa-shopping-cart me-2" /> Đặt Thuê Ngay
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+      {/* Bestseller Products End */}
+
+      {/* Product Banner Start */}
+      <div className="container-fluid py-5">
+        <div className="container">
+          <div className="row g-4">
+            <div className="col-lg-6 wow fadeInLeft" data-wow-delay="0.1s">
+              <Link to="/shop" className="d-block">
+                <div className="bg-primary rounded position-relative overflow-hidden">
+                  <img src="/img/product-banner.jpg" className="img-fluid w-100 rounded" alt="Banner 1" />
+                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center rounded p-4" style={{ background: 'rgba(255, 255, 255, 0.7)' }}>
+                    <h3 className="display-5 text-primary">Máy Ảnh <br /> <span>Canon Rebel T7i</span></h3>
+                    <p className="fs-4 text-dark font-weight-bold">Giá chỉ 200.000đ/ngày</p>
+                    <span className="btn btn-primary rounded-pill align-self-start py-2 px-4 mt-2">Thuê Ngay</span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+            <div className="col-lg-6 wow fadeInRight" data-wow-delay="0.2s">
+              <Link to="/shop" className="d-block">
+                <div className="text-center bg-primary rounded position-relative overflow-hidden">
+                  <img src="/img/product-banner-2.jpg" className="img-fluid w-100" alt="Banner 2" />
+                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center rounded p-4" style={{ background: 'rgba(242, 139, 0, 0.6)' }}>
+                    <h2 className="display-2 text-white font-weight-bold">ƯU ĐÃI</h2>
+                    <h4 className="display-5 text-white mb-4">Giảm phí cọc đến 50%</h4>
+                    <span className="btn btn-secondary rounded-pill align-self-center py-2 px-4">Khám Phá Ngay</span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Product Banner End */}
       {/* Our Products Start */}
       <div className="container-fluid product py-5">
         <div className="container py-5">
@@ -388,7 +544,7 @@ function HomePage() {
                   </Link>
                 </div>
                 {/* Component render Product List của bạn */}
-                <ItemList searchQuery={searchQuery} />
+                 <ItemList searchQuery={searchQuery} limit={8} />
               </div>
             </div>
           </div>
@@ -396,129 +552,7 @@ function HomePage() {
       </div>
       {/* Our Products End */}
 
-      {/* Product Banner Start */}
-      <div className="container-fluid py-5">
-        <div className="container">
-          <div className="row g-4">
-            <div className="col-lg-6 wow fadeInLeft" data-wow-delay="0.1s">
-              <Link to="/shop" className="d-block">
-                <div className="bg-primary rounded position-relative overflow-hidden">
-                  <img src="/img/product-banner.jpg" className="img-fluid w-100 rounded" alt="Banner 1" />
-                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center rounded p-4" style={{ background: 'rgba(255, 255, 255, 0.7)' }}>
-                    <h3 className="display-5 text-primary">Máy Ảnh <br /> <span>Canon Rebel T7i</span></h3>
-                    <p className="fs-4 text-dark font-weight-bold">Giá chỉ 200.000đ/ngày</p>
-                    <span className="btn btn-primary rounded-pill align-self-start py-2 px-4 mt-2">Thuê Ngay</span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-            <div className="col-lg-6 wow fadeInRight" data-wow-delay="0.2s">
-              <Link to="/shop" className="d-block">
-                <div className="text-center bg-primary rounded position-relative overflow-hidden">
-                  <img src="/img/product-banner-2.jpg" className="img-fluid w-100" alt="Banner 2" />
-                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center rounded p-4" style={{ background: 'rgba(242, 139, 0, 0.6)' }}>
-                    <h2 className="display-2 text-white font-weight-bold">ƯU ĐÃI</h2>
-                    <h4 className="display-5 text-white mb-4">Giảm phí cọc đến 50%</h4>
-                    <span className="btn btn-secondary rounded-pill align-self-center py-2 px-4">Khám Phá Ngay</span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Product Banner End */}
-
-      {/* Bestseller Products Start */}
-      <div className="container-fluid products pb-5">
-        <div className="container products-mini py-5">
-          <div className="mx-auto text-center mb-5" style={{ maxWidth: '700px' }}>
-            <h4 className="text-primary mb-4 border-bottom border-primary border-2 d-inline-block p-2 title-border-radius wow fadeInUp" data-wow-delay="0.1s">
-              Những Sản Phẩm Được Thuê Nhiều Nhất
-            </h4>
-            <p className="mb-0 wow fadeInUp" data-wow-delay="0.2s">
-              Khám phá danh sách các món đồ đang hot và được cộng đồng ưu chuộng thuê nhất. Chất lượng đảm bảo, giá thuê hợp lý!
-            </p>
-          </div>
-          <div className="row g-4">
-            {bestsellers.length === 0 ? (
-              [1, 2, 3].map(n => (
-                <div key={n} className="col-md-6 col-lg-6 col-xl-4">
-                  <div className="products-mini-item border rounded" style={{ opacity: 0.4 }}>
-                    <div className="row g-0">
-                      <div className="col-5">
-                        <div className="products-mini-img border-end h-100 position-relative bg-light" style={{ minHeight: 120 }} />
-                      </div>
-                      <div className="col-7">
-                        <div className="products-mini-content p-3">
-                          <div className="bg-light rounded mb-2" style={{ height: 14, width: '60%' }} />
-                          <div className="bg-light rounded mb-3" style={{ height: 20, width: '80%' }} />
-                          <div className="bg-light rounded" style={{ height: 18, width: '50%' }} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="products-mini-add border-top p-3 bg-light" style={{ height: 72 }} />
-                  </div>
-                </div>
-              ))
-            ) : (
-              bestsellers.map((item, idx) => {
-                const imageSources = getMiniItemImage(item.mainImage || '/img/product-3.png');
-
-                return (
-                  <div key={item._id} className="col-md-6 col-lg-6 col-xl-4 wow fadeInUp" data-wow-delay={`${0.1 + idx * 0.2}s`}>
-                    <div className="products-mini-item border rounded">
-                      <div className="row g-0">
-                        <div className="col-5">
-                          <div className="products-mini-img border-end h-100 position-relative">
-                            <img
-                              src={imageSources.src}
-                              srcSet={imageSources.srcSet}
-                              sizes={imageSources.sizes}
-                              className="img-fluid w-100 h-100"
-                              style={{ objectFit: 'cover', backfaceVisibility: 'hidden' }}
-                              alt={item.name}
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            <div className="products-mini-icon rounded-circle bg-primary">
-                              <Link to={`/items/${item._id}`}><i className="fa fa-eye fa-1x text-white" /></Link>
-                            </div>
-                        </div>
-                      </div>
-                      <div className="col-7">
-                        <div className="products-mini-content p-3">
-                          <Link to={`/shop?category=${encodeURIComponent(item.category || '')}`} className="d-block mb-2 text-muted">
-                            {item.category || 'Khác'}
-                          </Link>
-                          <Link to={`/items/${item._id}`} className="d-block h5 mb-2">{item.name}</Link>
-                          <span className="text-primary fw-bold fs-5 d-block">
-                            {Number(item.pricePerDay).toLocaleString('vi-VN')}đ/ngày
-                          </span>
-                          {item.rentalCount > 0 && (
-                            <small className="text-muted">
-                              <i className="fas fa-fire text-danger me-1" />
-                              {item.rentalCount} lượt thuê
-                            </small>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="products-mini-add border-top p-3 bg-light">
-                      <Link to={`/items/${item._id}`} className="btn btn-primary border-secondary rounded-pill py-2 px-4 w-100 mb-3">
-                        <i className="fas fa-shopping-cart me-2" /> Đặt Thuê Ngay
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
-      {/* Bestseller Products End */}
-    </>
+          </>
   );
 }
 

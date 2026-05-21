@@ -18,6 +18,8 @@ function ItemCard({ item }) {
   const distanceLabel = hasDistance
     ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(distanceValue)
     : '';
+
+
   const priceValue = Number(item.pricePerDay);
   const hasValidPrice = Number.isFinite(priceValue);
   const priceLabel = hasValidPrice ? priceValue.toLocaleString('vi-VN') : 'Liên hệ';
@@ -26,8 +28,7 @@ function ItemCard({ item }) {
   return (
     <div className="col-md-6 col-lg-4 col-xl-3 mb-4">
       <div
-        className="product-item rounded h-100 shadow-sm transition"
-        style={{ overflow: 'hidden', border: '1px solid #eee' }}
+        className={`product-item rounded h-100 shadow-sm transition ${item.isFeatured ? 'product-item--featured' : ''}`}
       >
         <div className="product-item-inner d-flex flex-column h-100">
           <div className="position-relative">
@@ -45,6 +46,12 @@ function ItemCard({ item }) {
             <span className={`badge position-absolute top-0 start-0 m-2 ${isAvailable ? 'bg-success' : 'bg-secondary'}`}>
               {t(statusKey)}
             </span>
+
+            {item.isFeatured && (
+              <span className="badge position-absolute top-0 end-0 m-2 badge-featured-vip fw-bold shadow-sm">
+                🌟 {t('item.featured', 'Nổi bật')}
+              </span>
+            )}
 
             <Link
               to={`/items/${item._id}`}
@@ -112,21 +119,6 @@ function ItemCard({ item }) {
           </div>
         </div>
       </div>
-
-      <style>
-        {`
-          .product-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-          }
-          .product-item:hover img {
-            filter: none;
-          }
-          .product-item:hover a.position-absolute {
-            opacity: 1 !important;
-          }
-        `}
-      </style>
     </div>
   );
 }

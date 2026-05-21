@@ -425,6 +425,46 @@ function ItemDetailPage() {
           {/* ── RIGHT: Info + Booking ── */}
           <div className="col-lg-6">
 
+            {/* VIP/Featured Banner */}
+            {item.isFeatured && (
+              <div 
+                className="featured-trust-banner rounded-3 p-3 mb-3 d-flex align-items-center gap-3 shadow-sm border-0 position-relative overflow-hidden" 
+                style={{
+                  background: 'linear-gradient(135deg, #fffcf0 0%, #fff7d6 100%)',
+                  borderLeft: '4px solid #ffd700',
+                  boxShadow: '0 4px 12px rgba(255, 215, 0, 0.1)'
+                }}
+              >
+                <div 
+                  className="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-sm"
+                  style={{ width: '40px', height: '40px', minWidth: '40px' }}
+                >
+                  <span className="fs-4">🌟</span>
+                </div>
+                <div>
+                  <div className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style={{ fontSize: '0.95rem' }}>
+                    Sản phẩm nổi bật uy tín
+                    <span className="badge text-white" style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)', fontSize: '0.65rem' }}>VIP</span>
+                  </div>
+                  <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.3' }}>
+                    Sản phẩm được đánh giá cao với độ tin cậy vượt trội trên Rental-P2P.
+                  </p>
+                </div>
+                {/* Background shimmer lines */}
+                <div 
+                  className="position-absolute end-0 bottom-0 opacity-10" 
+                  style={{
+                    fontSize: '4.5rem',
+                    transform: 'translate(10px, 15px) rotate(-15deg)',
+                    color: '#ffd700',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  👑
+                </div>
+              </div>
+            )}
+
             {/* Title */}
             <h1 className="idp-product-title">{item.name}</h1>
 

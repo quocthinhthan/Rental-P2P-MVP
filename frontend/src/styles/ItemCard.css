@@ -60,3 +60,53 @@
     padding: 9px;
   }
 }
+
+/* Premium Featured VIP Badge (Warm Gold Theme) */
+.badge-featured-vip {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  border: 1.5px solid #f59e0b !important;
+  color: #b45309 !important;
+  padding: 5px 10px !important;
+  font-size: 0.75rem !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- Premium ItemCard Container Styling --- */
+.product-item {
+  overflow: hidden;
+  background: #ffffff !important;
+  border: 1.5px solid #f1f5f9 !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.product-item:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+  border-color: #cbd5e1 !important;
+}
+
+.product-item:hover img {
+  filter: none !important;
+}
+
+.product-item:hover a.position-absolute {
+  opacity: 1 !important;
+}
+
+/* Featured VIP Card - Premium Slate-to-Ice Gradient, Slate Border */
+.product-item--featured {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04) !important;
+}
+
+.product-item--featured:hover {
+  border-color: #ffd700 !important; /* Elegant gold border only on hover */
+  box-shadow: 0 12px 30px rgba(255, 215, 0, 0.15) !important;
+  transform: translateY(-5px) !important;
+}
+
