@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import './App.css'; 
 
 // Import components
@@ -30,11 +30,22 @@ import AdminItemsPage from './pages/AdminItemsPage';
 import AdminItemDetailPage from './pages/AdminItemDetailPage';
 import AdminItemReportsPage from './pages/AdminItemReportsPage';
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, search]);
+
+  return null;
+}
+
 function App() {
   return (
     <>
       <GlobalSpinner />
       <LocationPickerHost />
+      <ScrollToTop />
       <Header />
       <Routes>
         {/* Routes công khai */}

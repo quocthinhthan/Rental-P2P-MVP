@@ -160,6 +160,14 @@ export const pickupRental = (rentalId, pickupImages) =>
 export const completeRental = (rentalId, returnImages) =>
   api.patch(`/rentals/${rentalId}/complete`, { returnImages });
 
+export const getRentalMessages = (rentalId) => api.get(`/rentals/${rentalId}/messages`, {
+  skipGlobalLoading: true,
+});
+
+export const sendRentalMessage = (rentalId, content) => api.post(`/rentals/${rentalId}/messages`, { content }, {
+  skipGlobalLoading: true,
+});
+
 export const getMe = () => api.get('/auth/me');
 
 // === Users ===
@@ -274,6 +282,8 @@ const apiService = {
   signContract,
   pickupRental,
   completeRental,
+  getRentalMessages,
+  sendRentalMessage,
   createDispute,
   withdrawDispute,
   escalateDispute,

@@ -3,7 +3,7 @@
 The repository contains a `mobile/` directory for the Flutter mobile app.
 
 This directory is owned by another teammate and is OUT OF SCOPE for this agent.
-
+This project do not use docker to run (ignore docker files)
 Agents must NOT:
 - read files inside `mobile/` unless explicitly instructed
 - modify files inside `mobile/`
@@ -52,6 +52,9 @@ The rental lifecycle is:
 - Backend authorization rules decide which user can perform each action.
 - Frontend should display and submit data according to backend state, not local assumptions.
 - Rental statuses must be verified from backend implementation before conditional UI or API changes.
+- Item violation reporting: A user can only report a specific item once. Item reports require at least a 10-character description and support up to 3 evidence images (each <= 5MB, format: .jpg, .jpeg, .png, .webp, .gif).
+- Admin report adjustments: Once a report is resolved, the original owner penalties/actions (e.g. warnings, trust score deductions) are preserved to keep penalty history consistent. Any subsequent adjustments from the admin reports page only toggle the product's active status (AVAILABLE vs DELISTED) by calling `updateAdminItemStatus` instead of modifying the report action.
+
 
 ## Important APIs
 
@@ -62,6 +65,9 @@ Verify the exact implementation before using or modifying these endpoints:
 - `POST /api/rentals/{id}/sign-contract`
 - `PATCH /api/rentals/{id}/pickup`
 - `PATCH /api/rentals/{id}/complete`
+- `POST /api/items/{id}/report` (Submit product violation report)
+- `GET /api/admin/item-reports` (Admin get violation reports list)
+- `PATCH /api/admin/item-reports/{reportId}/resolve` (Admin resolve violation report)
 
 When touching these APIs from the frontend:
 
