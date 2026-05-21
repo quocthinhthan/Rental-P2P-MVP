@@ -371,6 +371,12 @@ exports.confirmRental = async (req, res) => {
       { new: true }
     );
 
+    publishToQueue({
+      task: 'rental_status_changed',
+      rentalId: savedRental._id,
+      status: RentalStatus.CONFIRMED
+    });
+
     res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract });
   } catch (error) {
     if (error.code === 11000) {
@@ -385,6 +391,12 @@ exports.confirmRental = async (req, res) => {
           },
           { new: true }
         );
+
+        publishToQueue({
+          task: 'rental_status_changed',
+          rentalId: savedRental._id,
+          status: RentalStatus.CONFIRMED
+        });
 
         return res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract: existingContract });
       }
@@ -474,7 +486,12 @@ exports.signContract = async (req, res) => {
     const rental = await Rental.findById(req.params.id);
     if (!rental || !rental.contractId) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });
 
+    if (rental.status === RentalStatus.DISPUTED) {
+      return res.status(400).json({ message: 'Don thue dang tranh chap, khong the ky hop dong.' });
+    }
+
     const contract = await Contract.findById(rental.contractId);
+    if (!contract) return res.status(404).json({ message: 'Khong tim thay hop dong' });
     const userId = req.user._id;
 
     // Gắn thời gian VÀ dán ảnh chữ ký vào đúng người

@@ -68,12 +68,13 @@ const isCompletedWithinSevenDays = (rental) => {
 const hasPickupProof = (rental) => Array.isArray(rental?.pickupImages) && rental.pickupImages.length > 0;
 
 const canCreateDispute = (rental, dispute) => {
-  if (!rental || dispute?.status) return false;
+  const hasActiveDispute = ['pending', 'escalated'].includes(dispute?.status);
+  if (!rental || hasActiveDispute) return false;
   if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed'].includes(rental.status)) {
     return false;
   }
 
-  return hasPickupProof(rental) || rental.status === 'in_progress' || isCompletedWithinSevenDays(rental);
+  return rental.status === 'confirmed' || rental.status === 'in_progress' || hasPickupProof(rental) || isCompletedWithinSevenDays(rental);
 };
 
 

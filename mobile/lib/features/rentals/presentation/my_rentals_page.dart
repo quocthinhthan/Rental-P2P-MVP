@@ -10,6 +10,24 @@ import 'package:rental_p2p_mobile/features/rentals/data/rental_models.dart';
 import 'package:rental_p2p_mobile/features/rentals/data/rentals_repository.dart';
 import 'package:rental_p2p_mobile/features/rentals/presentation/rental_detail_page.dart';
 
+bool _isDisplayableImageUrl(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null) return false;
+  if (uri.scheme == 'data') return value.startsWith('data:image');
+  if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+
+  final host = uri.host.toLowerCase();
+  if (host.contains('vnpayment.vn')) return false;
+  if (host.contains('cloudinary.com')) return true;
+
+  final path = uri.path.toLowerCase();
+  return path.endsWith('.jpg') ||
+      path.endsWith('.jpeg') ||
+      path.endsWith('.png') ||
+      path.endsWith('.webp') ||
+      path.endsWith('.gif');
+}
+
 class MyRentalsPage extends StatefulWidget {
   const MyRentalsPage({
     super.key,
@@ -66,6 +84,16 @@ class _MyRentalsPageState extends State<MyRentalsPage>
         await widget.repository.rejectRental(id);
       }
       await loadRentals();
+      if (action == 'confirm' && mounted) {
+        await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => RentalDetailPage(
+            rentalId: id,
+            repository: widget.repository,
+            currentUserId: widget.currentUserId,
+          ),
+        ));
+        await loadRentals();
+      }
     } catch (error) {
       if (!mounted) return;
       showError(context, error);
@@ -173,7 +201,8 @@ class _MyRentalsPageState extends State<MyRentalsPage>
                   _RentalListView(
                     rentals: data?.asOwner ?? [],
                     emptyMessage: 'Chưa có đơn thuê nào',
-                    emptySubtitle: 'Khi có người thuê đồ của bạn, đơn sẽ hiện tại đây',
+                    emptySubtitle:
+                        'Khi có người thuê đồ của bạn, đơn sẽ hiện tại đây',
                     ownerView: true,
                     onRentalAction: rentalAction,
                     onRefresh: loadRentals,
@@ -330,12 +359,12 @@ class _RentalCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                        // Thumbnail with real image
-                        _ItemThumbnail(
-                          imageUrl: rental.itemMainImage,
-                          size: 56,
-                          statusColor: _statusColor,
-                        ),
+                      // Thumbnail with real image
+                      _ItemThumbnail(
+                        imageUrl: rental.itemMainImage,
+                        size: 56,
+                        statusColor: _statusColor,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -385,8 +414,8 @@ class _RentalCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
                       color: AppColors.page,
                       borderRadius: BorderRadius.circular(8),
@@ -413,8 +442,7 @@ class _RentalCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (ownerView &&
-                      rental.status == 'pending_confirmation') ...[
+                  if (ownerView && rental.status == 'pending_confirmation') ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -422,8 +450,7 @@ class _RentalCard extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: () =>
                                 onAction?.call(rental.id, 'reject'),
-                            icon: const Icon(Icons.close_rounded,
-                                size: 16),
+                            icon: const Icon(Icons.close_rounded, size: 16),
                             label: const Text('Từ chối'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.red,
@@ -453,7 +480,6 @@ class _RentalCard extends StatelessWidget {
   }
 }
 
-
 // ─── My Items View ───────────────────────────────────────────────────────────
 
 class _MyItemsView extends StatelessWidget {
@@ -469,9 +495,9 @@ class _MyItemsView extends StatelessWidget {
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
         'available' => AppColors.green,
-        'rented'    => AppColors.blue,
-        'delisted'  => AppColors.muted,
-        _           => AppColors.orange,
+        'rented' => AppColors.blue,
+        'delisted' => AppColors.muted,
+        _ => AppColors.orange,
       };
 
   @override
@@ -559,7 +585,8 @@ class _MyItemsView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           StatusBadge(
-                            label: item.status.isEmpty ? 'available' : item.status,
+                            label:
+                                item.status.isEmpty ? 'available' : item.status,
                             color: statusColor,
                           ),
                           const SizedBox(height: 6),
@@ -594,6 +621,8 @@ class _ItemThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayImage = _isDisplayableImageUrl(imageUrl);
+
     return Container(
       width: size,
       height: size,
@@ -614,7 +643,7 @@ class _ItemThumbnail extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: imageUrl.isEmpty
+      child: !displayImage
           ? Container(
               color: statusColor.withValues(alpha: 0.08),
               child: Icon(

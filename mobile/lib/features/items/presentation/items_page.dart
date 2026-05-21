@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 import 'package:rental_p2p_mobile/core/theme/app_theme.dart';
 import 'package:rental_p2p_mobile/core/widgets/empty_state.dart';
@@ -280,21 +283,25 @@ class _ItemsPageState extends State<ItemsPage> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final item = filtered[index];
-                          return ItemTile(
-                            item: item,
-                            onTap: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ItemDetailPage(
-                                    repository: widget.repository,
-                                    itemId: item.id,
-                                    rentalsRepository: widget.rentalsRepository,
-                                    currentUserId: widget.currentUserId,
+                          return _AnimatedGridTile(
+                            index: index,
+                            child: ItemTile(
+                              item: item,
+                              onTap: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ItemDetailPage(
+                                      repository: widget.repository,
+                                      itemId: item.id,
+                                      rentalsRepository:
+                                          widget.rentalsRepository,
+                                      currentUserId: widget.currentUserId,
+                                    ),
                                   ),
-                                ),
-                              );
-                              loadItems();
-                            },
+                                );
+                                loadItems();
+                              },
+                            ),
                           );
                         },
                         childCount: filtered.length,
@@ -326,7 +333,8 @@ class _BannerCarousel extends StatefulWidget {
 }
 
 class _BannerCarouselState extends State<_BannerCarousel> {
-  final _pageCtrl = PageController(viewportFraction: 0.92);
+  final _pageCtrl = PageController();
+  Timer? _autoTimer;
   int _current = 0;
 
   final _banners = const [
@@ -351,68 +359,139 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _autoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_pageCtrl.hasClients) return;
+      final next = (_current + 1) % _banners.length;
+      _pageCtrl.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 16),
-        SizedBox(
-          height: 130,
-          child: PageView.builder(
-            controller: _pageCtrl,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemCount: _banners.length,
-            itemBuilder: (context, i) {
-              final b = _banners[i];
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: b.$3,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: b.$3[0].withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SizedBox(
+            height: 130,
+            child: ScrollConfiguration(
+              behavior: const MaterialScrollBehavior().copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: PageView.builder(
+                controller: _pageCtrl,
+                physics: const PageScrollPhysics(),
+                allowImplicitScrolling: true,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemCount: _banners.length,
+                itemBuilder: (context, i) {
+                  final b = _banners[i];
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                    margin: EdgeInsets.symmetric(
+                      horizontal: i == _current ? 0 : 5,
+                      vertical: i == _current ? 0 : 4,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Stack(
                         children: [
-                          Text(
-                            b.$1,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
+                          Positioned(
+                            right: -18,
+                            top: -22,
+                            child: _FloatingGlow(
+                              size: 82,
+                              color: Colors.white.withValues(alpha: 0.14),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            b.$2,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          Positioned(
+                            right: 78,
+                            bottom: -16,
+                            child: _FloatingGlow(
+                              size: 42,
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: b.$3,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: b.$3[0].withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        b.$1,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        b.$2,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.9,
+                                          ),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _AnimatedBannerIcon(
+                                  icon: b.$4,
+                                  accent: b.$3[0],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(b.$4, size: 50, color: Colors.white.withValues(alpha: 0.8)),
-                  ],
-                ),
-              );
-            },
+                  );
+                },
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -425,9 +504,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               width: i == _current ? 18 : 6,
               height: 6,
               decoration: BoxDecoration(
-                color: i == _current
-                    ? AppColors.orange
-                    : AppColors.line,
+                color: i == _current ? AppColors.orange : AppColors.line,
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -440,6 +517,147 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 }
 
 // ─── Category Grid ──────────────────────────────────────────────────────────
+
+class _FloatingGlow extends StatefulWidget {
+  const _FloatingGlow({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  State<_FloatingGlow> createState() => _FloatingGlowState();
+}
+
+class _FloatingGlowState extends State<_FloatingGlow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final scale = 0.92 + (_controller.value * 0.12);
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          color: widget.color,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedBannerIcon extends StatefulWidget {
+  const _AnimatedBannerIcon({required this.icon, required this.accent});
+
+  final IconData icon;
+  final Color accent;
+
+  @override
+  State<_AnimatedBannerIcon> createState() => _AnimatedBannerIconState();
+}
+
+class _AnimatedBannerIconState extends State<_AnimatedBannerIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1450),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final lift = -5 * _controller.value;
+        final scale = 0.96 + (_controller.value * 0.06);
+        return Transform.translate(
+          offset: Offset(0, lift),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+          boxShadow: [
+            BoxShadow(
+              color: widget.accent.withValues(alpha: 0.24),
+              blurRadius: 18,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Icon(
+          widget.icon,
+          size: 34,
+          color: Colors.white.withValues(alpha: 0.9),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedGridTile extends StatelessWidget {
+  const _AnimatedGridTile({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 260 + (index % 6) * 40),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
 
 class _CategoryGrid extends StatelessWidget {
   const _CategoryGrid({required this.selected, required this.onSelect});
@@ -461,44 +679,65 @@ class _CategoryGrid extends StatelessWidget {
           children: List.generate(_kCategories.length, (index) {
             final (label, icon) = _kCategories[index];
             final isSelected = selected == index;
-            return GestureDetector(
-              onTap: () => onSelect(index),
-              child: Container(
-                width: 72,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                child: Column(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.orange : AppColors.page,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected ? AppColors.orange : Colors.transparent,
-                          width: 2,
+            return AnimatedScale(
+              scale: isSelected ? 1.06 : 1,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutBack,
+              child: GestureDetector(
+                onTap: () => onSelect(index),
+                child: Container(
+                  width: 72,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.orange : AppColors.page,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.orange
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        AppColors.orange.withValues(alpha: 0.2),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 24,
+                          color: isSelected ? Colors.white : AppColors.ink,
                         ),
                       ),
-                      child: Icon(
-                        icon,
-                        size: 24,
-                        color: isSelected ? Colors.white : AppColors.ink,
+                      const SizedBox(height: 8),
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 180),
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.2,
+                          fontWeight:
+                              isSelected ? FontWeight.w800 : FontWeight.w500,
+                          color: isSelected ? AppColors.orange : AppColors.ink,
+                        ),
+                        child: Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.2,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                        color: isSelected ? AppColors.orange : AppColors.ink,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );

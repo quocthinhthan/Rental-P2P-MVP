@@ -231,6 +231,8 @@ exports.getMyRentalsView = async (req, res) => {
           payoutAmount: rental.payoutAmount,
             paymentStatus: rental.paymentStatus,
             status: rental.status,
+            createdAt: rental.createdAt,
+            updatedAt: rental.updatedAt,
             note: rental.note,
             contractId: rental.contractId,
             pickupImages: rental.pickupImages || [],
