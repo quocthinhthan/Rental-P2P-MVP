@@ -2,6 +2,7 @@ import React, { useState, useEffect, forwardRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
+import ReportItemModal from '../components/Items/ReportItemModal';
 import DatePicker from 'react-datepicker';
 import Swal from 'sweetalert2';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -154,6 +155,9 @@ function ItemDetailPage() {
   const [note, setNote]             = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /* ── state: report ── */
+  const [isReportOpen, setIsReportOpen] = useState(false);
+
   /* ── state: reviews ── */
   const [ownerReviews, setOwnerReviews]         = useState([]);
   const [ownerAverageRating, setOwnerAverageRating] = useState(null);
@@ -279,9 +283,27 @@ function ItemDetailPage() {
     return () => window.removeEventListener('hashchange', activate);
   }, [itemId]);
 
-  /* ─────────────────────────────────────
-     Handlers
-     ───────────────────────────────────── */
+  const handleReportClick = () => {
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Yêu cầu đăng nhập! 🔑',
+        text: 'Bạn cần đăng nhập tài khoản để báo cáo vi phạm sản phẩm.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đăng nhập ngay',
+        cancelButtonText: 'Để sau',
+        confirmButtonColor: '#ffb524',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/login', { state: { from: window.location.pathname } });
+        }
+      });
+      return;
+    }
+    setIsReportOpen(true);
+  };
+
   const handleRentalSubmit = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) { navigate('/login'); return; }
@@ -417,6 +439,16 @@ function ItemDetailPage() {
                 muted
               />
               {ownerProfile && <TrustBadge user={ownerProfile} />}
+              {!isOwner && (
+                <button
+                  type="button"
+                  className="idp-report-btn ms-auto"
+                  onClick={handleReportClick}
+                  title="Báo cáo sản phẩm vi phạm"
+                >
+                  <i className="far fa-flag me-1" /> Báo cáo
+                </button>
+              )}
             </div>
 
             <div className="mb-4">
@@ -720,6 +752,13 @@ function ItemDetailPage() {
           linkLabel={`Xem tất cả "${item.category}"`}
           items={categoryItems}
           loading={categoryItemsLoading}
+        />
+
+        {/* ══ MODAL BÁO CÁO SẢN PHẨM ══ */}
+        <ReportItemModal
+          isOpen={isReportOpen}
+          itemId={itemId}
+          onClose={() => setIsReportOpen(false)}
         />
 
       </div>{/* /container */}

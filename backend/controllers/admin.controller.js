@@ -765,7 +765,7 @@ exports.resolveItemReport = async (req, res) => {
     }
 
     if (report.status === ItemReportStatus.RESOLVED) {
-      return res.status(400).json({ message: 'Report nay da duoc xu ly' });
+      return res.status(400).json({ message: 'Báo cáo này đã được xử lý từ trước.' });
     }
 
     const item = await Item.findById(report.itemId);
@@ -781,17 +781,24 @@ exports.resolveItemReport = async (req, res) => {
       ownerIsBanned: owner?.isBanned
     };
 
-    if ([ItemReportAction.HIDE_ITEM, ItemReportAction.DELIST_ITEM, ItemReportAction.BAN_ITEM].includes(action)) {
-      const activeRental = await findActiveRentalForItem(item._id);
-      if (activeRental) {
-        return res.status(400).json({
-          message: 'Khong the an hoac go item dang co don thue active',
-          activeRental
-        });
+    const delistingActions = [ItemReportAction.HIDE_ITEM, ItemReportAction.DELIST_ITEM, ItemReportAction.BAN_ITEM];
+    if (delistingActions.includes(action)) {
+      if (item.status !== ItemStatus.DELISTED) {
+        const activeRental = await findActiveRentalForItem(item._id);
+        if (activeRental) {
+          return res.status(400).json({
+            message: 'Khong the an hoac go item dang co don thue active',
+            activeRental
+          });
+        }
+        item.status = ItemStatus.DELISTED;
+        await item.save();
       }
-
-      item.status = ItemStatus.DELISTED;
-      await item.save();
+    } else {
+      if (item.status === ItemStatus.DELISTED) {
+        item.status = ItemStatus.AVAILABLE;
+        await item.save();
+      }
     }
 
     report.status = ItemReportStatus.RESOLVED;

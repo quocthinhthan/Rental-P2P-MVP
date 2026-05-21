@@ -29,13 +29,16 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
   const rentalId = getId(rental);
   const readOnly = mode === 'admin-readonly';
   const socketRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const messagesRef = useRef(null);
+  const collapsedRef = useRef(false);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const parties = useMemo(() => {
     const renter = rental?.renter || rental?.renterId || {};
@@ -44,10 +47,19 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
     return {
       renterId: getId(renter),
       ownerId: getId(owner),
-      renterName: getName(renter, 'Nguoi thue'),
-      ownerName: getName(owner, 'Chu do'),
+      renterName: getName(renter, 'Người thuê'),
+      ownerName: getName(owner, 'Chủ đồ'),
     };
   }, [rental]);
+
+  const currentUserId = getId(currentUser);
+
+  useEffect(() => {
+    collapsedRef.current = isCollapsed;
+    if (!isCollapsed) {
+      setUnreadCount(0);
+    }
+  }, [isCollapsed]);
 
   const appendMessage = useCallback((message) => {
     setMessages((current) => {
@@ -56,6 +68,10 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
       }
       return [...current, message];
     });
+
+    if (collapsedRef.current) {
+      setUnreadCount((count) => count + 1);
+    }
   }, []);
 
   useEffect(() => {
@@ -73,14 +89,14 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
       })
       .catch((err) => {
         if (isActive) {
-          setError(err.response?.data?.message || 'Khong the tai lich su tro chuyen.');
+          setError(err.response?.data?.message || 'Không thể tải lịch sử trò chuyện.');
         }
       })
       .finally(() => {
         if (isActive) setLoading(false);
       });
 
-    if (!readOnly && currentUser?._id) {
+    if (!readOnly && currentUserId) {
       const socket = createRentalChatSocket();
       socketRef.current = socket;
 
@@ -91,11 +107,11 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
       socket.on('disconnect', () => setConnected(false));
       socket.on('receive_message', appendMessage);
       socket.on('chat_error', (payload) => {
-        setError(payload?.message || 'Ket noi chat gap loi.');
+        setError(payload?.message || 'Kết nối chat gặp lỗi.');
       });
       socket.on('connect_error', (err) => {
         setConnected(false);
-        setError(err.message || 'Khong the ket noi chat realtime.');
+        setError(err.message || 'Không thể kết nối chat realtime.');
       });
 
       socket.connect();
@@ -109,24 +125,45 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
         socketRef.current = null;
       }
     };
-  }, [appendMessage, rentalId, readOnly, currentUser?._id]);
+  }, [appendMessage, rentalId, readOnly, currentUserId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length]);
+    const messageList = messagesRef.current;
+    if (!messageList) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      messageList.scrollTo({
+        top: messageList.scrollHeight,
+        behavior: loading ? 'auto' : 'smooth',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [messages.length, loading]);
 
   const getSenderMeta = (message) => {
     const senderId = getId(message?.senderId);
     const isMine = senderId && senderId === getId(currentUser);
 
     if (senderId === parties.renterId) {
-      return { label: 'Nguoi thue', name: parties.renterName, isMine, role: 'renter' };
+      return { label: 'Người thuê', name: parties.renterName, isMine, role: 'renter' };
     }
     if (senderId === parties.ownerId) {
-      return { label: 'Chu do', name: parties.ownerName, isMine, role: 'owner' };
+      return { label: 'Chủ đồ', name: parties.ownerName, isMine, role: 'owner' };
     }
 
-    return { label: 'Tin nhan', name: 'Nguoi dung', isMine, role: 'unknown' };
+    return { label: 'Tin nhắn', name: 'Người dùng', isMine, role: 'unknown' };
+  };
+
+  const handleDraftKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((current) => !current);
   };
 
   const handleSubmit = async (event) => {
@@ -147,41 +184,95 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
 
       setDraft('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Khong the gui tin nhan.');
+      setError(err.response?.data?.message || 'Không thể gửi tin nhắn.');
     } finally {
       setSending(false);
     }
   };
 
+  if (isCollapsed) {
+    return (
+      <section className={`rental-chat-collapsed${readOnly ? ' is-readonly' : ''}`}>
+        <button
+          type="button"
+          className="rental-chat-bubble-toggle"
+          onClick={handleToggleCollapse}
+          aria-label={readOnly ? 'Mở lịch sử trò chuyện' : 'Mở chat với đối tác'}
+        >
+          <span className="rental-chat-collapsed-icon" aria-hidden="true">
+            <i className={readOnly ? 'fas fa-folder-open' : 'fas fa-comment-dots'} />
+          </span>
+          <span className="rental-chat-collapsed-copy">
+            <span>{readOnly ? 'Lịch sử trò chuyện' : 'Chat với đối tác'}</span>
+            <strong>{formatRentalCode(rental)}</strong>
+            <small>
+              {readOnly
+                ? 'Bấm để xem bằng chứng trao đổi'
+                : connected ? 'Đang trực tuyến, bấm để mở khung chat' : 'Bấm để mở khung chat'}
+            </small>
+          </span>
+          <span className={`rental-chat-state ${readOnly ? 'is-readonly' : connected ? 'is-online' : 'is-offline'}`}>
+            {readOnly ? 'Chỉ đọc' : connected ? 'Online' : 'Kết nối'}
+          </span>
+          {unreadCount > 0 && (
+            <span className="rental-chat-unread" aria-label={`${unreadCount} tin nhắn mới`}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </section>
+    );
+  }
+
   return (
-    <section className={`rental-detail-panel rental-chat-panel${readOnly ? ' is-readonly' : ''}`}>
-      <div className="detail-section-header">
-        <div>
-          <p className="section-kicker">{readOnly ? 'Bang chung trao doi' : 'Trao doi don thue'}</p>
-          <h3>{readOnly ? 'Lich su chat' : 'Chat voi doi tac'}</h3>
+    <section className={`rental-chat-panel${readOnly ? ' is-readonly' : ''}`}>
+      <div className="rental-chat-header">
+        <div className="rental-chat-title-group">
+          <span className="rental-chat-icon" aria-hidden="true">
+            <i className={readOnly ? 'fas fa-folder-open' : 'fas fa-comments'} />
+          </span>
+          <div>
+            <p className="section-kicker">{readOnly ? 'Bằng chứng trao đổi' : 'Trao đổi đơn thuê'}</p>
+            <h3>{readOnly ? 'Lịch sử trò chuyện' : 'Chat với đối tác'}</h3>
+            <span className="rental-chat-subtitle">
+              {readOnly
+                ? 'Admin chỉ xem lịch sử để đối chiếu khi xử lý tranh chấp.'
+                : `${formatRentalCode(rental)} được lưu lại để hai bên dễ đối chiếu khi cần.`}
+            </span>
+          </div>
         </div>
-        <span className={`rental-chat-state ${readOnly ? 'is-readonly' : connected ? 'is-online' : 'is-offline'}`}>
-          {readOnly ? 'Chi doc' : connected ? 'Realtime' : 'Dang ket noi'}
-        </span>
+        <div className="rental-chat-header-actions">
+          <span className={`rental-chat-state ${readOnly ? 'is-readonly' : connected ? 'is-online' : 'is-offline'}`}>
+            {readOnly ? 'Chỉ đọc' : connected ? 'Đang trực tuyến' : 'Đang kết nối'}
+          </span>
+          <button
+            type="button"
+            className="rental-chat-collapse-btn"
+            onClick={handleToggleCollapse}
+            aria-label="Thu gọn chat"
+          >
+            <i className="fas fa-minus" aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      <div className="rental-chat-context">
-        <i className="fas fa-comments" aria-hidden="true" />
-        <span>{formatRentalCode(rental)} - tin nhan duoc luu de doi chieu khi can.</span>
+      <div className="rental-chat-parties" aria-label="Các bên trong cuộc trò chuyện">
+        <span><i className="fas fa-user" aria-hidden="true" /> Người thuê: <strong>{parties.renterName}</strong></span>
+        <span><i className="fas fa-store" aria-hidden="true" /> Chủ đồ: <strong>{parties.ownerName}</strong></span>
       </div>
 
-      <div className="rental-chat-messages" aria-live="polite">
+      <div className="rental-chat-messages" ref={messagesRef} aria-live="polite">
         {loading && (
-          <div className="compact-empty-state">
-            <span aria-hidden="true" />
-            <p>Dang tai lich su tro chuyen...</p>
+          <div className="rental-chat-empty">
+            <span aria-hidden="true"><i className="fas fa-spinner fa-spin" /></span>
+            <p>Đang tải lịch sử trò chuyện...</p>
           </div>
         )}
 
         {!loading && messages.length === 0 && (
-          <div className="compact-empty-state">
-            <span aria-hidden="true" />
-            <p>Chua co tin nhan nao trong don thue nay.</p>
+          <div className="rental-chat-empty">
+            <span aria-hidden="true"><i className="far fa-comment-dots" /></span>
+            <p>Chưa có tin nhắn nào trong đơn thuê này.</p>
           </div>
         )}
 
@@ -194,9 +285,12 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
               key={message._id || `${message.createdAt}-${message.content}`}
               className={`rental-chat-message ${alignRight ? 'is-mine' : 'is-theirs'} is-${sender.role}`}
             >
+              <span className="rental-chat-avatar" aria-hidden="true">
+                {sender.role === 'owner' ? <i className="fas fa-store" /> : <i className="fas fa-user" />}
+              </span>
               <div className="rental-chat-bubble">
                 <div className="rental-chat-meta">
-                  <strong>{readOnly ? sender.label : sender.isMine ? 'Ban' : sender.name}</strong>
+                  <strong>{readOnly ? sender.label : sender.isMine ? 'Bạn' : sender.name}</strong>
                   <span>{formatMessageTime(message.createdAt)}</span>
                 </div>
                 <p>{message.content}</p>
@@ -204,23 +298,24 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
             </article>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
 
       {error && <div className="rental-chat-error">{error}</div>}
 
       {!readOnly && (
         <form className="rental-chat-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
+          <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Nhap tin nhan..."
+            onKeyDown={handleDraftKeyDown}
+            placeholder="Nhập tin nhắn..."
             maxLength={1000}
+            rows={1}
             disabled={sending}
           />
-          <button type="submit" className="btn-xs btn-primary-xs" disabled={!draft.trim() || sending}>
-            {sending ? 'Dang gui...' : 'Gui'}
+          <button type="submit" className="rental-chat-send-btn" disabled={!draft.trim() || sending} aria-label="Gửi tin nhắn">
+            <i className={sending ? 'fas fa-spinner fa-spin' : 'fas fa-paper-plane'} aria-hidden="true" />
+            <span>{sending ? 'Đang gửi' : 'Gửi'}</span>
           </button>
         </form>
       )}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { getAdminItemReports, resolveAdminItemReport } from '../services/api';
+import { getAdminItemReports, resolveAdminItemReport, updateAdminItemStatus } from '../services/api';
 import Spinner from '../components/Common/Spinner';
 import AdminHero from '../components/Admin/AdminHero';
 import { formatDateTime, getErrorMessage, getName } from '../components/Admin/AdminDisputeResolutionForm';
@@ -104,18 +104,76 @@ export default function AdminItemReportsPage() {
   };
 
   const handleResolve = async (report) => {
-    if (report.status === 'resolved') {
-      Swal.fire('Đã xử lý', 'Báo cáo này đã được xử lý trước đó.', 'info');
+    const isAlreadyResolved = report.status === 'resolved';
+    const item = report.itemId || {};
+    const itemId = item._id || item.id;
+
+    if (isAlreadyResolved) {
+      const currentStatus = item.status || 'available';
+      const originalActionLabel = ACTION_LABELS[report.action] || 'Không xử lý thêm';
+
+      const { value, isConfirmed } = await Swal.fire({
+        title: 'Điều chỉnh trạng thái sản phẩm ⚖️',
+        html: `
+          <div style="text-align: left; margin-bottom: 12px; font-size: 0.88rem; line-height: 1.5; color: #475569; background: #f1f5f9; padding: 10px; border-radius: 8px;">
+            <p style="margin: 0 0 6px;"><strong>Lưu ý:</strong> Phán quyết ban đầu <strong>"${originalActionLabel}"</strong> và các hình phạt liên quan đến chủ sở hữu vẫn được giữ nguyên.</p>
+            <p style="margin: 0;">Bạn chỉ đang điều chỉnh trạng thái hiển thị của sản phẩm này trên hệ thống.</p>
+          </div>
+          <label style="display:block; text-align:left; font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:4px;">Trạng thái sản phẩm:</label>
+          <select id="item-status" class="swal2-select" style="display:block;width:100%;margin:0 0 12px;">
+            <option value="available" ${currentStatus === 'available' ? 'selected' : ''}>Đang hoạt động (AVAILABLE)</option>
+            <option value="delisted" ${currentStatus === 'delisted' ? 'selected' : ''}>Đã gỡ (DELISTED)</option>
+          </select>
+          <label style="display:block; text-align:left; font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:4px;">Lý do điều chỉnh:</label>
+          <textarea id="adjustment-reason" class="swal2-textarea" placeholder="Nhập lý do điều chỉnh trạng thái sản phẩm..." style="display:block;width:100%;margin:0;"></textarea>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Cập nhật',
+        cancelButtonText: 'Hủy',
+        preConfirm: () => {
+          const status = document.getElementById('item-status')?.value;
+          const reason = document.getElementById('adjustment-reason')?.value?.trim();
+          if (!reason) {
+            Swal.showValidationMessage('Vui lòng nhập lý do điều chỉnh.');
+            return false;
+          }
+          return { status, reason };
+        },
+      });
+
+      if (!isConfirmed) return;
+
+      try {
+        setActionLoading(report._id);
+        await updateAdminItemStatus(itemId, {
+          status: value.status,
+          reason: value.reason,
+        });
+        Swal.fire('Thành công!', 'Trạng thái sản phẩm đã được điều chỉnh thành công.', 'success');
+        await fetchReports();
+      } catch (error) {
+        Swal.fire('Thất bại', getErrorMessage(error, 'Không thể điều chỉnh trạng thái sản phẩm.'), 'error');
+      } finally {
+        setActionLoading('');
+      }
       return;
     }
+
+    const currentAction = report.action || 'no_action';
+    const currentNote = report.resolutionNote || report.adminNote || '';
 
     const { value, isConfirmed } = await Swal.fire({
       title: 'Xử lý báo cáo sản phẩm',
       html: `
         <select id="report-action" class="swal2-select" style="display:block;width:100%;margin:0 0 12px;">
-          ${ACTION_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join('')}
+          ${ACTION_OPTIONS.map((option) => `
+            <option value="${option.value}" ${option.value === currentAction ? 'selected' : ''}>
+              ${option.label}
+            </option>
+          `).join('')}
         </select>
-        <textarea id="report-note" class="swal2-textarea" placeholder="Nhập ghi chú xử lý bắt buộc..." style="display:block;width:100%;margin:0;"></textarea>
+        <textarea id="report-note" class="swal2-textarea" placeholder="Nhập ghi chú xử lý bắt buộc..." style="display:block;width:100%;margin:0;">${currentNote}</textarea>
       `,
       icon: 'warning',
       showCancelButton: true,
@@ -140,10 +198,40 @@ export default function AdminItemReportsPage() {
         adminNote: value.adminNote,
         resolutionNote: value.adminNote,
       });
-      Swal.fire('Thành công!', 'Báo cáo sản phẩm đã được xử lý.', 'success');
+      Swal.fire('Thành công!', 'Báo cáo sản phẩm đã được xử lý thành công.', 'success');
       await fetchReports();
     } catch (error) {
       Swal.fire('Thất bại', getErrorMessage(error, 'Không thể xử lý báo cáo sản phẩm.'), 'error');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  const handleQuickDismiss = async (report) => {
+    const result = await Swal.fire({
+      title: 'Xác nhận bỏ qua nhanh? 🤔',
+      text: 'Báo cáo này sẽ được duyệt nhanh với hướng xử lý "Không xử lý thêm" mà không phạt chủ sở hữu hoặc ẩn sản phẩm.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Đồng ý',
+      cancelButtonText: 'Hủy bỏ',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6c757d'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setActionLoading(report._id);
+      await resolveAdminItemReport(report._id, {
+        action: 'no_action',
+        adminNote: 'Đã phê duyệt nhanh: Không phát hiện vi phạm sau khi rà soát.',
+        resolutionNote: 'Đã phê duyệt nhanh: Không phát hiện vi phạm sau khi rà soát.',
+      });
+      Swal.fire('Thành công! 🎉', 'Báo cáo sản phẩm đã được phê duyệt bỏ qua nhanh.', 'success');
+      await fetchReports();
+    } catch (error) {
+      Swal.fire('Thất bại', getErrorMessage(error, 'Không thể xử lý nhanh báo cáo sản phẩm.'), 'error');
     } finally {
       setActionLoading('');
     }
@@ -238,6 +326,36 @@ export default function AdminItemReportsPage() {
                           <div className="air-report-reason">
                             <strong>{report.reason || 'Không có lý do'}</strong>
                             <span>{formatDateTime(report.createdAt)}</span>
+                            {report.evidenceImages && report.evidenceImages.length > 0 && (
+                              <div className="air-report-evidence d-flex gap-2 mt-2 flex-wrap">
+                                {report.evidenceImages.map((img, index) => (
+                                  <a
+                                    key={index}
+                                    href={img}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="air-evidence-thumb-link"
+                                    title="Click để phóng to ảnh"
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`Evidence ${index + 1}`}
+                                      style={{
+                                        width: '45px',
+                                        height: '45px',
+                                        objectFit: 'cover',
+                                        borderRadius: '6px',
+                                        border: '1px solid #cbd5e1',
+                                        transition: 'transform 0.15s ease',
+                                        cursor: 'zoom-in'
+                                      }}
+                                      onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                      onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -272,15 +390,26 @@ export default function AdminItemReportsPage() {
                           </span>
                         </td>
                         <td className="text-end">
-                          <button
-                            type="button"
-                            className="aip-action-btn aip-action-btn--view"
-                            disabled={isResolved || actionLoading === report._id}
-                            onClick={() => handleResolve(report)}
-                            title={isResolved ? 'Đã xử lý' : 'Xử lý báo cáo'}
-                          >
-                            <i className={`fas ${isResolved ? 'fa-check' : 'fa-gavel'}`} />
-                          </button>
+                          <div className="aip-actions">
+                            <button
+                              type="button"
+                              className="aip-action-btn aip-action-btn--approve"
+                              disabled={actionLoading === report._id}
+                              onClick={() => handleQuickDismiss(report)}
+                              title="Bỏ qua nhanh (Không vi phạm)"
+                            >
+                              <i className="fas fa-check-circle" />
+                            </button>
+                            <button
+                              type="button"
+                              className="aip-action-btn aip-action-btn--view"
+                              disabled={actionLoading === report._id}
+                              onClick={() => handleResolve(report)}
+                              title={isResolved ? 'Điều chỉnh phán quyết' : 'Xử lý báo cáo'}
+                            >
+                              <i className={`fas ${isResolved ? 'fa-check' : 'fa-gavel'}`} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

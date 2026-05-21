@@ -417,6 +417,18 @@
   color: #ffffff;
 }
 
+.aip-action-btn--approve {
+  border-color: #a7f3d0;
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.aip-action-btn--approve:hover {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
 .aip-action-btn--feature {
   border-color: #fde68a;
   color: #d97706;
