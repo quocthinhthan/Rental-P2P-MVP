@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import HandoverModal from '../components/Rentals/HandoverModal';
+import RentalChatPanel from '../components/Rentals/RentalChatPanel';
 import SignatureModal from '../components/Rentals/SignatureModal';
+import ContractModal from '../components/Rentals/ContractModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { formatRentalCode } from '../utils/itemCode';
@@ -748,6 +750,7 @@ function RentalDetailPage() {
   const [signatureRental, setSignatureRental] = useState(null);
   const [handoverState, setHandoverState] = useState({ type: null, rental: null });
   const [reviewRental, setReviewRental] = useState(null);
+  const [isViewContractOpen, setIsViewContractOpen] = useState(false);
 
   const loadRental = useCallback(async () => {
     try {
@@ -766,7 +769,7 @@ function RentalDetailPage() {
       }
 
       let nextRental = found;
-      if (!found.contract && (found.contractId || ['confirmed', 'in_progress', 'disputed', 'completed'].includes(found.status))) {
+      if ((!found.contract || !found.contract.ownerInfo) && (found.contractId || ['confirmed', 'in_progress', 'disputed', 'completed'].includes(found.status))) {
         try {
           const contractResponse = await apiService.getRentalContract(found._id);
           nextRental = {
@@ -1034,6 +1037,15 @@ function RentalDetailPage() {
                     <span className="contract-state contract-state-waiting">Bạn đã ký, đang chờ bên còn lại</span>
                   )}
                   {isFullySigned && <span className="contract-state contract-state-ready">Hợp đồng đã ký đủ</span>}
+                  {rental.contract && (
+                    <button
+                      className="btn-xs btn-primary-xs mt-2"
+                      type="button"
+                      onClick={() => setIsViewContractOpen(true)}
+                    >
+                      <i className="fas fa-file-contract"></i> Xem hợp đồng chi tiết
+                    </button>
+                  )}
                 </div>
                 <div className="process-card">
                   <span className="process-step-number">2</span>
@@ -1051,6 +1063,8 @@ function RentalDetailPage() {
             </section>
 
             <DisputePanel rental={rental} type={type} currentUser={user} onRefresh={loadRental} />
+
+            <RentalChatPanel rental={rental} currentUser={user} />
 
             <section className="rental-detail-panel">
               <SectionHeader eyebrow="Đánh giá" title="Phản hồi sau thuê">
@@ -1190,6 +1204,16 @@ function RentalDetailPage() {
                 {!hasVisibleAction && (
                   <span className="contract-state contract-state-neutral">Không có thao tác khả dụng ở trạng thái hiện tại</span>
                 )}
+
+                {rental?.contract && (
+                  <button
+                    className="btn-xs btn-primary-xs w-full mt-2"
+                    type="button"
+                    onClick={() => setIsViewContractOpen(true)}
+                  >
+                    <i className="fas fa-file-contract"></i> Xem hợp đồng
+                  </button>
+                )}
               </div>
             </section>
           </aside>
@@ -1217,6 +1241,12 @@ function RentalDetailPage() {
         type={type}
         onClose={() => setReviewRental(null)}
         onSubmitted={loadRental}
+      />
+
+      <ContractModal
+        isOpen={isViewContractOpen}
+        contract={rental?.contract}
+        onClose={() => setIsViewContractOpen(false)}
       />
     </div>
   );

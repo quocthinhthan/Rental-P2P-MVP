@@ -13,6 +13,10 @@ const crypto = require('crypto');
 const qs = require('qs');
 const { saveWithUniqueCode } = require('../utils/codeGenerator');
 const { recalculateUserTrustScore } = require('../services/trustScore.service');
+const {
+  authorizeChatRead,
+  authorizeChatWrite
+} = require('../services/chatAuthorization.service');
 
 const sortObject = (obj) => {
   const sorted = {};
@@ -585,10 +589,20 @@ exports.sendMessage = async (req, res) => {
     
     if (!content) return res.status(400).json({ message: 'Nội dung tin nhắn không được để trống' });
 
+    const trimmedContent = typeof content === 'string' ? content.trim() : '';
+    if (!trimmedContent) {
+      return res.status(400).json({ message: 'Noi dung tin nhan khong duoc de trong' });
+    }
+
+    const { error } = await authorizeChatWrite(id, req.user);
+    if (error) {
+      return res.status(error.status).json({ message: error.message });
+    }
+
     const newMessage = await Message.create({
       rentalId: id,
       senderId: req.user._id,
-      content
+      content: trimmedContent
     });
 
     res.status(201).json(newMessage);
@@ -604,6 +618,11 @@ exports.getMessages = async (req, res) => {
     
     // (Có thể thêm logic check xem req.user._id có phải Renter/Owner/Admin không cho bảo mật)
     
+    const { error } = await authorizeChatRead(id, req.user);
+    if (error) {
+      return res.status(error.status).json({ message: error.message });
+    }
+
     const messages = await Message.find({ rentalId: id }).sort({ createdAt: 1 });
     res.status(200).json(messages);
   } catch (error) {

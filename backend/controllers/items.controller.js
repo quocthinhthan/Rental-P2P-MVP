@@ -546,6 +546,15 @@ const reportItem = async (req, res) => {
       return res.status(404).json({ message: 'Item not found' });
     }
 
+    // Chặn spam report: kiểm tra xem user này đã report item này chưa
+    const existingReport = await ItemReport.findOne({
+      itemId: item._id,
+      reporterId: req.user._id
+    });
+    if (existingReport) {
+      return res.status(400).json({ message: 'Bạn đã gửi báo cáo vi phạm cho sản phẩm này trước đó.' });
+    }
+
     const report = await ItemReport.create({
       itemId: item._id,
       reporterId: req.user._id,
@@ -553,7 +562,7 @@ const reportItem = async (req, res) => {
       evidenceImages: Array.isArray(evidenceImages) ? evidenceImages : []
     });
 
-    res.status(201).json({ message: 'Da gui bao cao san pham', report });
+    res.status(201).json({ message: 'Đã gửi báo cáo sản phẩm thành công.', report });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

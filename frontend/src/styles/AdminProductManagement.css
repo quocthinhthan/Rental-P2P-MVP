@@ -417,6 +417,18 @@
   color: #ffffff;
 }
 
+.aip-action-btn--approve {
+  border-color: #a7f3d0;
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.aip-action-btn--approve:hover {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
 .aip-action-btn--feature {
   border-color: #fde68a;
   color: #d97706;
@@ -644,3 +656,226 @@
     justify-content: center;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   Admin Item Detail Page – Signals, Reports, Disputes
+   Premium Styling
+   ═══════════════════════════════════════════════════ */
+.admin-item-signals-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  margin-top: 24px !important;
+}
+
+.admin-signals-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.admin-signal-block {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 24px;
+}
+
+.admin-signal-block:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-signal-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-signal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-signal-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: all 0.2s ease;
+}
+
+.admin-signal-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.admin-signal-card.report-card.is-pending {
+  border-left: 4px solid #f59e0b;
+}
+
+.admin-signal-card.report-card.is-resolved {
+  border-left: 4px solid #10b981;
+}
+
+.admin-signal-card.dispute-card {
+  border-left: 4px solid #ef4444;
+}
+
+.admin-signal-card.review-card {
+  border-left: 4px solid #3b82f6;
+}
+
+.signal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.signal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.signal-status-badge.badge-resolved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.signal-status-badge.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Dispute specific badges */
+.signal-status-badge.badge-pending_mediation,
+.signal-status-badge.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.signal-status-badge.badge-escalated {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.signal-status-badge.badge-resolved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.signal-status-badge.badge-withdrawn {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.signal-card-date {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.signal-card-body p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.signal-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+.signal-card-reporter strong,
+.signal-card-renter strong,
+.signal-card-reviewer strong,
+.signal-card-reason strong,
+.signal-card-comment strong {
+  color: #475569;
+  font-weight: 600;
+}
+
+.signal-evidence-gallery {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.signal-evidence-link {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.signal-evidence-link:hover {
+  transform: scale(1.06);
+}
+
+.signal-evidence-img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+
+.signal-resolution-box {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.84rem;
+}
+
+.resolution-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.badge-action-pill {
+  display: inline-block;
+  background: #eff6ff;
+  color: #1e40af;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.resolution-note {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+  margin-top: 6px !important;
+}
+
+.admin-signal-empty {
+  font-size: 0.88rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 0;
+}
+
+.signal-rating-stars {
+  display: inline-flex;
+}
+
