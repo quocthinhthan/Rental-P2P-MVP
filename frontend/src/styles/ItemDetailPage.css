@@ -328,6 +328,47 @@
   font-size: .95rem;
 }
 
+.idp-desc-text .desc-h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--idp-brand);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 2px solid var(--idp-brand-light);
+  padding-bottom: 0.4rem;
+}
+
+.idp-desc-text .desc-h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--idp-text);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.idp-desc-text .desc-h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--idp-text);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.idp-desc-text .desc-p {
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+.idp-desc-text em {
+  font-style: italic;
+  color: #4b5563;
+}
+
+.idp-desc-text strong {
+  font-weight: 700;
+  color: #111827;
+}
+
 /* ── Review panel ── */
 .idp-review-score-box {
   background: var(--idp-surface-2);
@@ -364,42 +405,49 @@
 
 .idp-review-item {
   display: flex;
-  gap: 14px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--idp-border);
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: #fdfdfd;
+  border: 1px solid var(--idp-border);
+  border-radius: var(--idp-radius-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.idp-review-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
+.idp-review-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border-color: rgba(26, 107, 74, 0.25);
+  background: #ffffff;
 }
 
 .idp-reviewer-avatar {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.06);
 }
 
 .idp-review-author {
-  font-size: .9rem;
-  font-weight: 600;
+  font-size: .95rem;
+  font-weight: 700;
   margin: 0 0 2px;
+  color: var(--idp-text);
 }
 
 .idp-review-date {
-  font-size: .76rem;
+  font-size: .78rem;
   color: var(--idp-muted);
 }
 
 .idp-review-comment {
-  font-size: .87rem;
-  margin: 6px 0 0;
-  color: var(--idp-text);
-  line-height: 1.6;
+  font-size: .88rem;
+  margin: 8px 0 0;
+  color: #4b5563;
+  line-height: 1.65;
 }
 
 .idp-review-form-title {
@@ -641,7 +689,8 @@
   animation: idp-shimmer 1.4s infinite;
   margin: 12px 16px 8px;
 }
-@keyframes idp-shimmer {
+
+@keyframes idp-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }

@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import 'leaflet/dist/leaflet.css';
 import '../styles/PostItemPage.css';
+import { sanitizeDescription } from '../utils/sanitize';
 
 const DEFAULT_ITEM_LOCATION = {
   lat: 10.7321,
@@ -86,6 +87,7 @@ function PostItemPage() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [tileSourceIndex, setTileSourceIndex] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
 
   const {
     register,
@@ -104,6 +106,27 @@ function PostItemPage() {
   });
 
   const watchedCategory = watch('category');
+  const watchDescription = watch('description');
+
+  const insertTag = (openTag, closeTag = '') => {
+    const textarea = document.getElementById('item-description');
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    
+    const replacement = openTag + selectedText + closeTag;
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    
+    setValue('description', newValue, { shouldDirty: true, shouldValidate: true });
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + openTag.length, start + openTag.length + selectedText.length);
+    }, 0);
+  };
   const mapCenter = selectedLocation || DEFAULT_ITEM_LOCATION;
   const tileSource = TILE_SOURCES[tileSourceIndex];
 
@@ -415,12 +438,108 @@ function PostItemPage() {
 
                   <div className="mb-3">
                     <label className="form-label">Mô tả</label>
-                    <textarea
-                      className="form-control"
-                      rows="5"
-                      {...register('description')}
-                      placeholder="Mô tả tình trạng, phụ kiện đi kèm, lưu ý khi sử dụng..."
-                    />
+                    
+                    <div className="custom-editor-container">
+                      <div className="custom-editor-toolbar d-flex flex-wrap align-items-center gap-1 p-2 bg-light border border-bottom-0 rounded-top">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<b>', '</b>')}
+                          title="In đậm (Bold)"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="fas fa-bold"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<i>', '</i>')}
+                          title="In nghiêng (Italic)"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="fas fa-italic"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<h2>', '</h2>')}
+                          title="Tiêu đề lớn H2"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                        >
+                          H2
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<h3>', '</h3>')}
+                          title="Tiêu đề vừa H3"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                        >
+                          H3
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<p>', '</p>')}
+                          title="Đoạn văn"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="fas fa-paragraph"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border-0"
+                          onClick={() => insertTag('<br/>')}
+                          title="Xuống dòng nhanh"
+                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="fas fa-level-down-alt"></i>
+                        </button>
+                        
+                        <div className="ms-auto d-flex gap-1">
+                          <button
+                            type="button"
+                            className={`btn btn-xs py-1 px-2 btn-preview-tab ${!showPreview ? 'btn-primary text-white' : 'btn-light border-0 text-dark'}`}
+                            onClick={() => setShowPreview(false)}
+                            style={{ fontSize: '0.78rem', borderRadius: '4px' }}
+                          >
+                            <i className="fas fa-edit me-1"></i> Soạn thảo
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-xs py-1 px-2 btn-preview-tab ${showPreview ? 'btn-primary text-white' : 'btn-light border-0 text-dark'}`}
+                            onClick={() => setShowPreview(true)}
+                            style={{ fontSize: '0.78rem', borderRadius: '4px' }}
+                          >
+                            <i className="fas fa-eye me-1"></i> Xem trước
+                          </button>
+                        </div>
+                      </div>
+
+                      {!showPreview ? (
+                        <textarea
+                          id="item-description"
+                          className="form-control rounded-0 rounded-bottom border"
+                          rows="6"
+                          {...register('description')}
+                          placeholder="Mô tả tình trạng, phụ kiện đi kèm, lưu ý khi sử dụng... (Bôi đen văn bản hoặc click thanh công cụ để định dạng nhanh)"
+                        />
+                      ) : (
+                        <div 
+                          className="custom-editor-preview p-3 border rounded-bottom bg-white overflow-auto text-start" 
+                          style={{ minHeight: '158px', maxHeight: '300px', borderTop: 'none' }}
+                        >
+                          {watchDescription ? (
+                            <div 
+                              className="idp-desc-text"
+                              dangerouslySetInnerHTML={{ __html: sanitizeDescription(watchDescription) }}
+                            />
+                          ) : (
+                            <em className="text-muted small">Nội dung xem trước sẽ hiển thị ở đây khi bạn nhập mô tả...</em>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="row g-3 mb-3">

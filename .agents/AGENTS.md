@@ -98,6 +98,12 @@ When touching these APIs from the frontend:
 - Do not directly add/subtract `trustScore` in controllers. Persist source events such as public reviews, completed rentals, resolved disputes, item report actions, eKYC changes, or admin account status changes, then call `recalculateUserTrustScore`.
 - Public user summaries should avoid sensitive fields. `GET /api/users/:id/profile` returns safe profile, trust/rating fields, public reviews, and public owner items.
 
+## Description Formatting & Security
+
+- **WYSIWYG Formatting:** Item descriptions can contain basic HTML styling tags. When editing/posting descriptions, the frontend uses a lightweight formatting toolbar in `PostItemPage.js` and a Live Preview rendering system to avoid bulky third-party editor packages.
+- **XSS Sanitization:** To render formatted descriptions safely on the detail page or in previews without risking XSS vulnerability, use the zero-dependency `sanitizeDescription` utility in `frontend/src/utils/sanitize.js`. This function encodes all incoming HTML tags and then selectively restores safe elements (`<b>`, `<strong>`, `<i>`, `<em>`, `<h2>`, `<h3>`, `<h4>`, `<br>`, `<p>`) while converting `\n` to `<br/>`.
+- **Review Breakdown Dashboards:** The reviews tab on details page displays dynamic visual dashboards that compute 1-to-5 star breakdowns based on the user's transaction history reviews. Ensure review cards use standard typography tokens for responsive and beautiful mobile and desktop rendering.
+
 ## Safe Change Checklist
 
 Before changing rental-related frontend behavior:
