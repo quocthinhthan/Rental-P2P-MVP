@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 // Import file layout.css
@@ -8,10 +8,12 @@ import '../../styles/layout.css';
 function Header() {
   const { isLoggedIn, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [rentalBadgeCount, setRentalBadgeCount] = useState(0);
 
   // Thêm useState này vào phần đầu component Header
   const [isCatOpen, setIsCatOpen] = useState(false);
@@ -33,6 +35,39 @@ function Header() {
     };
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setRentalBadgeCount(0);
+      return;
+    }
+
+    const activeRentalStatuses = new Set([
+      'pending_payment',
+      'pending_confirmation',
+      'confirmed',
+      'in_progress',
+      'disputed',
+    ]);
+
+    const countActiveRentals = (rentals = []) => (
+      rentals.filter((rental) => activeRentalStatuses.has(rental?.status)).length
+    );
+
+    const fetchRentalBadgeCount = async () => {
+      try {
+        const response = await apiService.getMyRentals({ skipGlobalLoading: true });
+        const asRenterCount = countActiveRentals(response.data?.asRenter);
+        const asOwnerCount = countActiveRentals(response.data?.asOwner);
+        setRentalBadgeCount(asRenterCount + asOwnerCount);
+      } catch (err) {
+        console.error('Lỗi khi tải số lượng đơn thuê:', err);
+        setRentalBadgeCount(0);
+      }
+    };
+
+    fetchRentalBadgeCount();
+  }, [isLoggedIn, user?._id, location.pathname, location.search]);
 
   const handleLogout = () => {
     logout();
@@ -278,9 +313,8 @@ function Header() {
             <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center">
               <div className="position-relative cart-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
                 <i className="fas fa-shopping-cart text-primary fs-5"></i>
-                {/* Bạn có thể truyền biến đếm số lượng đơn vào số 0 bên dưới */}
                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
-                  0
+                  {rentalBadgeCount}
                 </span>
               </div>
               <div className="text-start ms-3">
