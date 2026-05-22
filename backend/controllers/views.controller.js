@@ -38,6 +38,7 @@ exports.getItemDetailView = async (req, res) => {
         endDate: { $gte: new Date() } 
     }).select('startDate endDate');
 
+
     const hasMapLocation = (
         item.location &&
         Array.isArray(item.location.coordinates) &&
@@ -51,6 +52,7 @@ exports.getItemDetailView = async (req, res) => {
         description: item.description,
         category: item.category, // Bổ sung category
         status: item.status,     // Bổ sung status
+        isFeatured: item.isFeatured,
         images: item.images,
         pricePerDay: item.pricePerDay,
         baseValue: item.baseValue,

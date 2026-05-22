@@ -14,6 +14,7 @@ import {
   getRelatedItemImage
 } from '../utils/cloudinaryImage';
 import { formatItemCode } from '../utils/itemCode';
+import { sanitizeDescription } from '../utils/sanitize';
 import UserTrustSummary, { RatingSummary, TrustBadge } from '../components/Trust/TrustBadge';
 
 /* ─────────────────────────────────────────
@@ -197,6 +198,7 @@ function ItemDetailPage() {
      ───────────────────────────────────── */
   useEffect(() => {
     if (!itemId) return;
+    window.scrollTo(0, 0);
 
     const fetchItem = async () => {
       setLoading(true);
@@ -240,6 +242,9 @@ function ItemDetailPage() {
         setError('Không thể tải dữ liệu sản phẩm.');
       } finally {
         setLoading(false);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 100);
       }
     };
 
@@ -365,6 +370,16 @@ function ItemDetailPage() {
     totalReviews: ownerTotalReviews || item.owner.totalReviews || 0
   } : null;
 
+  const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  if (ownerReviews && ownerReviews.length > 0) {
+    ownerReviews.forEach(r => {
+      const rate = Math.round(r.rating);
+      if (rate >= 1 && rate <= 5) {
+        ratingBreakdown[rate] += 1;
+      }
+    });
+  }
+
   /* ─────────────────────────────────────
      RENDER
      ───────────────────────────────────── */
@@ -424,6 +439,46 @@ function ItemDetailPage() {
 
           {/* ── RIGHT: Info + Booking ── */}
           <div className="col-lg-6">
+
+            {/* VIP/Featured Banner */}
+            {item.isFeatured && (
+              <div 
+                className="featured-trust-banner rounded-3 p-3 mb-3 d-flex align-items-center gap-3 shadow-sm border-0 position-relative overflow-hidden" 
+                style={{
+                  background: 'linear-gradient(135deg, #fffcf0 0%, #fff7d6 100%)',
+                  borderLeft: '4px solid #ffd700',
+                  boxShadow: '0 4px 12px rgba(255, 215, 0, 0.1)'
+                }}
+              >
+                <div 
+                  className="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-sm"
+                  style={{ width: '40px', height: '40px', minWidth: '40px' }}
+                >
+                  <span className="fs-4">🌟</span>
+                </div>
+                <div>
+                  <div className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style={{ fontSize: '0.95rem' }}>
+                    Sản phẩm nổi bật uy tín
+                    <span className="badge text-white" style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)', fontSize: '0.65rem' }}>VIP</span>
+                  </div>
+                  <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.3' }}>
+                    Sản phẩm được đánh giá cao với độ tin cậy vượt trội trên Rental-P2P.
+                  </p>
+                </div>
+                {/* Background shimmer lines */}
+                <div 
+                  className="position-absolute end-0 bottom-0 opacity-10" 
+                  style={{
+                    fontSize: '4.5rem',
+                    transform: 'translate(10px, 15px) rotate(-15deg)',
+                    color: '#ffd700',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  👑
+                </div>
+              </div>
+            )}
 
             {/* Title */}
             <h1 className="idp-product-title">{item.name}</h1>
@@ -635,31 +690,74 @@ function ItemDetailPage() {
 
               {/* ── Mô tả ── */}
               {activeTab === 'desc' && (
-                <div id="nav-desc">
-                  <p className="idp-desc-text">
-                    {item.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}
-                  </p>
+                <div id="nav-desc" className="fade-in">
+                  {item.description ? (
+                    <div 
+                      className="idp-desc-text"
+                      dangerouslySetInnerHTML={{ __html: sanitizeDescription(item.description) }}
+                    />
+                  ) : (
+                    <p className="idp-desc-text text-muted italic">Chưa có mô tả chi tiết cho sản phẩm này.</p>
+                  )}
                 </div>
               )}
 
               {/* ── Đánh giá ── */}
               {activeTab === 'review' && (
-                <div id="nav-review">
+                <div id="nav-review" className="fade-in">
                   <div className="row g-4">
 
                     {/* Score box */}
                     <div className="col-lg-4">
-                      <div className="idp-review-score-box">
-                        <div className="idp-review-score-num">
+                      <div className="idp-review-score-box shadow-sm border border-light-subtle rounded-4 p-4 text-center bg-light-subtle">
+                        <div className="idp-review-score-label text-uppercase small fw-bold text-muted mb-2 tracking-wider">
+                          Đánh giá trung bình
+                        </div>
+                        <div className="idp-review-score-num text-primary fw-extrabold mb-1" style={{ fontSize: '3rem', fontWeight: 800 }}>
                           {ownerAverageRating !== null && ownerTotalReviews > 0 ? ownerAverageRating.toFixed(1) : '--'}
                         </div>
-                        <div className="idp-review-stars">
+                        <div className="idp-review-stars mb-2 d-flex justify-content-center gap-1">
                           {ownerAverageRating !== null ? renderStars(Math.round(ownerAverageRating)) : renderStars(0)}
                         </div>
-                        <p className="idp-review-count">{ownerTotalReviews} đánh giá công khai về chủ sở hữu</p>
+                        <p className="idp-review-count text-muted small mb-3">
+                          {ownerTotalReviews} đánh giá công khai
+                        </p>
+                        
+                        {/* Star progress breakdown chart */}
+                        <div className="rating-breakdown border-top pt-3 mt-2">
+                          {[5, 4, 3, 2, 1].map((star) => {
+                            const count = ratingBreakdown[star];
+                            const percentage = ownerReviews.length > 0 ? (count / ownerReviews.length) * 100 : 0;
+                            return (
+                              <div key={star} className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: '.8rem' }}>
+                                <span style={{ width: '12px' }} className="fw-semibold text-dark">{star}</span>
+                                <i className="fa fa-star text-warning" style={{ fontSize: '.75rem' }} />
+                                <div className="progress flex-grow-1" style={{ height: '6px', borderRadius: '3px', backgroundColor: '#e5e7eb', overflow: 'hidden' }}>
+                                  <div 
+                                    className="progress-bar" 
+                                    role="progressbar" 
+                                    style={{ 
+                                      width: `${percentage}%`, 
+                                      height: '100%', 
+                                      borderRadius: '3px',
+                                      background: 'linear-gradient(90deg, #ffb524 0%, #ff8c00 100%)'
+                                    }} 
+                                    aria-valuenow={percentage} 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100"
+                                  />
+                                </div>
+                                <span className="text-muted" style={{ width: '30px', textAlign: 'right', fontSize: '0.75rem' }}>
+                                  {ownerReviews.length > 0 ? `${Math.round(percentage)}%` : '0%'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
                         {!isLoggedIn && (
-                          <div className="alert alert-light border mt-3 mb-0 small">
-                            Đăng nhập để thuê và gửi đánh giá.
+                          <div className="alert alert-light border mt-4 mb-0 small text-muted py-2" style={{ borderRadius: '10px' }}>
+                            <i className="fas fa-lock me-1"></i> Đăng nhập để thuê và gửi đánh giá.
                           </div>
                         )}
                       </div>
@@ -667,15 +765,23 @@ function ItemDetailPage() {
 
                     {/* Review list + form */}
                     <div className="col-lg-8">
-                      <div className="bg-white border rounded-4 p-4 shadow-sm">
-                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
-                          <h5 className="fw-bold mb-0">Đánh giá từ người thuê</h5>
-                          <span className="text-muted small">Đánh giá công khai về chủ vật dụng.</span>
+                      <div className="bg-white border border-light-subtle rounded-4 p-4 shadow-sm">
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 pb-2 border-bottom">
+                          <div>
+                            <h5 className="fw-bold mb-1" id="reviews-header-title">Đánh giá từ người thuê</h5>
+                            <span className="text-muted small">Đánh giá được gửi sau khi hoàn thành giao dịch thực tế.</span>
+                          </div>
+                          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '.75rem' }}>
+                            {ownerTotalReviews} Nhận xét
+                          </span>
                         </div>
 
                         {reviewLoading && (
-                          <div className="text-center py-4">
-                            <div className="spinner-border text-primary" role="status" />
+                          <div className="text-center py-5">
+                            <div className="spinner-border text-primary" role="status" style={{ width: '2.5rem', height: '2.5rem' }}>
+                              <span className="visually-hidden">Đang tải...</span>
+                            </div>
+                            <p className="text-muted small mt-2">Đang tải phản hồi...</p>
                           </div>
                         )}
                         {!reviewLoading && reviewError && (

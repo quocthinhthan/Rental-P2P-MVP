@@ -71,15 +71,15 @@ export const verifyEKYC = (idCardFrontUrl) => api.post('/auth/verify-ekyc', { id
 export const getItems = (params = {}) => {
   if (typeof params === 'string') {
     const queryString = buildItemsQueryString({
-      search: trimSearchText(params),
       limit: ITEM_SEARCH_LIMIT,
+      search: trimSearchText(params),
     });
     return api.get(`/items?${queryString}`);
   }
 
   const queryString = buildItemsQueryString({
-    ...params,
     limit: ITEM_SEARCH_LIMIT,
+    ...params,
   });
   return api.get(`/items${queryString ? `?${queryString}` : ''}`);
 };
