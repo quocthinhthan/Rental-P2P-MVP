@@ -17,6 +17,8 @@
     "react-i18next": "^17.0.7",
     "react-leaflet": "^4.2.1",
     "react-router-dom": "^7.9.4",
+    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
+    "@ckeditor/ckeditor5-react": "^11.1.2",
     "react-scripts": "5.0.1",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "socket.io-client": "^4.8.3",

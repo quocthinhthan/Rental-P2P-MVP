@@ -198,6 +198,7 @@ function ItemDetailPage() {
      ───────────────────────────────────── */
   useEffect(() => {
     if (!itemId) return;
+    window.scrollTo(0, 0);
 
     const fetchItem = async () => {
       setLoading(true);
@@ -241,6 +242,9 @@ function ItemDetailPage() {
         setError('Không thể tải dữ liệu sản phẩm.');
       } finally {
         setLoading(false);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 100);
       }
     };
 

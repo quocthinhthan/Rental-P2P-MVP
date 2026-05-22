@@ -369,6 +369,29 @@
   color: #111827;
 }
 
+.idp-desc-text .desc-ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+}
+
+.idp-desc-text .desc-ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+}
+
+.idp-desc-text .desc-li {
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.idp-desc-text u {
+  text-decoration: underline;
+}
+
 /* ── Review panel ── */
 .idp-review-score-box {
   background: var(--idp-surface-2);

@@ -9,6 +9,8 @@ import Swal from 'sweetalert2';
 import 'leaflet/dist/leaflet.css';
 import '../styles/PostItemPage.css';
 import { sanitizeDescription } from '../utils/sanitize';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 const DEFAULT_ITEM_LOCATION = {
   lat: 10.7321,
@@ -67,6 +69,24 @@ function LocationMapRecenter({ center }) {
   return null;
 }
 
+const editorConfiguration = {
+  toolbar: [
+    'heading',
+    '|',
+    'bold',
+    'italic',
+    '|',
+    'bulletedList',
+    'numberedList',
+    '|',
+    'blockQuote',
+    '|',
+    'undo',
+    'redo'
+  ],
+  placeholder: 'Mô tả chi tiết tình trạng, phụ kiện đi kèm, hướng dẫn sử dụng và các điều khoản khác...'
+};
+
 function PostItemPage() {
   const { itemId } = useParams();
   const isEditMode = Boolean(itemId);
@@ -108,25 +128,6 @@ function PostItemPage() {
   const watchedCategory = watch('category');
   const watchDescription = watch('description');
 
-  const insertTag = (openTag, closeTag = '') => {
-    const textarea = document.getElementById('item-description');
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-    
-    const replacement = openTag + selectedText + closeTag;
-    const newValue = text.substring(0, start) + replacement + text.substring(end);
-    
-    setValue('description', newValue, { shouldDirty: true, shouldValidate: true });
-    
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + openTag.length, start + openTag.length + selectedText.length);
-    }, 0);
-  };
   const mapCenter = selectedLocation || DEFAULT_ITEM_LOCATION;
   const tileSource = TILE_SOURCES[tileSourceIndex];
 
@@ -441,60 +442,9 @@ function PostItemPage() {
                     
                     <div className="custom-editor-container">
                       <div className="custom-editor-toolbar d-flex flex-wrap align-items-center gap-1 p-2 bg-light border border-bottom-0 rounded-top">
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<b>', '</b>')}
-                          title="In đậm (Bold)"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <i className="fas fa-bold"></i>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<i>', '</i>')}
-                          title="In nghiêng (Italic)"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <i className="fas fa-italic"></i>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<h2>', '</h2>')}
-                          title="Tiêu đề lớn H2"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
-                        >
-                          H2
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<h3>', '</h3>')}
-                          title="Tiêu đề vừa H3"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
-                        >
-                          H3
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<p>', '</p>')}
-                          title="Đoạn văn"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <i className="fas fa-paragraph"></i>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-light border-0"
-                          onClick={() => insertTag('<br/>')}
-                          title="Xuống dòng nhanh"
-                          style={{ width: '32px', height: '32px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <i className="fas fa-level-down-alt"></i>
-                        </button>
+                        <div className="fw-semibold text-muted small px-2">
+                          <i className="fas fa-edit me-1"></i> Trình soạn thảo mô tả
+                        </div>
                         
                         <div className="ms-auto d-flex gap-1">
                           <button
@@ -503,7 +453,7 @@ function PostItemPage() {
                             onClick={() => setShowPreview(false)}
                             style={{ fontSize: '0.78rem', borderRadius: '4px' }}
                           >
-                            <i className="fas fa-edit me-1"></i> Soạn thảo
+                            <i className="fas fa-pencil-alt me-1"></i> Soạn thảo
                           </button>
                           <button
                             type="button"
@@ -511,23 +461,29 @@ function PostItemPage() {
                             onClick={() => setShowPreview(true)}
                             style={{ fontSize: '0.78rem', borderRadius: '4px' }}
                           >
-                            <i className="fas fa-eye me-1"></i> Xem trước
+                            <i className="fas fa-eye me-1"></i> Xem trước bài đăng
                           </button>
                         </div>
                       </div>
 
+                      <input type="hidden" {...register('description')} />
+
                       {!showPreview ? (
-                        <textarea
-                          id="item-description"
-                          className="form-control rounded-0 rounded-bottom border"
-                          rows="6"
-                          {...register('description')}
-                          placeholder="Mô tả tình trạng, phụ kiện đi kèm, lưu ý khi sử dụng... (Bôi đen văn bản hoặc click thanh công cụ để định dạng nhanh)"
-                        />
+                        <div className="ckeditor-wrapper border rounded-bottom bg-white">
+                          <CKEditor
+                            editor={ClassicEditor}
+                            config={editorConfiguration}
+                            data={watchDescription || ''}
+                            onChange={(event, editor) => {
+                              const data = editor.getData();
+                              setValue('description', data, { shouldDirty: true, shouldValidate: true });
+                            }}
+                          />
+                        </div>
                       ) : (
                         <div 
-                          className="custom-editor-preview p-3 border rounded-bottom bg-white overflow-auto text-start" 
-                          style={{ minHeight: '158px', maxHeight: '300px', borderTop: 'none' }}
+                          className="custom-editor-preview p-4 border rounded-bottom bg-white overflow-auto text-start" 
+                          style={{ minHeight: '300px', maxHeight: '500px', borderTop: 'none' }}
                         >
                           {watchDescription ? (
                             <div 

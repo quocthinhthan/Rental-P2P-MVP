@@ -100,8 +100,8 @@ When touching these APIs from the frontend:
 
 ## Description Formatting & Security
 
-- **WYSIWYG Formatting:** Item descriptions can contain basic HTML styling tags. When editing/posting descriptions, the frontend uses a lightweight formatting toolbar in `PostItemPage.js` and a Live Preview rendering system to avoid bulky third-party editor packages.
-- **XSS Sanitization:** To render formatted descriptions safely on the detail page or in previews without risking XSS vulnerability, use the zero-dependency `sanitizeDescription` utility in `frontend/src/utils/sanitize.js`. This function encodes all incoming HTML tags and then selectively restores safe elements (`<b>`, `<strong>`, `<i>`, `<em>`, `<h2>`, `<h3>`, `<h4>`, `<br>`, `<p>`) while converting `\n` to `<br/>`.
+- **WYSIWYG Formatting:** Item descriptions use the premium **CKEditor 5** (Classic Build) editor inside `PostItemPage.js` to enable rich and professional formatting, coupled with a Live Preview rendering system to verify layouts before posting.
+- **XSS Sanitization:** Formatted descriptions are safely rendered using the zero-dependency `sanitizeDescription` utility in `frontend/src/utils/sanitize.js`. This function escapes all input HTML tags for absolute security, and then restores safe formatting tags (like `<b>`, `<strong>`, `<i>`, `<em>`, `<h2>`, `<h3>`, `<h4>`, `<br>`, `<p>`, `<u>`, `<ul>`, `<ol>`, and `<li>`), which are beautifully structured with proper margin and bullet styles in `ItemDetailPage.css`.
 - **Review Breakdown Dashboards:** The reviews tab on details page displays dynamic visual dashboards that compute 1-to-5 star breakdowns based on the user's transaction history reviews. Ensure review cards use standard typography tokens for responsive and beautiful mobile and desktop rendering.
 
 ## Safe Change Checklist
