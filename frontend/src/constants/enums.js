@@ -11,7 +11,8 @@ export const RentalStatus = Object.freeze({
   REJECTED: 'rejected',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  DISPUTED: 'disputed'
 });
 
 export const PaymentStatus = Object.freeze({
@@ -33,7 +34,8 @@ export const RentalStatusI18nKey = Object.freeze({
   [RentalStatus.REJECTED]: 'rental.status.rejected',
   [RentalStatus.IN_PROGRESS]: 'rental.status.in_progress',
   [RentalStatus.COMPLETED]: 'rental.status.completed',
-  [RentalStatus.CANCELLED]: 'rental.status.cancelled'
+  [RentalStatus.CANCELLED]: 'rental.status.cancelled',
+  [RentalStatus.DISPUTED]: 'rental.status.disputed'
 });
 
 export const PaymentStatusI18nKey = Object.freeze({

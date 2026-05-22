@@ -200,8 +200,8 @@ const searchItems = async (req, res) => {
 
     // 6. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
     const itemSummaries = items.map(item => {
-      let trueStatus = item.status;
-      if (item.status === 'rented' && !currentlyRentedItemIds.has(item._id.toString())) {
+      let trueStatus = currentlyRentedItemIds.has(item._id.toString()) ? 'rented' : item.status;
+      if (trueStatus === 'rented' && !currentlyRentedItemIds.has(item._id.toString())) {
         trueStatus = 'available';
       }
 
