@@ -26,6 +26,79 @@ const renderStars = (rating) =>
   ));
 
 /* ─────────────────────────────────────────
+   Helper: availability status calculator
+   ───────────────────────────────────────── */
+const getAvailabilityStatus = (bookedDates) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!bookedDates || bookedDates.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      label: 'Còn trống',
+      subLabel: '✨ Sẵn sàng phục vụ',
+      badgeClass: 'badge-available',
+      activeBookings: []
+    };
+  }
+
+  // Parse and sort bookings ascending by startDate
+  const activeBookings = bookedDates
+    .map(r => {
+      const start = new Date(r.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(r.endDate);
+      end.setHours(0, 0, 0, 0);
+      return { start, end };
+    })
+    .filter(r => r.end >= today) // only care about current or future bookings
+    .sort((a, b) => a.start - b.start);
+
+  if (activeBookings.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      label: 'Còn trống',
+      subLabel: '✨ Sẵn sàng phục vụ',
+      badgeClass: 'badge-available',
+      activeBookings: []
+    };
+  }
+
+  // Check if today falls in any booking range
+  const currentBooking = activeBookings.find(r => today >= r.start && today <= r.end);
+
+  if (currentBooking) {
+    // Find expected free date (day after end date of current booking)
+    const nextFreeDate = new Date(currentBooking.end);
+    nextFreeDate.setDate(nextFreeDate.getDate() + 1);
+    const formattedFreeDate = nextFreeDate.toLocaleDateString('vi-VN');
+
+    return {
+      status: 'RENTED',
+      label: 'Đang được thuê',
+      subLabel: `🕒 Dự kiến trống từ ${formattedFreeDate}`,
+      badgeClass: 'badge-rented',
+      currentBooking,
+      activeBookings
+    };
+  }
+
+  // If today is free but there are future bookings
+  const nextBooking = activeBookings[0]; // first upcoming booking
+  const formattedNextBookingDate = nextBooking.start.toLocaleDateString('vi-VN');
+
+  return {
+    status: 'AVAILABLE_TODAY',
+    label: 'Còn trống hôm nay',
+    subLabel: `⚠️ Bận từ ${formattedNextBookingDate}`,
+    badgeClass: 'badge-available-today',
+    nextBooking,
+    activeBookings
+  };
+};
+
+
+/* ─────────────────────────────────────────
    Helper: related product card
    ───────────────────────────────────────── */
 function ProdCard({ item }) {
@@ -359,6 +432,7 @@ function ItemDetailPage() {
   if (!item)  return <div className="alert alert-warning m-4">Vật phẩm không tồn tại.</div>;
 
   const isOwner = isLoggedIn && user?._id === item.owner._id;
+  const availability = getAvailabilityStatus(item.bookedDates);
   const allImages = item.images?.length ? item.images : [item.mainImage || 'https://via.placeholder.com/600'];
   const activeImageSources = getDetailMainImage(allImages[activeImg]);
   const depositPercentage = Number(item.depositPercentage ?? 100);
@@ -483,27 +557,50 @@ function ItemDetailPage() {
             {/* Title */}
             <h1 className="idp-product-title">{item.name}</h1>
 
-            <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
-              <span className="idp-category-badge">
-                <i className="fa fa-tag" style={{ fontSize: '.65rem' }} /> {item.category || 'Khác'}
-              </span>
-              <span className="idp-code">{formatItemCode(item)}</span>
-              <RatingSummary
-                averageRating={ownerProfile?.averageRating}
-                totalReviews={ownerProfile?.totalReviews}
-                muted
-              />
-              {ownerProfile && <TrustBadge user={ownerProfile} />}
+            {/* Row 1: Low-key Metadata (Category, Code, Rating, Report on far right) */}
+            <div className="idp-meta-top-row d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+              <div className="d-flex align-items-center gap-2 flex-wrap text-muted small">
+                <span className="idp-category-tag">
+                  <i className="fa fa-tag me-1" /> {item.category || 'Khác'}
+                </span>
+                <span className="idp-meta-dot">•</span>
+                <span className="idp-code-text">{formatItemCode(item)}</span>
+                <span className="idp-meta-dot">•</span>
+                <RatingSummary
+                  averageRating={ownerProfile?.averageRating}
+                  totalReviews={ownerProfile?.totalReviews}
+                  muted
+                />
+              </div>
+              
               {!isOwner && (
                 <button
                   type="button"
-                  className="idp-report-btn ms-auto"
+                  className="idp-report-text-btn"
                   onClick={handleReportClick}
                   title="Báo cáo sản phẩm vi phạm"
                 >
-                  <i className="far fa-flag me-1" /> Báo cáo
+                  <i className="far fa-flag me-1" /> Báo cáo vi phạm
                 </button>
               )}
+            </div>
+
+            {/* Row 2: Status & Trust Indicators (High-priority action-oriented info) */}
+            <div className="d-flex align-items-center gap-3 mb-4 flex-wrap">
+              <span className={`idp-status-badge ${availability.badgeClass}`}>
+                {availability.status === 'AVAILABLE' && <i className="fas fa-check-circle me-1" />}
+                {availability.status === 'AVAILABLE_TODAY' && <i className="fas fa-info-circle me-1" />}
+                {availability.status === 'RENTED' && <i className="fas fa-history me-1" />}
+                {availability.label}
+              </span>
+              
+              {availability.subLabel && (
+                <span className={`idp-status-sublabel ${availability.badgeClass}`}>
+                  {availability.subLabel}
+                </span>
+              )}
+
+              {ownerProfile && <TrustBadge user={ownerProfile} />}
             </div>
 
             <div className="mb-4">
@@ -548,6 +645,36 @@ function ItemDetailPage() {
                             monthsShown={1}
                           />
                         </div>
+
+                        {/* Hộp lịch bận sắp tới */}
+                        <div className="idp-schedule-box mt-3">
+                          <div className="idp-schedule-header">
+                            <i className="far fa-calendar-alt text-primary me-2" />
+                            <span>Lịch bận sắp tới</span>
+                          </div>
+                          {availability.activeBookings.length === 0 ? (
+                            <div className="idp-schedule-empty">
+                              ✨ Chưa có lịch bận sắp tới - Sẵn sàng phục vụ bất cứ lúc nào!
+                            </div>
+                          ) : (
+                            <div className="idp-schedule-list">
+                              {availability.activeBookings.slice(0, 3).map((booking, idx) => (
+                                <div key={idx} className="idp-schedule-item">
+                                  <span className="idp-schedule-bullet" />
+                                  <span className="idp-schedule-dates">
+                                    {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
+                                  </span>
+                                  <span className="idp-schedule-status-tag">Đã đặt</span>
+                                </div>
+                              ))}
+                              {availability.activeBookings.length > 3 && (
+                                <div className="idp-schedule-more text-muted mt-1 small">
+                                  + và {availability.activeBookings.length - 3} lịch thuê khác...
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="mb-4">
                         <label className="form-label fw-bold small text-muted text-uppercase mb-2 d-block">
@@ -588,18 +715,45 @@ function ItemDetailPage() {
                     </form>
                   </>
                 ) : (
-                  <div className="alert alert-info border-0 rounded-4 text-center mb-0 shadow-sm py-4">
-                    <div
-                      className="bg-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm"
-                      style={{ width: '60px', height: '60px' }}
-                    >
-                      <i className="fas fa-box-open fa-2x text-info" />
+                  <>
+                    <div className="alert alert-info border-0 rounded-4 text-center mb-4 shadow-sm py-4">
+                      <div
+                        className="bg-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm"
+                        style={{ width: '60px', height: '60px' }}
+                      >
+                        <i className="fas fa-box-open fa-2x text-info" />
+                      </div>
+                      <h5 className="fw-bold text-dark">Vật dụng của bạn</h5>
+                      <p className="mb-0 text-muted small">
+                        Bạn đang xem giao diện chi tiết vật dụng do chính bạn đăng tải.
+                      </p>
                     </div>
-                    <h5 className="fw-bold text-dark">Vật dụng của bạn</h5>
-                    <p className="mb-0 text-muted small">
-                      Bạn đang xem giao diện chi tiết vật dụng do chính bạn đăng tải.
-                    </p>
-                  </div>
+
+                    {/* Hộp lịch bận sắp tới cho chủ sở hữu */}
+                    <div className="idp-schedule-box">
+                      <div className="idp-schedule-header">
+                        <i className="far fa-calendar-alt text-primary me-2" />
+                        <span>Lịch bận sắp tới</span>
+                      </div>
+                      {availability.activeBookings.length === 0 ? (
+                        <div className="idp-schedule-empty text-center text-muted py-3">
+                          ✨ Chưa có lịch bận sắp tới cho sản phẩm của bạn.
+                        </div>
+                      ) : (
+                        <div className="idp-schedule-list">
+                          {availability.activeBookings.map((booking, idx) => (
+                            <div key={idx} className="idp-schedule-item">
+                              <span className="idp-schedule-bullet" />
+                              <span className="idp-schedule-dates">
+                                {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
+                              </span>
+                              <span className="idp-schedule-status-tag">Đã đặt</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
 

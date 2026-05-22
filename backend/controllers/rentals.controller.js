@@ -61,6 +61,79 @@ const buildFrontendVNPayReturnUrl = (params = {}) => {
   return `${frontendUrl}/vnpay-return${query ? `?${query}` : ''}`;
 };
 
+const BOOKING_BLOCKING_STATUSES = [
+  RentalStatus.PENDING_CONFIRMATION,
+  RentalStatus.CONFIRMED,
+  RentalStatus.IN_PROGRESS,
+  RentalStatus.DISPUTED
+];
+
+const parseRentalDateRange = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+    return null;
+  }
+
+  return { start, end };
+};
+
+const findOverlappingBooking = ({ itemId, startDate, endDate, excludeRentalId = null }) => {
+  const query = {
+    itemId,
+    status: { $in: BOOKING_BLOCKING_STATUSES },
+    startDate: { $lte: endDate },
+    endDate: { $gte: startDate }
+  };
+
+  if (excludeRentalId) {
+    query._id = { $ne: excludeRentalId };
+  }
+
+  return Rental.findOne(query).select('_id code status startDate endDate');
+};
+
+const updateItemRuntimeStatus = async (itemId) => {
+  const item = await Item.findById(itemId).select('_id status');
+  if (!item || item.status === ItemStatus.DELISTED) {
+    return item;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const currentRental = await Rental.findOne({
+    itemId,
+    status: { $in: [RentalStatus.CONFIRMED, RentalStatus.IN_PROGRESS, RentalStatus.DISPUTED] },
+    startDate: { $lt: tomorrow },
+    endDate: { $gte: today }
+  }).select('_id');
+
+  const nextStatus = currentRental ? ItemStatus.RENTED : ItemStatus.AVAILABLE;
+  if (item.status !== nextStatus) {
+    item.status = nextStatus;
+    await item.save();
+  }
+
+  return item;
+};
+
+const applyRentalCancellation = async (rental, cancelledBy, reason = '') => {
+  const wasEscrowed = rental.paymentStatus === PaymentStatus.ESCROWED;
+  rental.status = RentalStatus.CANCELLED;
+  rental.paymentStatus = wasEscrowed ? PaymentStatus.REFUNDED : rental.paymentStatus;
+  rental.cancellationReason = typeof reason === 'string' ? reason.trim().slice(0, 500) : '';
+  rental.cancelledBy = cancelledBy;
+  rental.cancelledAt = new Date();
+  await rental.save();
+  await updateItemRuntimeStatus(rental.itemId);
+
+  return rental;
+};
+
 // POST /api/rentals (Create a rental request)
 exports.createRentalRequest = async (req, res) => {
   const { itemId, startDate, endDate, note } = req.body;
@@ -78,15 +151,30 @@ exports.createRentalRequest = async (req, res) => {
     if (item.ownerId.equals(renterId)) {
       return res.status(400).json({ message: MESSAGES.RENTAL.OWN_ITEM_NOT_ALLOWED });
     }
-    if (item.status !== ItemStatus.AVAILABLE) {
+    if (item.status === ItemStatus.DELISTED) {
       return res.status(400).json({ message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const rentalRange = parseRentalDateRange(startDate, endDate);
+    if (!rentalRange) {
+      return res.status(400).json({ message: MESSAGES.RENTAL.INVALID_DATE_RANGE });
+    }
+    const { start, end } = rentalRange;
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     if (days <= 0) {
       return res.status(400).json({ message: MESSAGES.RENTAL.INVALID_DATE_RANGE });
+    }
+
+    const overlappingRental = await findOverlappingBooking({
+      itemId,
+      startDate: start,
+      endDate: end
+    });
+    if (overlappingRental) {
+      return res.status(400).json({
+        message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE,
+        overlappingRental
+      });
     }
     const rentalFee = days * item.pricePerDay;
     const depositAmount = (item.baseValue * item.depositPercentage) / 100;
@@ -139,6 +227,24 @@ exports.createVNPayUrl = async (req, res) => {
 
     if (rental.status !== RentalStatus.PENDING_PAYMENT || rental.paymentStatus !== PaymentStatus.PENDING) {
       return res.status(400).json({ message: MESSAGES.RENTAL.WAITING_PAYMENT_REQUIRED });
+    }
+
+    const item = await Item.findById(rental.itemId).select('_id status');
+    if (!item || item.status === ItemStatus.DELISTED) {
+      return res.status(400).json({ message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE });
+    }
+
+    const overlappingRental = await findOverlappingBooking({
+      itemId: rental.itemId,
+      startDate: rental.startDate,
+      endDate: rental.endDate,
+      excludeRentalId: rental._id
+    });
+    if (overlappingRental) {
+      return res.status(400).json({
+        message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE,
+        overlappingRental
+      });
     }
 
     const requiredEnv = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
@@ -230,6 +336,29 @@ exports.handleVNPayReturn = async (req, res) => {
 
     if (vnpParams.vnp_ResponseCode === '00') {
       if (rental.paymentStatus !== PaymentStatus.ESCROWED) {
+        const item = await Item.findById(rental.itemId).select('_id status');
+        const overlappingRental = await findOverlappingBooking({
+          itemId: rental.itemId,
+          startDate: rental.startDate,
+          endDate: rental.endDate,
+          excludeRentalId: rental._id
+        });
+
+        if (!item || item.status === ItemStatus.DELISTED || overlappingRental) {
+          rental.paymentStatus = PaymentStatus.REFUNDED;
+          rental.status = RentalStatus.CANCELLED;
+          rental.cancellationReason = 'Lịch thuê đã không còn khả dụng trước khi xác nhận thanh toán.';
+          rental.cancelledAt = new Date();
+          await rental.save();
+
+          return res.redirect(buildFrontendVNPayReturnUrl({
+            status: 'refunded',
+            rentalId: rental._id.toString(),
+            rentalCode: rental.code || '',
+            message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE
+          }));
+        }
+
         await Rental.findByIdAndUpdate(rental._id, {
           paymentStatus: PaymentStatus.ESCROWED,
           status: RentalStatus.PENDING_CONFIRMATION
@@ -292,8 +421,21 @@ exports.confirmRental = async (req, res) => {
     const item = await Item.findById(rental.itemId);
     let contract = await Contract.findOne({ rentalId: rental._id });
     // Dùng Enum
-    if (!item || (!contract && item.status !== ItemStatus.AVAILABLE)) {
+    if (!item || item.status === ItemStatus.DELISTED) {
       return res.status(400).json({ message: MESSAGES.ITEM.NO_LONGER_AVAILABLE });
+    }
+
+    const overlappingRental = await findOverlappingBooking({
+      itemId: rental.itemId,
+      startDate: rental.startDate,
+      endDate: rental.endDate,
+      excludeRentalId: rental._id
+    });
+    if (overlappingRental) {
+      return res.status(400).json({
+        message: MESSAGES.RENTAL.ITEM_NOT_AVAILABLE,
+        overlappingRental
+      });
     }
 
     const owner = await User.findById(rental.ownerId);
@@ -319,7 +461,6 @@ exports.confirmRental = async (req, res) => {
     }
 
     // Dùng Enum cập nhật trạng thái
-    await Item.findByIdAndUpdate(item._id, { status: ItemStatus.RENTED });
     const savedRental = await Rental.findByIdAndUpdate(
       rental._id,
       {
@@ -328,13 +469,13 @@ exports.confirmRental = async (req, res) => {
       },
       { new: true }
     );
+    await updateItemRuntimeStatus(item._id);
 
     res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract });
   } catch (error) {
     if (error.code === 11000) {
       const existingContract = await Contract.findOne({ rentalId: rental._id });
       if (existingContract) {
-        await Item.findByIdAndUpdate(rental.itemId, { status: ItemStatus.RENTED });
         const savedRental = await Rental.findByIdAndUpdate(
           rental._id,
           {
@@ -343,6 +484,7 @@ exports.confirmRental = async (req, res) => {
           },
           { new: true }
         );
+        await updateItemRuntimeStatus(rental.itemId);
 
         return res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract: existingContract });
       }
@@ -363,11 +505,18 @@ exports.rejectRental = async (req, res) => {
   // Dùng findByIdAndUpdate để tránh lỗi validation trên dữ liệu cũ
   const savedRental = await Rental.findByIdAndUpdate(
     rental._id, 
-    { status: RentalStatus.REJECTED }, 
+    {
+      status: RentalStatus.REJECTED,
+      paymentStatus: rental.paymentStatus === PaymentStatus.ESCROWED
+        ? PaymentStatus.REFUNDED
+        : rental.paymentStatus
+    }, 
     { new: true }
   );
 
   // Gửi message đến RabbitMQ
+  await updateItemRuntimeStatus(rental.itemId);
+
   publishToQueue({
     task: 'rental_status_changed',
     rentalId: savedRental._id,
@@ -375,6 +524,58 @@ exports.rejectRental = async (req, res) => {
   });
 
   res.status(200).json(savedRental);
+};
+
+// PATCH /api/rentals/:id/cancel
+exports.cancelRental = async (req, res) => {
+  const { reason = '' } = req.body;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: MESSAGES.COMMON.INVALID_RENTAL_ID });
+    }
+
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) {
+      return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
+    }
+
+    const isRenter = rental.renterId.equals(req.user._id);
+    const isOwner = rental.ownerId.equals(req.user._id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isRenter && !isOwner && !isAdmin) {
+      return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
+    }
+
+    if ([RentalStatus.COMPLETED, RentalStatus.REJECTED, RentalStatus.CANCELLED, RentalStatus.DISPUTED].includes(rental.status)) {
+      return res.status(400).json({ message: 'Không thể hủy đơn thuê ở trạng thái hiện tại.' });
+    }
+
+    if (rental.status === RentalStatus.IN_PROGRESS || rental.pickupImages?.length > 0) {
+      return res.status(400).json({ message: 'Không thể hủy đơn sau khi đã bàn giao. Vui lòng dùng luồng tranh chấp.' });
+    }
+
+    if (rental.status === RentalStatus.PENDING_PAYMENT && !isRenter && !isAdmin) {
+      return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
+    }
+
+    const cancelledRental = await applyRentalCancellation(rental, req.user._id, reason);
+
+    publishToQueue({
+      task: 'rental_status_changed',
+      rentalId: cancelledRental._id,
+      status: RentalStatus.CANCELLED
+    });
+
+    res.status(200).json({
+      message: cancelledRental.paymentStatus === PaymentStatus.REFUNDED
+        ? 'Đã hủy đơn và đánh dấu hoàn tiền ký quỹ.'
+        : 'Đã hủy đơn thuê thành công.',
+      rental: cancelledRental
+    });
+  } catch (error) {
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
+  }
 };
 
 // PATCH /api/rentals/:id/complete
@@ -397,7 +598,6 @@ exports.completeRental = async (req, res) => {
         return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
       }
 
-      await Item.findByIdAndUpdate(rental.itemId, { status: ItemStatus.AVAILABLE });
       const savedRental = await Rental.findByIdAndUpdate(
         rental._id,
         {
@@ -406,6 +606,7 @@ exports.completeRental = async (req, res) => {
         },
         { new: true }
       );
+      await updateItemRuntimeStatus(rental.itemId);
 
       await Promise.all([
         recalculateUserTrustScore(rental.renterId),

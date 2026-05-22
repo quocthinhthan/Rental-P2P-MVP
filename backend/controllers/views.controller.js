@@ -95,6 +95,10 @@ exports.getMyRentalsView = async (req, res) => {
       .populate({
           path: 'renterId',
           select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'cancelledBy',
+          select: '_id fullName email'
       });
 
     // 2. Lấy các đơn tôi là chủ (asOwner)
@@ -114,6 +118,10 @@ exports.getMyRentalsView = async (req, res) => {
       .populate({
           path: 'ownerId',
           select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'cancelledBy',
+          select: '_id fullName email'
       });
     
     // 3. Lấy các vật phẩm tôi đã đăng (myItems)
@@ -234,6 +242,9 @@ exports.getMyRentalsView = async (req, res) => {
             paymentStatus: rental.paymentStatus,
             status: rental.status,
             note: rental.note,
+            cancellationReason: rental.cancellationReason || '',
+            cancelledBy: rental.cancelledBy || null,
+            cancelledAt: rental.cancelledAt || null,
             contractId: rental.contractId,
             pickupImages: rental.pickupImages || [],
             returnImages: rental.returnImages || [],

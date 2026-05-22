@@ -34,6 +34,9 @@ const RentalSchema = new mongoose.Schema({
     default: PaymentStatus.PENDING
   },
   note: { type: String, default: '' },
+  cancellationReason: { type: String, default: '' },
+  cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  cancelledAt: { type: Date, default: null },
 
   contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' }, // Link tới hợp đồng
   pickupImages: [{ type: String }], // Ảnh lúc nhận đồ

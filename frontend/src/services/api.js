@@ -149,6 +149,8 @@ export const confirmRental = (rentalId) => api.patch(`/rentals/${rentalId}/confi
 
 export const rejectRental = (rentalId) => api.patch(`/rentals/${rentalId}/reject`);
 
+export const cancelRental = (rentalId, reason = '') => api.patch(`/rentals/${rentalId}/cancel`, { reason });
+
 export const getRentalContract = (rentalId) => api.get(`/rentals/${rentalId}/contract`);
 
 export const signContract = (rentalId, signatureUrl) =>
@@ -278,6 +280,7 @@ const apiService = {
   createVNPayUrl,
   confirmRental,
   rejectRental,
+  cancelRental,
   getRentalContract,
   signContract,
   pickupRental,

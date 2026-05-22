@@ -10,6 +10,7 @@ function VNPayReturnPage() {
   const message = searchParams.get('message');
 
   const isSuccess = status === 'success';
+  const isRefunded = status === 'refunded';
 
   return (
     <>
@@ -35,7 +36,7 @@ function VNPayReturnPage() {
               <div className="bg-white rounded p-5 shadow-sm">
                 <i
                   className={`bi ${
-                    isSuccess
+                    isSuccess || isRefunded
                       ? 'bi-check-circle text-success'
                       : 'bi-x-circle text-danger'
                   } display-1`}
@@ -44,13 +45,17 @@ function VNPayReturnPage() {
                 <h2 className="mt-4 mb-3">
                   {isSuccess
                     ? 'Thanh toán ký quỹ thành công'
-                    : 'Thanh toán chưa thành công'}
+                    : isRefunded
+                      ? 'Đơn đã được hoàn tiền'
+                      : 'Thanh toán chưa thành công'}
                 </h2>
 
                 <p className="mb-4 text-muted">
                   {isSuccess
                     ? 'Đơn thuê của bạn đã được chuyển sang trạng thái chờ chủ cửa hàng xác nhận.'
-                    : 'Giao dịch VNPay không thành công hoặc không thể xác thực. Bạn có thể thử thanh toán lại trong mục Đơn thuê của tôi.'}
+                    : isRefunded
+                      ? 'Lịch thuê vừa được giữ bởi đơn khác hoặc sản phẩm không còn khả dụng. Hệ thống đã đánh dấu hoàn tiền cho đơn này.'
+                      : 'Giao dịch VNPay không thành công hoặc không thể xác thực. Bạn có thể thử thanh toán lại trong mục Đơn thuê của tôi.'}
                 </p>
 
                 {rentalId && (
@@ -59,7 +64,7 @@ function VNPayReturnPage() {
                   </p>
                 )}
 
-                {!isSuccess && responseCode && (
+                {!isSuccess && !isRefunded && responseCode && (
                   <p className="mb-2">
                     <strong>Mã phản hồi VNPay:</strong> {responseCode}
                   </p>

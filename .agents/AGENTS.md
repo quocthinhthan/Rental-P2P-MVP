@@ -18,6 +18,67 @@ This repository is a web platform for peer-to-peer personal item rentals. Users 
 
 Use this file as persistent project context. The existing frontend UI and API integrations are mostly implemented and working. Do not rewrite large flows, introduce new architecture, or replace established patterns unless the user explicitly asks for that.
 
+## Current Project Map
+
+Backend and frontend are the main working areas. Keep `mobile/` out of searches and edits unless the user explicitly asks for mobile work.
+
+### Backend
+
+- Runtime: Node.js, Express, CommonJS, Mongoose, Socket.IO, RabbitMQ, Cloudinary, Swagger UI.
+- Main entry point: `backend/server.js`. This file loads env, connects MongoDB, tries RabbitMQ, configures Socket.IO chat auth, mounts REST routes, and exposes `/api-docs`.
+- `backend/app.js` is an older/exportable Express app shape. Check whether a task actually uses it before editing it; the npm entry currently points to `server.js`.
+- `backend/routes/`: URL definitions and route-level middleware. Add or verify endpoints here first.
+- `backend/controllers/`: REST business logic for auth, items, rentals, disputes, admin, views, users, and reviews.
+- `backend/models/`: Mongoose schemas for `User`, `Item`, `Rental`, `Contract`, `Dispute`, `Message`, `Review`, `ItemReport`, and `AuditLog`.
+- `backend/enums/`: backend source of truth for item, rental/payment, and dispute status constants.
+- `backend/middleware/auth.middleware.js`: shared auth/permission middleware: `protect`, `admin`, `checkVerified`.
+- `backend/services/`: shared domain logic such as chat authorization and trust score recalculation.
+- `backend/config/`: MongoDB, RabbitMQ, and Cloudinary configuration.
+- `backend/scripts/`: migration/backfill/maintenance scripts. Most require a valid `MONGO_URI`.
+- `backend/constants/` and `backend/utils/`: reusable messages and helpers.
+
+Mounted backend API groups in `server.js`:
+
+- `/api/auth`: register, login, logout, current user, profile, eKYC, forgot/reset password.
+- `/api/items`: item search/list, categories, bestsellers, create/update/delete, price suggestion, item report.
+- `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup, completion, rental messages.
+- `/api/views`: BFF-style read endpoints for item detail and the current user's rentals.
+- `/api/admin`: dashboard, user moderation, item moderation, featured/status updates, item reports.
+- `/api/upload`: Cloudinary image upload/delete.
+- `/api/users`: public profile.
+- `/api/reviews`: create review and list user reviews.
+- `/api/disputes`: create, list for admin, withdraw, escalate, resolve.
+
+### Frontend
+
+- Runtime: React CRA, React Router, axios, Socket.IO client, i18next, Leaflet, SweetAlert2, CKEditor.
+- Main entry point: `frontend/src/index.js`. It wraps the app with `BrowserRouter`, `LoadingProvider`, and `AuthProvider`.
+- Routes live in `frontend/src/App.js`. Public pages are direct routes; authenticated pages are nested under `<ProtectedRoute />`.
+- `frontend/src/services/api.js`: central axios instance, auth token interceptor, global loading hooks, and exported API client functions. Prefer adding API wrappers here instead of calling axios directly from pages.
+- `frontend/src/services/chatSocket.js`: rental chat Socket.IO client. It reads the same stored token as the API client.
+- `frontend/src/contexts/AuthContext.js`: auth state, token storage, `/auth/me` bootstrap, login/logout/updateUser helpers.
+- `frontend/src/contexts/LoadingContext.js`: global spinner state used by the axios interceptor.
+- `frontend/src/pages/`: page-level screens for home/shop/item detail/auth/account/rentals/admin/disputes/VNPay return.
+- `frontend/src/components/`: reusable UI grouped by domain:
+  - `Layout`: header/footer.
+  - `Auth`: protected route.
+  - `Common`: spinner and location picker.
+  - `Items`: item card/list/report modal.
+  - `Rentals`: contract, signature, handover, chat panels.
+  - `Admin`: admin nav/hero/dispute resolution form.
+  - `Trust`: trust badge.
+- `frontend/src/constants/`: frontend enum/status UI mapping. Keep these aligned with backend enums when statuses change.
+- `frontend/src/styles/`, `App.css`, and `index.css`: page/component CSS. Prefer extending the nearest existing style file.
+- `frontend/src/locales/vi.json` and `frontend/src/config/i18n.js`: Vietnamese localization setup.
+- `frontend/public/`: template/static assets, Bootstrap files, legacy JS/CSS libs, and demo images. Avoid broad cleanup here unless the task targets static assets.
+
+### Local Scripts
+
+- Usual local startup: from the repository root, run `.\start-all.ps1` to start the whole project.
+- Backend only: from `backend/`, use `npm run dev` for nodemon or `npm start` for `node server.js`.
+- Frontend only: from `frontend/`, use `npm start`; the custom script sets `PORT` from `FRONTEND_PORT` or defaults to `3000`.
+- Backend test script is still the default failing placeholder. Frontend uses `react-scripts test`.
+
 ## Working Principles
 
 - Preserve the current UI and behavior as much as possible.
@@ -43,12 +104,16 @@ The rental lifecycle is:
 7. Return is recorded with proof images.
 8. Rental is completed.
 
+Rentals can be cancelled before handover. If escrow was already paid, cancellation/rejection marks `paymentStatus` as `refunded`; after pickup, users should use the dispute flow instead of cancellation.
+
 
 ## Business Rules
 
 - Pickup is allowed only after the contract is fully signed.
 - Pickup requires `pickupImages`.
 - Completion requires `returnImages`.
+- Booking availability is date-range based. `Item.status = rented` is not a global lock for all future rentals; new rental/payment/confirmation checks must reject only overlapping active bookings.
+- Blocking rental statuses for booking overlap are `pending_confirmation`, `confirmed`, `in_progress`, and `disputed`.
 - Backend authorization rules decide which user can perform each action.
 - Frontend should display and submit data according to backend state, not local assumptions.
 - Rental statuses must be verified from backend implementation before conditional UI or API changes.
@@ -61,6 +126,7 @@ The rental lifecycle is:
 Verify the exact implementation before using or modifying these endpoints:
 
 - `PATCH /api/rentals/{id}/confirm`
+- `PATCH /api/rentals/{id}/cancel`
 - `POST /api/upload`
 - `POST /api/rentals/{id}/sign-contract`
 - `PATCH /api/rentals/{id}/pickup`
@@ -103,6 +169,8 @@ When touching these APIs from the frontend:
 - **WYSIWYG Formatting:** Item descriptions use the premium **CKEditor 5** (Classic Build) editor inside `PostItemPage.js` to enable rich and professional formatting, coupled with a Live Preview rendering system to verify layouts before posting.
 - **XSS Sanitization:** Formatted descriptions are safely rendered using the zero-dependency `sanitizeDescription` utility in `frontend/src/utils/sanitize.js`. This function escapes all input HTML tags for absolute security, and then restores safe formatting tags (like `<b>`, `<strong>`, `<i>`, `<em>`, `<h2>`, `<h3>`, `<h4>`, `<br>`, `<p>`, `<u>`, `<ul>`, `<ol>`, and `<li>`), which are beautifully structured with proper margin and bullet styles in `ItemDetailPage.css`.
 - **Review Breakdown Dashboards:** The reviews tab on details page displays dynamic visual dashboards that compute 1-to-5 star breakdowns based on the user's transaction history reviews. Ensure review cards use standard typography tokens for responsive and beautiful mobile and desktop rendering.
+- **Smart Availability & Busy Schedule:** Product details page (`ItemDetailPage.js`) dynamically computes Today's availability status based on local timezone-safe `item.bookedDates` normalization (AVAILABLE "Còn trống", AVAILABLE_TODAY "Còn trống hôm nay", or RENTED "Đang được thuê"). It also displays a premium "Lịch bận sắp tới" (Upcoming Schedule) list widget for both renters (first 3 entries with '+ more' label) and owners (full entries list) to aid rental planning.
+
 
 ## Safe Change Checklist
 

@@ -7,6 +7,7 @@ const {
   handleVNPayReturn,
   confirmRental,
   rejectRental,
+  cancelRental,
   completeRental,
   checkRentalOwner,
   signContract,
@@ -31,6 +32,9 @@ router.patch('/:id/confirm', protect, checkRentalOwner, confirmRental);
 
 // PATCH /api/rentals/:id/reject - (Owner) Từ chối
 router.patch('/:id/reject', protect, checkRentalOwner, rejectRental);
+
+// PATCH /api/rentals/:id/cancel - (Renter/Owner/Admin) Cancel before handover
+router.patch('/:id/cancel', protect, cancelRental);
 
 // PATCH /api/rentals/:id/complete - (Owner hoặc Renter) Hoàn thành
 router.patch('/:id/complete', protect, completeRental);
