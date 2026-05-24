@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import ItemList from '../components/Items/ItemList';
+import ItemCard from '../components/Items/ItemCard';
 import apiService from '../services/api';
 // Import file CSS riêng
 import '../styles/ShopPage.css';
@@ -22,6 +22,14 @@ function ShopPage() {
   });
   const [radius, setRadius] = useState(searchParams.get('radius') || '');
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isFeaturedOnly, setIsFeaturedOnly] = useState(false);
+
+  // States for client-side pagination and item fetching
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -59,6 +67,10 @@ function ShopPage() {
       ownerId,
     };
 
+    if (isFeaturedOnly) {
+      nextFilters.isFeatured = true;
+    }
+
     if (nearbyLocation) {
       nextFilters.lat = nearbyLocation.lat;
       nextFilters.lng = nearbyLocation.lng;
@@ -66,7 +78,7 @@ function ShopPage() {
     }
 
     return nextFilters;
-  }, [searchInput, category, address, startDate, endDate, ownerId, nearbyLocation, radius]);
+  }, [searchInput, category, address, startDate, endDate, ownerId, nearbyLocation, radius, isFeaturedOnly]);
 
   const locationPickerFilters = useMemo(() => ({
     search: searchInput.trim(),
@@ -76,6 +88,24 @@ function ShopPage() {
     endDate,
     ownerId,
   }), [searchInput, category, address, startDate, endDate, ownerId]);
+
+  // Effect to fetch items on filters change
+  useEffect(() => {
+    const fetchItems = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await apiService.getItems({ ...filters, limit: 1000 });
+        setItems(response.data || []);
+        setCurrentPage(1);
+      } catch (err) {
+        console.error('Lỗi khi tải sản phẩm:', err);
+        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+      }
+      setLoading(false);
+    };
+    fetchItems();
+  }, [filters]);
 
   const handleReset = () => {
     setSearchInput('');
@@ -87,6 +117,8 @@ function ShopPage() {
     setNearbyLocation(null);
     setRadius('');
     setIsCategoryOpen(false);
+    setIsFeaturedOnly(false);
+    setCurrentPage(1);
   };
 
   const handleCategorySelect = (catName) => {
@@ -121,6 +153,7 @@ function ShopPage() {
     filters.startDate ||
     filters.endDate ||
     filters.ownerId ||
+    isFeaturedOnly ||
     hasNearbyFilter
   );
 
@@ -246,6 +279,23 @@ function ShopPage() {
                 </div>
               </div>
 
+              {/* Lọc sản phẩm nổi bật */}
+              <div className="filter-group">
+                <div className="form-check form-switch d-flex align-items-center justify-content-between p-0">
+                  <label className="filter-label m-0 cursor-pointer shop-featured-toggle-label" htmlFor="featuredSwitch">
+                    ⭐ Nổi bật VIP
+                  </label>
+                  <input
+                    className="form-check-input ms-0 cursor-pointer shop-featured-toggle-input"
+                    type="checkbox"
+                    role="switch"
+                    id="featuredSwitch"
+                    checked={isFeaturedOnly}
+                    onChange={(e) => setIsFeaturedOnly(e.target.checked)}
+                  />
+                </div>
+              </div>
+
               <hr className="my-4 text-muted" />
 
               {/* Tìm quanh đây (Bản đồ) */}
@@ -315,7 +365,86 @@ function ShopPage() {
             </div>
             
             {/* Component hiển thị danh sách sản phẩm */}
-            <ItemList filters={filters} />
+            {loading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-3 text-muted">Đang tải danh sách sản phẩm...</p>
+              </div>
+            ) : error ? (
+              <div className="alert alert-danger shadow-sm rounded-3 py-3" role="alert">
+                <i className="fas fa-exclamation-circle me-2"></i> {error}
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-5 bg-white rounded-3 shadow-sm border border-light">
+                <p className="fs-5 text-muted mb-0">Không tìm thấy sản phẩm nào phù hợp.</p>
+              </div>
+            ) : (
+              <>
+                <div className="row g-4">
+                  {items.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(item => (
+                    <ItemCard key={item._id} item={item} />
+                  ))}
+                </div>
+
+                {/* Phân trang */}
+                <div className="pagination-container d-flex align-items-center justify-content-between flex-wrap gap-3 mt-5">
+                  <div className="d-flex align-items-center gap-3 flex-wrap text-muted small">
+                    <span>Tổng số <strong>{items.length}</strong> sản phẩm</span>
+                    <select
+                      className="form-select form-select-sm shop-page-size-select cursor-pointer shadow-sm"
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option value={10}>10 / trang</option>
+                      <option value={20}>20 / trang</option>
+                      <option value={50}>50 / trang</option>
+                    </select>
+                  </div>
+
+                  {/* Điều hướng trang */}
+                  {Math.ceil(items.length / pageSize) > 1 && (
+                    <nav aria-label="Page navigation">
+                      <ul className="pagination shop-pagination pagination-sm m-0 gap-1">
+                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                          <button
+                            className="page-link rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                            style={{ width: '32px', height: '32px' }}
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          >
+                            <i className="fas fa-chevron-left" style={{ fontSize: '0.75rem' }}></i>
+                          </button>
+                        </li>
+                        {Array.from({ length: Math.ceil(items.length / pageSize) }, (_, i) => i + 1).map(page => (
+                          <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                            <button
+                              className="page-link rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                              style={{ width: '32px', height: '32px', fontWeight: 'bold' }}
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </button>
+                          </li>
+                        ))}
+                        <li className={`page-item ${currentPage === Math.ceil(items.length / pageSize) ? 'disabled' : ''}`}>
+                          <button
+                            className="page-link rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                            style={{ width: '32px', height: '32px' }}
+                            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(items.length / pageSize), prev + 1))}
+                          >
+                            <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }}></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
         </div>

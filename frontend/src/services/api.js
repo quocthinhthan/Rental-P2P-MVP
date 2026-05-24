@@ -71,15 +71,15 @@ export const verifyEKYC = (idCardFrontUrl) => api.post('/auth/verify-ekyc', { id
 export const getItems = (params = {}) => {
   if (typeof params === 'string') {
     const queryString = buildItemsQueryString({
-      search: trimSearchText(params),
       limit: ITEM_SEARCH_LIMIT,
+      search: trimSearchText(params),
     });
     return api.get(`/items?${queryString}`);
   }
 
   const queryString = buildItemsQueryString({
-    ...params,
     limit: ITEM_SEARCH_LIMIT,
+    ...params,
   });
   return api.get(`/items${queryString ? `?${queryString}` : ''}`);
 };
@@ -130,7 +130,7 @@ export const reportItem = (itemId, payload) => api.post(`/items/${itemId}/report
 // === Views (BFF) ===
 export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}`);
 
-export const getMyRentals = () => api.get('/views/my-rentals');
+export const getMyRentals = (config = {}) => api.get('/views/my-rentals', config);
 
 // === Reviews ===
 export const createReview = ({ rentalId, rating, comment }) =>
@@ -148,6 +148,8 @@ export const createVNPayUrl = (rentalId) => api.post(`/rentals/${rentalId}/creat
 export const confirmRental = (rentalId) => api.patch(`/rentals/${rentalId}/confirm`);
 
 export const rejectRental = (rentalId) => api.patch(`/rentals/${rentalId}/reject`);
+
+export const cancelRental = (rentalId, reason = '') => api.patch(`/rentals/${rentalId}/cancel`, { reason });
 
 export const getRentalContract = (rentalId) => api.get(`/rentals/${rentalId}/contract`);
 
@@ -278,6 +280,7 @@ const apiService = {
   createVNPayUrl,
   confirmRental,
   rejectRental,
+  cancelRental,
   getRentalContract,
   signContract,
   pickupRental,

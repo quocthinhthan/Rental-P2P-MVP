@@ -69,3 +69,172 @@
         font-size: 2.2rem;
     }
 }
+
+/* Balance Banner & Carousel Heights */
+@media (min-width: 992px) {
+    .homepage-carousel .header-carousel-item,
+    .homepage-carousel-content,
+    .carousel-header-banner {
+        height: 650px !important;
+        min-height: 650px !important;
+    }
+}
+
+@media (max-width: 991px) {
+    .carousel-header-banner {
+        height: 350px !important;
+    }
+}
+
+/* Premium Featured VIP Badge (Warm Gold Theme) */
+.badge-featured-vip {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    border: 1.5px solid #f59e0b !important;
+    color: #b45309 !important;
+    padding: 5px 10px !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Premium Featured VIP Spotlight Badge (Warm Gold Theme) */
+.badge-spotlight-vip {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    border: 1.5px solid #f59e0b !important;
+    color: #b45309 !important;
+    padding: 8px 16px !important;
+    font-size: 0.8rem !important;
+    border-radius: 20px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12) !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Bestsellers Card UI/UX Improvement */
+.products-mini-item {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid #f1f5f9 !important;
+    overflow: hidden;
+}
+
+.products-mini-item:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+
+.products-mini-popular-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(254, 242, 242, 0.95) !important;
+    border: 1px solid #fca5a5 !important;
+    color: #ef4444 !important;
+    padding: 4px 8px !important;
+    font-size: 0.65rem !important;
+    border-radius: 4px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 10;
+}
+
+/* Subtle refinements for Bestseller items content to keep them subordinate */
+.products-mini-content {
+    background: #ffffff !important;
+}
+
+.products-mini-content .text-muted {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b !important;
+}
+
+.products-mini-content .h5 {
+    color: #1e293b !important;
+    font-weight: 600 !important;
+    font-size: 1.05rem !important;
+    margin-bottom: 8px !important;
+    transition: color 0.2s ease;
+}
+
+.products-mini-content .h5:hover {
+    color: #3b82f6 !important;
+}
+
+.products-mini-content .text-primary {
+    color: #3b82f6 !important;
+}
+
+.products-mini-add {
+    background: #f8fafc !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding: 12px 16px !important;
+}
+
+.products-mini-add .btn-primary {
+    background: #3b82f6 !important;
+    border: none !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 8px 16px !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.products-mini-add .btn-primary:hover {
+    background: #2563eb !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Featured Products Spotlight Section Background */
+.featured-spotlight {
+    background: linear-gradient(180deg, #fffcf0 0%, #ffffff 100%) !important;
+}
+
+/* Fix Bestsellers hover button bug - Show button smoothly on hover via height & opacity transition */
+.products .products-mini .products-mini-item .products-mini-add,
+.products-mini-add {
+    position: static !important;
+    display: block !important;
+    margin: 0 !important;
+    background: #f8fafc !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    border-bottom-left-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+    
+    /* Default hidden state */
+    height: 0 !important;
+    padding: 0 16px !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    border-top: 1px solid transparent !important;
+}
+
+.products .products-mini .products-mini-item:hover .products-mini-add {
+    /* Hover active state: expand and fade in */
+    height: 72px !important;
+    padding: 12px 16px !important;
+    opacity: 1 !important;
+    border-top: 1px solid #f1f5f9 !important;
+}
+
+/* Also ensure the button inside is clean and has no margin-bottom */
+.products-mini-add .btn-primary {
+    margin-bottom: 0 !important; /* Counter mb-3 in React code */
+}
+
+
+

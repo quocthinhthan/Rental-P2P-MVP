@@ -14,6 +14,7 @@ import {
   getRelatedItemImage
 } from '../utils/cloudinaryImage';
 import { formatItemCode } from '../utils/itemCode';
+import { sanitizeDescription } from '../utils/sanitize';
 import UserTrustSummary, { RatingSummary, TrustBadge } from '../components/Trust/TrustBadge';
 
 /* ─────────────────────────────────────────
@@ -23,6 +24,79 @@ const renderStars = (rating) =>
   [1, 2, 3, 4, 5].map((s) => (
     <i key={s} className={`fa fa-star ${s <= rating ? 'text-warning' : 'text-muted'}`} />
   ));
+
+/* ─────────────────────────────────────────
+   Helper: availability status calculator
+   ───────────────────────────────────────── */
+const getAvailabilityStatus = (bookedDates) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!bookedDates || bookedDates.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      label: 'Còn trống',
+      subLabel: '✨ Sẵn sàng phục vụ',
+      badgeClass: 'badge-available',
+      activeBookings: []
+    };
+  }
+
+  // Parse and sort bookings ascending by startDate
+  const activeBookings = bookedDates
+    .map(r => {
+      const start = new Date(r.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(r.endDate);
+      end.setHours(0, 0, 0, 0);
+      return { start, end };
+    })
+    .filter(r => r.end >= today) // only care about current or future bookings
+    .sort((a, b) => a.start - b.start);
+
+  if (activeBookings.length === 0) {
+    return {
+      status: 'AVAILABLE',
+      label: 'Còn trống',
+      subLabel: '✨ Sẵn sàng phục vụ',
+      badgeClass: 'badge-available',
+      activeBookings: []
+    };
+  }
+
+  // Check if today falls in any booking range
+  const currentBooking = activeBookings.find(r => today >= r.start && today <= r.end);
+
+  if (currentBooking) {
+    // Find expected free date (day after end date of current booking)
+    const nextFreeDate = new Date(currentBooking.end);
+    nextFreeDate.setDate(nextFreeDate.getDate() + 1);
+    const formattedFreeDate = nextFreeDate.toLocaleDateString('vi-VN');
+
+    return {
+      status: 'RENTED',
+      label: 'Đang được thuê',
+      subLabel: `🕒 Dự kiến trống từ ${formattedFreeDate}`,
+      badgeClass: 'badge-rented',
+      currentBooking,
+      activeBookings
+    };
+  }
+
+  // If today is free but there are future bookings
+  const nextBooking = activeBookings[0]; // first upcoming booking
+  const formattedNextBookingDate = nextBooking.start.toLocaleDateString('vi-VN');
+
+  return {
+    status: 'AVAILABLE_TODAY',
+    label: 'Còn trống hôm nay',
+    subLabel: `⚠️ Bận từ ${formattedNextBookingDate}`,
+    badgeClass: 'badge-available-today',
+    nextBooking,
+    activeBookings
+  };
+};
+
 
 /* ─────────────────────────────────────────
    Helper: related product card
@@ -197,6 +271,7 @@ function ItemDetailPage() {
      ───────────────────────────────────── */
   useEffect(() => {
     if (!itemId) return;
+    window.scrollTo(0, 0);
 
     const fetchItem = async () => {
       setLoading(true);
@@ -240,6 +315,9 @@ function ItemDetailPage() {
         setError('Không thể tải dữ liệu sản phẩm.');
       } finally {
         setLoading(false);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 100);
       }
     };
 
@@ -354,6 +432,7 @@ function ItemDetailPage() {
   if (!item)  return <div className="alert alert-warning m-4">Vật phẩm không tồn tại.</div>;
 
   const isOwner = isLoggedIn && user?._id === item.owner._id;
+  const availability = getAvailabilityStatus(item.bookedDates);
   const allImages = item.images?.length ? item.images : [item.mainImage || 'https://via.placeholder.com/600'];
   const activeImageSources = getDetailMainImage(allImages[activeImg]);
   const depositPercentage = Number(item.depositPercentage ?? 100);
@@ -364,6 +443,16 @@ function ItemDetailPage() {
     averageRating: ownerAverageRating ?? item.owner.averageRating ?? 0,
     totalReviews: ownerTotalReviews || item.owner.totalReviews || 0
   } : null;
+
+  const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  if (ownerReviews && ownerReviews.length > 0) {
+    ownerReviews.forEach(r => {
+      const rate = Math.round(r.rating);
+      if (rate >= 1 && rate <= 5) {
+        ratingBreakdown[rate] += 1;
+      }
+    });
+  }
 
   /* ─────────────────────────────────────
      RENDER
@@ -425,30 +514,93 @@ function ItemDetailPage() {
           {/* ── RIGHT: Info + Booking ── */}
           <div className="col-lg-6">
 
+            {/* VIP/Featured Banner */}
+            {item.isFeatured && (
+              <div 
+                className="featured-trust-banner rounded-3 p-3 mb-3 d-flex align-items-center gap-3 shadow-sm border-0 position-relative overflow-hidden" 
+                style={{
+                  background: 'linear-gradient(135deg, #fffcf0 0%, #fff7d6 100%)',
+                  borderLeft: '4px solid #ffd700',
+                  boxShadow: '0 4px 12px rgba(255, 215, 0, 0.1)'
+                }}
+              >
+                <div 
+                  className="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-sm"
+                  style={{ width: '40px', height: '40px', minWidth: '40px' }}
+                >
+                  <span className="fs-4">🌟</span>
+                </div>
+                <div>
+                  <div className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style={{ fontSize: '0.95rem' }}>
+                    Sản phẩm nổi bật uy tín
+                    <span className="badge text-white" style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)', fontSize: '0.65rem' }}>VIP</span>
+                  </div>
+                  <p className="text-muted small mb-0 mt-1" style={{ fontSize: '0.8rem', lineHeight: '1.3' }}>
+                    Sản phẩm được đánh giá cao với độ tin cậy vượt trội trên Rental-P2P.
+                  </p>
+                </div>
+                {/* Background shimmer lines */}
+                <div 
+                  className="position-absolute end-0 bottom-0 opacity-10" 
+                  style={{
+                    fontSize: '4.5rem',
+                    transform: 'translate(10px, 15px) rotate(-15deg)',
+                    color: '#ffd700',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  👑
+                </div>
+              </div>
+            )}
+
             {/* Title */}
             <h1 className="idp-product-title">{item.name}</h1>
 
-            <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
-              <span className="idp-category-badge">
-                <i className="fa fa-tag" style={{ fontSize: '.65rem' }} /> {item.category || 'Khác'}
-              </span>
-              <span className="idp-code">{formatItemCode(item)}</span>
-              <RatingSummary
-                averageRating={ownerProfile?.averageRating}
-                totalReviews={ownerProfile?.totalReviews}
-                muted
-              />
-              {ownerProfile && <TrustBadge user={ownerProfile} />}
+            {/* Row 1: Low-key Metadata (Category, Code, Rating, Report on far right) */}
+            <div className="idp-meta-top-row d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+              <div className="d-flex align-items-center gap-2 flex-wrap text-muted small">
+                <span className="idp-category-tag">
+                  <i className="fa fa-tag me-1" /> {item.category || 'Khác'}
+                </span>
+                <span className="idp-meta-dot">•</span>
+                <span className="idp-code-text">{formatItemCode(item)}</span>
+                <span className="idp-meta-dot">•</span>
+                <RatingSummary
+                  averageRating={ownerProfile?.averageRating}
+                  totalReviews={ownerProfile?.totalReviews}
+                  muted
+                />
+              </div>
+              
               {!isOwner && (
                 <button
                   type="button"
-                  className="idp-report-btn ms-auto"
+                  className="idp-report-text-btn"
                   onClick={handleReportClick}
                   title="Báo cáo sản phẩm vi phạm"
                 >
-                  <i className="far fa-flag me-1" /> Báo cáo
+                  <i className="far fa-flag me-1" /> Báo cáo vi phạm
                 </button>
               )}
+            </div>
+
+            {/* Row 2: Status & Trust Indicators (High-priority action-oriented info) */}
+            <div className="d-flex align-items-center gap-3 mb-4 flex-wrap">
+              <span className={`idp-status-badge ${availability.badgeClass}`}>
+                {availability.status === 'AVAILABLE' && <i className="fas fa-check-circle me-1" />}
+                {availability.status === 'AVAILABLE_TODAY' && <i className="fas fa-info-circle me-1" />}
+                {availability.status === 'RENTED' && <i className="fas fa-history me-1" />}
+                {availability.label}
+              </span>
+              
+              {availability.subLabel && (
+                <span className={`idp-status-sublabel ${availability.badgeClass}`}>
+                  {availability.subLabel}
+                </span>
+              )}
+
+              {ownerProfile && <TrustBadge user={ownerProfile} />}
             </div>
 
             <div className="mb-4">
@@ -493,6 +645,36 @@ function ItemDetailPage() {
                             monthsShown={1}
                           />
                         </div>
+
+                        {/* Hộp lịch bận sắp tới */}
+                        <div className="idp-schedule-box mt-3">
+                          <div className="idp-schedule-header">
+                            <i className="far fa-calendar-alt text-primary me-2" />
+                            <span>Lịch bận sắp tới</span>
+                          </div>
+                          {availability.activeBookings.length === 0 ? (
+                            <div className="idp-schedule-empty">
+                              ✨ Chưa có lịch bận sắp tới - Sẵn sàng phục vụ bất cứ lúc nào!
+                            </div>
+                          ) : (
+                            <div className="idp-schedule-list">
+                              {availability.activeBookings.slice(0, 3).map((booking, idx) => (
+                                <div key={idx} className="idp-schedule-item">
+                                  <span className="idp-schedule-bullet" />
+                                  <span className="idp-schedule-dates">
+                                    {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
+                                  </span>
+                                  <span className="idp-schedule-status-tag">Đã đặt</span>
+                                </div>
+                              ))}
+                              {availability.activeBookings.length > 3 && (
+                                <div className="idp-schedule-more text-muted mt-1 small">
+                                  + và {availability.activeBookings.length - 3} lịch thuê khác...
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="mb-4">
                         <label className="form-label fw-bold small text-muted text-uppercase mb-2 d-block">
@@ -533,18 +715,45 @@ function ItemDetailPage() {
                     </form>
                   </>
                 ) : (
-                  <div className="alert alert-info border-0 rounded-4 text-center mb-0 shadow-sm py-4">
-                    <div
-                      className="bg-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm"
-                      style={{ width: '60px', height: '60px' }}
-                    >
-                      <i className="fas fa-box-open fa-2x text-info" />
+                  <>
+                    <div className="alert alert-info border-0 rounded-4 text-center mb-4 shadow-sm py-4">
+                      <div
+                        className="bg-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3 shadow-sm"
+                        style={{ width: '60px', height: '60px' }}
+                      >
+                        <i className="fas fa-box-open fa-2x text-info" />
+                      </div>
+                      <h5 className="fw-bold text-dark">Vật dụng của bạn</h5>
+                      <p className="mb-0 text-muted small">
+                        Bạn đang xem giao diện chi tiết vật dụng do chính bạn đăng tải.
+                      </p>
                     </div>
-                    <h5 className="fw-bold text-dark">Vật dụng của bạn</h5>
-                    <p className="mb-0 text-muted small">
-                      Bạn đang xem giao diện chi tiết vật dụng do chính bạn đăng tải.
-                    </p>
-                  </div>
+
+                    {/* Hộp lịch bận sắp tới cho chủ sở hữu */}
+                    <div className="idp-schedule-box">
+                      <div className="idp-schedule-header">
+                        <i className="far fa-calendar-alt text-primary me-2" />
+                        <span>Lịch bận sắp tới</span>
+                      </div>
+                      {availability.activeBookings.length === 0 ? (
+                        <div className="idp-schedule-empty text-center text-muted py-3">
+                          ✨ Chưa có lịch bận sắp tới cho sản phẩm của bạn.
+                        </div>
+                      ) : (
+                        <div className="idp-schedule-list">
+                          {availability.activeBookings.map((booking, idx) => (
+                            <div key={idx} className="idp-schedule-item">
+                              <span className="idp-schedule-bullet" />
+                              <span className="idp-schedule-dates">
+                                {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
+                              </span>
+                              <span className="idp-schedule-status-tag">Đã đặt</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -635,31 +844,74 @@ function ItemDetailPage() {
 
               {/* ── Mô tả ── */}
               {activeTab === 'desc' && (
-                <div id="nav-desc">
-                  <p className="idp-desc-text">
-                    {item.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}
-                  </p>
+                <div id="nav-desc" className="fade-in">
+                  {item.description ? (
+                    <div 
+                      className="idp-desc-text"
+                      dangerouslySetInnerHTML={{ __html: sanitizeDescription(item.description) }}
+                    />
+                  ) : (
+                    <p className="idp-desc-text text-muted italic">Chưa có mô tả chi tiết cho sản phẩm này.</p>
+                  )}
                 </div>
               )}
 
               {/* ── Đánh giá ── */}
               {activeTab === 'review' && (
-                <div id="nav-review">
+                <div id="nav-review" className="fade-in">
                   <div className="row g-4">
 
                     {/* Score box */}
                     <div className="col-lg-4">
-                      <div className="idp-review-score-box">
-                        <div className="idp-review-score-num">
+                      <div className="idp-review-score-box shadow-sm border border-light-subtle rounded-4 p-4 text-center bg-light-subtle">
+                        <div className="idp-review-score-label text-uppercase small fw-bold text-muted mb-2 tracking-wider">
+                          Đánh giá trung bình
+                        </div>
+                        <div className="idp-review-score-num text-primary fw-extrabold mb-1" style={{ fontSize: '3rem', fontWeight: 800 }}>
                           {ownerAverageRating !== null && ownerTotalReviews > 0 ? ownerAverageRating.toFixed(1) : '--'}
                         </div>
-                        <div className="idp-review-stars">
+                        <div className="idp-review-stars mb-2 d-flex justify-content-center gap-1">
                           {ownerAverageRating !== null ? renderStars(Math.round(ownerAverageRating)) : renderStars(0)}
                         </div>
-                        <p className="idp-review-count">{ownerTotalReviews} đánh giá công khai về chủ sở hữu</p>
+                        <p className="idp-review-count text-muted small mb-3">
+                          {ownerTotalReviews} đánh giá công khai
+                        </p>
+                        
+                        {/* Star progress breakdown chart */}
+                        <div className="rating-breakdown border-top pt-3 mt-2">
+                          {[5, 4, 3, 2, 1].map((star) => {
+                            const count = ratingBreakdown[star];
+                            const percentage = ownerReviews.length > 0 ? (count / ownerReviews.length) * 100 : 0;
+                            return (
+                              <div key={star} className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: '.8rem' }}>
+                                <span style={{ width: '12px' }} className="fw-semibold text-dark">{star}</span>
+                                <i className="fa fa-star text-warning" style={{ fontSize: '.75rem' }} />
+                                <div className="progress flex-grow-1" style={{ height: '6px', borderRadius: '3px', backgroundColor: '#e5e7eb', overflow: 'hidden' }}>
+                                  <div 
+                                    className="progress-bar" 
+                                    role="progressbar" 
+                                    style={{ 
+                                      width: `${percentage}%`, 
+                                      height: '100%', 
+                                      borderRadius: '3px',
+                                      background: 'linear-gradient(90deg, #ffb524 0%, #ff8c00 100%)'
+                                    }} 
+                                    aria-valuenow={percentage} 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100"
+                                  />
+                                </div>
+                                <span className="text-muted" style={{ width: '30px', textAlign: 'right', fontSize: '0.75rem' }}>
+                                  {ownerReviews.length > 0 ? `${Math.round(percentage)}%` : '0%'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
                         {!isLoggedIn && (
-                          <div className="alert alert-light border mt-3 mb-0 small">
-                            Đăng nhập để thuê và gửi đánh giá.
+                          <div className="alert alert-light border mt-4 mb-0 small text-muted py-2" style={{ borderRadius: '10px' }}>
+                            <i className="fas fa-lock me-1"></i> Đăng nhập để thuê và gửi đánh giá.
                           </div>
                         )}
                       </div>
@@ -667,15 +919,23 @@ function ItemDetailPage() {
 
                     {/* Review list + form */}
                     <div className="col-lg-8">
-                      <div className="bg-white border rounded-4 p-4 shadow-sm">
-                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
-                          <h5 className="fw-bold mb-0">Đánh giá từ người thuê</h5>
-                          <span className="text-muted small">Đánh giá công khai về chủ vật dụng.</span>
+                      <div className="bg-white border border-light-subtle rounded-4 p-4 shadow-sm">
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 pb-2 border-bottom">
+                          <div>
+                            <h5 className="fw-bold mb-1" id="reviews-header-title">Đánh giá từ người thuê</h5>
+                            <span className="text-muted small">Đánh giá được gửi sau khi hoàn thành giao dịch thực tế.</span>
+                          </div>
+                          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '.75rem' }}>
+                            {ownerTotalReviews} Nhận xét
+                          </span>
                         </div>
 
                         {reviewLoading && (
-                          <div className="text-center py-4">
-                            <div className="spinner-border text-primary" role="status" />
+                          <div className="text-center py-5">
+                            <div className="spinner-border text-primary" role="status" style={{ width: '2.5rem', height: '2.5rem' }}>
+                              <span className="visually-hidden">Đang tải...</span>
+                            </div>
+                            <p className="text-muted small mt-2">Đang tải phản hồi...</p>
                           </div>
                         )}
                         {!reviewLoading && reviewError && (

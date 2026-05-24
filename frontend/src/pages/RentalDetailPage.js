@@ -820,6 +820,12 @@ function RentalDetailPage() {
   const hasBothReviews = Boolean(rental?.review?.hasMyReview && rental?.review?.hasCounterpartyReview);
   const canPayEscrow = !isDisputed && !isOwnerView && rental?.status === 'pending_payment';
   const canOwnerConfirmReject = !isDisputed && isOwnerView && rental?.status === 'pending_confirmation';
+  const canCancelRental = !isDisputed
+    && !hasPickupProof(rental)
+    && (
+      (!isOwnerView && ['pending_payment', 'pending_confirmation', 'confirmed'].includes(rental?.status))
+      || (isOwnerView && rental?.status === 'confirmed')
+    );
   const showContractReadyState = isFullySigned && rental?.status === 'confirmed';
   const showReviewState = rental?.status === 'completed' && rental?.review?.hasMyReview;
   const showExistingDisputeState = !showCreateDispute && !isDisputed && Boolean(dispute?.status);
@@ -834,6 +840,7 @@ function RentalDetailPage() {
     canReturn ||
     canReview ||
     showReviewState ||
+    canCancelRental ||
     showCreateDispute ||
     showExistingDisputeState
   );
@@ -864,6 +871,36 @@ function RentalDetailPage() {
     } catch (err) {
       setActionLoading('');
       Swal.fire('Lỗi thanh toán', getErrorMessage(err, 'Không thể tạo liên kết thanh toán VNPay.'), 'error');
+    }
+  };
+
+  const handleCancelRental = async () => {
+    const willRefund = rental?.paymentStatus === 'escrowed';
+    const { value: reason } = await Swal.fire({
+      title: 'Hủy đơn thuê?',
+      input: 'textarea',
+      inputPlaceholder: 'Nhập lý do hủy đơn (tùy chọn)',
+      text: willRefund
+        ? 'Đơn đã ký quỹ sẽ được đánh dấu hoàn tiền sau khi hủy.'
+        : 'Đơn sẽ được hủy và không thể tiếp tục xử lý.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Hủy đơn',
+      cancelButtonText: 'Quay lại',
+    });
+
+    if (reason === undefined) return;
+
+    try {
+      setActionLoading('cancel');
+      const response = await apiService.cancelRental(rental._id, reason);
+      await loadRental();
+      Swal.fire('Đã hủy đơn', response.data?.message || 'Đơn thuê đã được hủy.', 'success');
+    } catch (err) {
+      Swal.fire('Lỗi!', getErrorMessage(err, 'Không thể hủy đơn thuê.'), 'error');
+    } finally {
+      setActionLoading('');
     }
   };
 
@@ -1176,6 +1213,12 @@ function RentalDetailPage() {
                 {canReturn && (
                   <button className="btn-xs btn-info-xs" onClick={() => setHandoverState({ type: 'return', rental })} disabled={Boolean(actionLoading)}>
                     Hoàn tất thuê / Trả đồ
+                  </button>
+                )}
+
+                {canCancelRental && (
+                  <button className="btn-xs btn-danger-xs" onClick={handleCancelRental} disabled={Boolean(actionLoading)}>
+                    {actionLoading === 'cancel' ? 'Đang hủy...' : 'Hủy đơn thuê'}
                   </button>
                 )}
 

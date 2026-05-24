@@ -233,3 +233,112 @@
     min-height: 320px;
   }
 }
+
+/* ── Custom WYSIWYG Editor Toolbar and Live Preview ── */
+.custom-editor-container {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.custom-editor-toolbar {
+  background-color: #f9fafb !important;
+  border: 1.5px solid #dee2e6 !important;
+  border-bottom: none !important;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  padding: 8px 12px !important;
+  user-select: none;
+}
+
+.custom-editor-toolbar button {
+  transition: all 0.15s ease-in-out;
+  border-radius: 6px !important;
+  font-size: 0.88rem;
+  color: #4b5563;
+  background: transparent;
+}
+
+.custom-editor-toolbar button:hover {
+  background-color: #e5e7eb !important;
+  color: #111827;
+}
+
+.custom-editor-toolbar button:active {
+  transform: scale(0.95);
+}
+
+.btn-preview-tab {
+  transition: all 0.2s ease-in-out;
+  font-weight: 600 !important;
+}
+
+.btn-preview-tab.btn-primary {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.15);
+}
+
+.custom-editor-preview {
+  background-color: #ffffff;
+  border: 1.5px solid #dee2e6 !important;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  min-height: 158px;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+/* ── CKEditor Custom Styling ── */
+.ck-editor {
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+  font-family: inherit !important;
+}
+
+.ck-editor__editable_inline {
+  min-height: 250px !important;
+  max-height: 450px !important;
+  border-radius: 0 0 10px 10px !important;
+  border: 1.5px solid #dee2e6 !important;
+  border-top: none !important;
+  font-size: 0.95rem !important;
+  line-height: 1.8 !important;
+  color: #374151 !important;
+  padding: 1rem 1.25rem !important;
+}
+
+.ck-editor__editable_inline:focus {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1) !important;
+  outline: none !important;
+}
+
+.ck-editor__top {
+  border-bottom: none !important;
+}
+
+.ck-toolbar {
+  background-color: #f9fafb !important;
+  border: 1.5px solid #dee2e6 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  padding: 6px 8px !important;
+}
+
+.ck.ck-editor__editable:not(.ck-editor__nested-editable).ck-focused {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1) !important;
+}
+
+.ckeditor-wrapper {
+  border-top: none !important;
+  border-radius: 0 0 10px 10px !important;
+  overflow: hidden;
+}

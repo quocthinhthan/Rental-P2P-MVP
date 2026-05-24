@@ -8,6 +8,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import 'leaflet/dist/leaflet.css';
 import '../styles/PostItemPage.css';
+import { sanitizeDescription } from '../utils/sanitize';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 const DEFAULT_ITEM_LOCATION = {
   lat: 10.7321,
@@ -66,6 +69,24 @@ function LocationMapRecenter({ center }) {
   return null;
 }
 
+const editorConfiguration = {
+  toolbar: [
+    'heading',
+    '|',
+    'bold',
+    'italic',
+    '|',
+    'bulletedList',
+    'numberedList',
+    '|',
+    'blockQuote',
+    '|',
+    'undo',
+    'redo'
+  ],
+  placeholder: 'Mô tả chi tiết tình trạng, phụ kiện đi kèm, hướng dẫn sử dụng và các điều khoản khác...'
+};
+
 function PostItemPage() {
   const { itemId } = useParams();
   const isEditMode = Boolean(itemId);
@@ -86,6 +107,7 @@ function PostItemPage() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [tileSourceIndex, setTileSourceIndex] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
 
   const {
     register,
@@ -104,6 +126,8 @@ function PostItemPage() {
   });
 
   const watchedCategory = watch('category');
+  const watchDescription = watch('description');
+
   const mapCenter = selectedLocation || DEFAULT_ITEM_LOCATION;
   const tileSource = TILE_SOURCES[tileSourceIndex];
 
@@ -415,12 +439,63 @@ function PostItemPage() {
 
                   <div className="mb-3">
                     <label className="form-label">Mô tả</label>
-                    <textarea
-                      className="form-control"
-                      rows="5"
-                      {...register('description')}
-                      placeholder="Mô tả tình trạng, phụ kiện đi kèm, lưu ý khi sử dụng..."
-                    />
+                    
+                    <div className="custom-editor-container">
+                      <div className="custom-editor-toolbar d-flex flex-wrap align-items-center gap-1 p-2 bg-light border border-bottom-0 rounded-top">
+                        <div className="fw-semibold text-muted small px-2">
+                          <i className="fas fa-edit me-1"></i> Trình soạn thảo mô tả
+                        </div>
+                        
+                        <div className="ms-auto d-flex gap-1">
+                          <button
+                            type="button"
+                            className={`btn btn-xs py-1 px-2 btn-preview-tab ${!showPreview ? 'btn-primary text-white' : 'btn-light border-0 text-dark'}`}
+                            onClick={() => setShowPreview(false)}
+                            style={{ fontSize: '0.78rem', borderRadius: '4px' }}
+                          >
+                            <i className="fas fa-pencil-alt me-1"></i> Soạn thảo
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-xs py-1 px-2 btn-preview-tab ${showPreview ? 'btn-primary text-white' : 'btn-light border-0 text-dark'}`}
+                            onClick={() => setShowPreview(true)}
+                            style={{ fontSize: '0.78rem', borderRadius: '4px' }}
+                          >
+                            <i className="fas fa-eye me-1"></i> Xem trước bài đăng
+                          </button>
+                        </div>
+                      </div>
+
+                      <input type="hidden" {...register('description')} />
+
+                      {!showPreview ? (
+                        <div className="ckeditor-wrapper border rounded-bottom bg-white">
+                          <CKEditor
+                            editor={ClassicEditor}
+                            config={editorConfiguration}
+                            data={watchDescription || ''}
+                            onChange={(event, editor) => {
+                              const data = editor.getData();
+                              setValue('description', data, { shouldDirty: true, shouldValidate: true });
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div 
+                          className="custom-editor-preview p-4 border rounded-bottom bg-white overflow-auto text-start" 
+                          style={{ minHeight: '300px', maxHeight: '500px', borderTop: 'none' }}
+                        >
+                          {watchDescription ? (
+                            <div 
+                              className="idp-desc-text"
+                              dangerouslySetInnerHTML={{ __html: sanitizeDescription(watchDescription) }}
+                            />
+                          ) : (
+                            <em className="text-muted small">Nội dung xem trước sẽ hiển thị ở đây khi bạn nhập mô tả...</em>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="row g-3 mb-3">

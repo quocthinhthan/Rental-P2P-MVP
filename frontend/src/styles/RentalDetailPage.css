@@ -194,14 +194,14 @@
   gap: 8px;
 }
 
-.counterparty-trust-main strong {
+.counterparty-trust-main > div > strong {
   display: block;
   color: var(--text-primary);
   font-size: 1rem;
   font-weight: var(--fw-bold);
 }
 
-.counterparty-trust-main span {
+.counterparty-trust-main > div > span {
   display: block;
   color: var(--text-secondary);
   font-size: 0.82rem;

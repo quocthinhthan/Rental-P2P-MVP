@@ -70,6 +70,9 @@ const searchItems = async (req, res) => {
     // 1. CÁC BỘ LỌC CƠ BẢN
     if (ownerId) query.ownerId = ownerId;
     if (exclude) query._id = { ...query._id, $ne: exclude };
+    if (req.query.isFeatured) {
+      query.isFeatured = req.query.isFeatured === 'true' || req.query.isFeatured === '1';
+    }
     
     const safeSearch = trimSearchText(search);
     const safeCategory = trimSearchText(category);
@@ -122,6 +125,7 @@ const searchItems = async (req, res) => {
         status: 1,
         images: 1,
         ownerId: 1,
+        isFeatured: 1,
         distance: 1
       };
 
@@ -169,15 +173,42 @@ const searchItems = async (req, res) => {
     } else {
       // 4. FALLBACK: NẾU KHÔNG CÓ TỌA ĐỘ, DÙNG FIND BÌNH THƯỜNG
       items = await Item.find(query)
-        .select('_id code name category address pricePerDay images status ownerId')
+        .select('_id code name category address pricePerDay images status ownerId isFeatured')
         .populate('ownerId', '_id fullName avatarUrl ekycStatus averageRating totalReviews trustScore')
         .sort({ createdAt: -1 })
         .skip(resultSkip)
         .limit(resultLimit);
     }
 
-    // 5. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
+    // 5. FETCH ACTIVE RENTALS FOR DYNAMIC STATUS MAPPING
+    const itemIds = items.map(item => item._id);
+    const activeRentals = await Rental.find({
+      itemId: { $in: itemIds },
+      status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] }
+    }).select('itemId startDate endDate');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const currentlyRentedItemIds = new Set();
+    activeRentals.forEach(rental => {
+      const start = new Date(rental.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(rental.endDate);
+      end.setHours(0, 0, 0, 0);
+
+      if (today >= start && today <= end) {
+        currentlyRentedItemIds.add(rental.itemId.toString());
+      }
+    });
+
+    // 6. FORMAT DỮ LIỆU TRẢ VỀ (Đảm bảo Privacy)
     const itemSummaries = items.map(item => {
+      let trueStatus = currentlyRentedItemIds.has(item._id.toString()) ? 'rented' : item.status;
+      if (trueStatus === 'rented' && !currentlyRentedItemIds.has(item._id.toString())) {
+        trueStatus = 'available';
+      }
+
       const summary = {
         _id: item._id,
         code: item.code,
@@ -185,11 +216,10 @@ const searchItems = async (req, res) => {
         category: item.category,
         address: item.address,
         pricePerDay: item.pricePerDay,
-        status: item.status,
+        status: trueStatus,
+        isFeatured: item.isFeatured,
         mainImage: (item.images && item.images.length > 0) ? item.images[0] : '',
         owner: formatOwnerSummary(item.owner || item.ownerId),
-        // Mặc định chỉ trả khoảng cách; map picker mới yêu cầu thêm mapLocation.
-        distance: item.distance !== undefined && item.distance !== null ? parseFloat((item.distance / 1000).toFixed(1)) : null 
       };
 
       if (

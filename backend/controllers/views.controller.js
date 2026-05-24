@@ -38,6 +38,7 @@ exports.getItemDetailView = async (req, res) => {
         endDate: { $gte: new Date() } 
     }).select('startDate endDate');
 
+
     const hasMapLocation = (
         item.location &&
         Array.isArray(item.location.coordinates) &&
@@ -51,6 +52,7 @@ exports.getItemDetailView = async (req, res) => {
         description: item.description,
         category: item.category, // Bổ sung category
         status: item.status,     // Bổ sung status
+        isFeatured: item.isFeatured,
         images: item.images,
         pricePerDay: item.pricePerDay,
         baseValue: item.baseValue,
@@ -93,6 +95,10 @@ exports.getMyRentalsView = async (req, res) => {
       .populate({
           path: 'renterId',
           select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'cancelledBy',
+          select: '_id fullName email'
       });
 
     // 2. Lấy các đơn tôi là chủ (asOwner)
@@ -112,6 +118,10 @@ exports.getMyRentalsView = async (req, res) => {
       .populate({
           path: 'ownerId',
           select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+          path: 'cancelledBy',
+          select: '_id fullName email'
       });
     
     // 3. Lấy các vật phẩm tôi đã đăng (myItems)
@@ -234,6 +244,9 @@ exports.getMyRentalsView = async (req, res) => {
             createdAt: rental.createdAt,
             updatedAt: rental.updatedAt,
             note: rental.note,
+            cancellationReason: rental.cancellationReason || '',
+            cancelledBy: rental.cancelledBy || null,
+            cancelledAt: rental.cancelledAt || null,
             contractId: rental.contractId,
             pickupImages: rental.pickupImages || [],
             returnImages: rental.returnImages || [],
