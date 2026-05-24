@@ -127,6 +127,10 @@ export const suggestItemPrice = (payload) => api.post('/items/suggest-price', pa
 
 export const reportItem = (itemId, payload) => api.post(`/items/${itemId}/report`, payload);
 
+// === Blocked Dates (Owner Only) ===
+export const addBlockedDates = (itemId, data) => api.post(`/items/${itemId}/blocked-dates`, data);
+export const removeBlockedDate = (itemId, blockId) => api.delete(`/items/${itemId}/blocked-dates/${blockId}`);
+
 // === Views (BFF) ===
 export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}`);
 
@@ -156,11 +160,11 @@ export const getRentalContract = (rentalId) => api.get(`/rentals/${rentalId}/con
 export const signContract = (rentalId, signatureUrl) =>
   api.post(`/rentals/${rentalId}/sign-contract`, { signatureUrl });
 
-export const pickupRental = (rentalId, pickupImages) =>
-  api.patch(`/rentals/${rentalId}/pickup`, { pickupImages });
+export const pickupRental = (rentalId, payload) =>
+  api.patch(`/rentals/${rentalId}/pickup`, typeof payload === 'object' && !Array.isArray(payload) ? payload : { pickupImages: payload });
 
-export const completeRental = (rentalId, returnImages) =>
-  api.patch(`/rentals/${rentalId}/complete`, { returnImages });
+export const completeRental = (rentalId, payload) =>
+  api.patch(`/rentals/${rentalId}/complete`, typeof payload === 'object' && !Array.isArray(payload) ? payload : { returnImages: payload });
 
 export const getRentalMessages = (rentalId) => api.get(`/rentals/${rentalId}/messages`, {
   skipGlobalLoading: true,
@@ -174,6 +178,11 @@ export const getMe = () => api.get('/auth/me');
 
 // === Users ===
 export const getPublicUserProfile = (userId) => api.get(`/users/${userId}/profile`);
+
+// === Favorites / Wishlist ===
+export const getFavorites = () => api.get('/users/me/favorites');
+export const addFavorite = (itemId) => api.post(`/users/me/favorites/${itemId}`);
+export const removeFavorite = (itemId) => api.delete(`/users/me/favorites/${itemId}`);
 
 // === Upload ===
 export const uploadImage = (file) => {
@@ -304,6 +313,13 @@ const apiService = {
   resolveAdminItemReport,
   getBestsellers,
   uploadImages,
+  // Blocked Dates
+  addBlockedDates,
+  removeBlockedDate,
+  // Favorites / Wishlist
+  getFavorites,
+  addFavorite,
+  removeFavorite,
 };
 
 export default apiService;

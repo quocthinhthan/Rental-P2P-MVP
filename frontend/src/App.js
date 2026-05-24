@@ -22,6 +22,7 @@ import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
 import PublicUserProfilePage from './pages/PublicUserProfilePage';
+import FavoritesPage from './pages/FavoritesPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminDisputeDetailPage from './pages/AdminDisputeDetailPage';
@@ -65,6 +66,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/my-rentals" element={<MyRentalsPage />} />
           <Route path="/my-rentals/:rentalId" element={<RentalDetailPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />

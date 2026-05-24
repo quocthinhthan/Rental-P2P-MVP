@@ -80,7 +80,7 @@ const searchItems = async (req, res) => {
     if (safeCategory) query.category = { $regex: createViFuzzyRegex(safeCategory), $options: 'i' };
     if (safeAddress) query.address = { $regex: createViFuzzyRegex(safeAddress), $options: 'i' };
 
-    // 2. LỌC THỜI GIAN TRỐNG
+    // 2. LỌC THỜI GIAN TRỐNG (rental overlap + owner-blocked dates)
     if (startDate && endDate) {
       const reqStart = new Date(startDate);
       const reqEnd = new Date(endDate);
@@ -89,14 +89,30 @@ const searchItems = async (req, res) => {
         return res.status(400).json({ message: 'Ngày kết thúc phải sau ngày bắt đầu' });
       }
 
+      // Items busy due to confirmed/active rentals
       const overlappingRentals = await Rental.find({
         status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
         startDate: { $lte: reqEnd },
-        endDate: { $gte: reqStart }
+        endDate:   { $gte: reqStart }
       }).select('itemId');
 
-      const unavailableItemIds = overlappingRentals.map(rental => rental.itemId);
-      query._id = { ...query._id, $nin: unavailableItemIds };
+      const unavailableItemIds = overlappingRentals.map(r => r.itemId.toString());
+
+      // Items blocked manually by owner
+      const ownerBlockedItems = await Item.find({
+        status: { $ne: 'delisted' },
+        blockedDates: {
+          $elemMatch: {
+            startDate: { $lte: reqEnd },
+            endDate:   { $gte: reqStart }
+          }
+        }
+      }).select('_id');
+
+      const ownerBlockedIds = ownerBlockedItems.map(i => i._id.toString());
+
+      const allUnavailableIds = [...new Set([...unavailableItemIds, ...ownerBlockedIds])];
+      query._id = { ...query._id, $nin: allUnavailableIds };
     }
 
     let items = [];
@@ -598,6 +614,107 @@ const reportItem = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────
+// BLOCKED DATES — owner-controlled calendar blocks
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/items/:id/blocked-dates
+ * Owner adds a blocked period to prevent new rentals.
+ * Validates: date range, no overlap with existing active rentals,
+ * no overlap with existing blocks on this item.
+ */
+const addBlockedDates = async (req, res) => {
+  const { startDate, endDate, reason } = req.body;
+  const item = req.item; // populated by checkOwner middleware
+
+  if (!startDate || !endDate) {
+    return res.status(400).json({ message: 'Vui lòng cung cấp startDate và endDate' });
+  }
+
+  const start = new Date(startDate);
+  const end   = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return res.status(400).json({ message: 'Ngày không hợp lệ' });
+  }
+
+  if (start > end) {
+    return res.status(400).json({ message: 'startDate phải trước hoặc bằng endDate' });
+  }
+
+  try {
+    // Check overlap with confirmed/active rentals
+    const conflictingRental = await Rental.findOne({
+      itemId: item._id,
+      status: { $in: ['confirmed', 'in_progress', 'pending_confirmation'] },
+      startDate: { $lte: end },
+      endDate:   { $gte: start }
+    }).select('_id code');
+
+    if (conflictingRental) {
+      return res.status(409).json({
+        message: `Khoảng thời gian này trùng với đơn thuê đang hoạt động (mã: ${conflictingRental.code || conflictingRental._id})`
+      });
+    }
+
+    // Check overlap with existing blocked periods on this item
+    const overlappingBlock = item.blockedDates.find(
+      b => start <= new Date(b.endDate) && end >= new Date(b.startDate)
+    );
+
+    if (overlappingBlock) {
+      return res.status(409).json({
+        message: 'Khoảng thời gian này trùng với lịch chặn đã có'
+      });
+    }
+
+    const safeReason = typeof reason === 'string' ? reason.trim().substring(0, 200) : '';
+
+    item.blockedDates.push({ startDate: start, endDate: end, reason: safeReason });
+    await item.save();
+
+    res.status(201).json({
+      message: 'Đã thêm lịch chặn thành công',
+      blockedDates: item.blockedDates
+    });
+  } catch (error) {
+    console.error('[BLOCKED DATES] addBlockedDates error:', error);
+    res.status(500).json({ message: 'Lỗi server khi thêm lịch chặn' });
+  }
+};
+
+/**
+ * DELETE /api/items/:id/blocked-dates/:blockId
+ * Owner removes a specific blocked period by its subdocument _id.
+ */
+const removeBlockedDates = async (req, res) => {
+  const { blockId } = req.params;
+  const item = req.item; // populated by checkOwner middleware
+
+  if (!mongoose.Types.ObjectId.isValid(blockId)) {
+    return res.status(400).json({ message: 'Block ID không hợp lệ' });
+  }
+
+  const block = item.blockedDates.id(blockId);
+  if (!block) {
+    return res.status(404).json({ message: 'Không tìm thấy lịch chặn này' });
+  }
+
+  try {
+    block.deleteOne();
+    await item.save();
+
+    res.status(200).json({
+      message: 'Đã xóa lịch chặn thành công',
+      blockedDates: item.blockedDates
+    });
+  } catch (error) {
+    console.error('[BLOCKED DATES] removeBlockedDates error:', error);
+    res.status(500).json({ message: 'Lỗi server khi xóa lịch chặn' });
+  }
+};
+
 module.exports = {
   searchItems,
   createItem,
@@ -607,5 +724,7 @@ module.exports = {
   getCategories,
   getBestsellerItems,
   suggestPrice,
-  reportItem
+  reportItem,
+  addBlockedDates,
+  removeBlockedDates
 };

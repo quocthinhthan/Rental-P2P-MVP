@@ -40,12 +40,12 @@ Backend and frontend are the main working areas. Keep `mobile/` out of searches 
 Mounted backend API groups in `server.js`:
 
 - `/api/auth`: register, login, logout, current user, profile, eKYC, forgot/reset password.
-- `/api/items`: item search/list, categories, bestsellers, create/update/delete, price suggestion, item report.
-- `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup, completion, rental messages.
-- `/api/views`: BFF-style read endpoints for item detail and the current user's rentals.
+- `/api/items`: item search/list, categories, bestsellers, create/update/delete, price suggestion, item report, owner blocked-dates management.
+- `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup (with checklist), completion (with checklist), rental messages.
+- `/api/views`: BFF-style read endpoints for item detail (includes blockedDates + isFavorited) and the current user's rentals.
 - `/api/admin`: dashboard, user moderation, item moderation, featured/status updates, item reports.
 - `/api/upload`: Cloudinary image upload/delete.
-- `/api/users`: public profile.
+- `/api/users`: public profile, favorites (wishlist) management.
 - `/api/reviews`: create review and list user reviews.
 - `/api/disputes`: create, list for admin, withdraw, escalate, resolve.
 
@@ -110,15 +110,18 @@ Rentals can be cancelled before handover. If escrow was already paid, cancellati
 ## Business Rules
 
 - Pickup is allowed only after the contract is fully signed.
-- Pickup requires `pickupImages`.
+- Pickup requires `pickupImages`. Both pickup and complete now optionally accept `condition`, `accessories`, `notes` (and `damages` for complete) to populate `pickupReport`/`returnReport` on the Rental document. Existing callers sending only images remain fully compatible.
 - Completion requires `returnImages`.
 - Booking availability is date-range based. `Item.status = rented` is not a global lock for all future rentals; new rental/payment/confirmation checks must reject only overlapping active bookings.
 - Blocking rental statuses for booking overlap are `pending_confirmation`, `confirmed`, `in_progress`, and `disputed`.
+- Item `blockedDates` are also excluded from search results when date-range filters are applied. They do NOT affect the rental status machine — they only block new bookings.
+- Owner can only add a `blockedDate` that does not overlap with any existing active rental on that item.
 - Backend authorization rules decide which user can perform each action.
 - Frontend should display and submit data according to backend state, not local assumptions.
 - Rental statuses must be verified from backend implementation before conditional UI or API changes.
 - Item violation reporting: A user can only report a specific item once. Item reports require at least a 10-character description and support up to 3 evidence images (each <= 5MB, format: .jpg, .jpeg, .png, .webp, .gif).
 - Admin report adjustments: Once a report is resolved, the original owner penalties/actions (e.g. warnings, trust score deductions) are preserved to keep penalty history consistent. Any subsequent adjustments from the admin reports page only toggle the product's active status (AVAILABLE vs DELISTED) by calling `updateAdminItemStatus` instead of modifying the report action.
+- Favorites (wishlist): `User.favorites` is an array of Item ObjectIds, capped at 100, managed via `$addToSet`/`$pull`. `getItemDetailView` returns `isFavorited: Boolean` when the caller is authenticated (decoded from Bearer token without requiring `protect` middleware on the route, so unauthenticated calls still work).
 
 
 ## Important APIs
@@ -129,11 +132,16 @@ Verify the exact implementation before using or modifying these endpoints:
 - `PATCH /api/rentals/{id}/cancel`
 - `POST /api/upload`
 - `POST /api/rentals/{id}/sign-contract`
-- `PATCH /api/rentals/{id}/pickup`
-- `PATCH /api/rentals/{id}/complete`
+- `PATCH /api/rentals/{id}/pickup` — body: `{ pickupImages, condition?, accessories?, notes? }`
+- `PATCH /api/rentals/{id}/complete` — body: `{ returnImages, condition?, accessories?, notes?, damages? }`
 - `POST /api/items/{id}/report` (Submit product violation report)
 - `GET /api/admin/item-reports` (Admin get violation reports list)
 - `PATCH /api/admin/item-reports/{reportId}/resolve` (Admin resolve violation report)
+- `POST /api/items/{id}/blocked-dates` — owner only; body: `{ startDate, endDate, reason? }`
+- `DELETE /api/items/{id}/blocked-dates/{blockId}` — owner only
+- `GET /api/users/me/favorites` — authenticated; returns array of item summaries
+- `POST /api/users/me/favorites/{itemId}` — authenticated; idempotent, max 100
+- `DELETE /api/users/me/favorites/{itemId}` — authenticated; idempotent
 
 When touching these APIs from the frontend:
 

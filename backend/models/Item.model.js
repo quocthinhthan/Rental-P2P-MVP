@@ -28,7 +28,19 @@ const ItemSchema = new mongoose.Schema({
     default: ItemStatus.AVAILABLE
   },
   isFeatured: { type: Boolean, default: false },
+
+  /**
+   * Owner-controlled date blocks — prevents new rentals for specified periods
+   * (e.g. maintenance, personal use). Each entry can be removed individually via _id.
+   */
+  blockedDates: [{
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+    startDate: { type: Date, required: true },
+    endDate:   { type: Date, required: true },
+    reason:    { type: String, default: '', maxlength: 200 }
+  }]
 }, { timestamps: true });
+
 
 ItemSchema.index({ code: 1 }, { unique: true, sparse: true });
 ItemSchema.index({ location: '2dsphere' });

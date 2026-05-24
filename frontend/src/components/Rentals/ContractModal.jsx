@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/ContractModal.css';
 
-function ContractModal({ isOpen, contract, onClose }) {
+function ContractModal({ isOpen, contract, rental, onClose }) {
   if (!isOpen || !contract) return null;
 
   const isFullySigned = Boolean(contract.isFullySigned);
@@ -217,6 +217,53 @@ function ContractModal({ isOpen, contract, onClose }) {
           <div className="contract-terms-text">
             {contract.terms || 'Hai bên cam kết giao nhận tài sản đúng như mô tả. Nếu có hư hỏng, hệ thống sẽ sử dụng tiền ký quỹ để đền bù theo quy định của pháp luật.'}
           </div>
+
+          {/* Phụ lục Bàn giao & Hoàn trả (Nếu có dữ liệu bàn giao hoặc trả đồ) */}
+          {rental && (rental.pickupReport || rental.returnReport) && (
+            <>
+              <div className="contract-section-title">Phụ lục Bàn giao & Hoàn trả</div>
+              <div className="contract-parties-grid" style={{ marginBottom: '22px' }}>
+                {/* Biên bản bàn giao */}
+                {rental.pickupReport && (
+                  <div className="contract-party-card" style={{ borderStyle: 'dashed', borderColor: '#cbd5e1' }}>
+                    <span className="contract-party-role" style={{ backgroundColor: '#f1f5f9', color: '#475569' }}>
+                      Biên bản Bàn giao vật dụng (Nhận đồ)
+                    </span>
+                    <div className="contract-party-details" style={{ fontSize: '0.82rem' }}>
+                      <p>Tình trạng lúc giao: <strong>{
+                        rental.pickupReport.condition === 'good' ? 'Tốt / Nguyên vẹn' :
+                        rental.pickupReport.condition === 'fair' ? 'Bình thường / Hao mòn nhẹ' :
+                        'Hư hỏng / Hao mòn nhiều'
+                      }</strong></p>
+                      <p>Phụ kiện bàn giao: <strong>{rental.pickupReport.accessories || 'Không có'}</strong></p>
+                      {rental.pickupReport.notes && <p>Ghi chú: <strong>{rental.pickupReport.notes}</strong></p>}
+                      {rental.pickupReport.recordedAt && <p>Thời gian bàn giao: <strong>{formatDateTime(rental.pickupReport.recordedAt)}</strong></p>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Biên bản trả đồ */}
+                {rental.returnReport && (
+                  <div className="contract-party-card" style={{ borderStyle: 'dashed', borderColor: '#cbd5e1' }}>
+                    <span className="contract-party-role" style={{ backgroundColor: '#f1f5f9', color: '#475569' }}>
+                      Biên bản Hoàn trả vật dụng (Trả đồ)
+                    </span>
+                    <div className="contract-party-details" style={{ fontSize: '0.82rem' }}>
+                      <p>Tình trạng lúc trả: <strong>{
+                        rental.returnReport.condition === 'good' ? 'Tốt / Nguyên vẹn' :
+                        rental.returnReport.condition === 'fair' ? 'Bình thường / Hao mòn nhẹ' :
+                        'Hư hỏng / Hao mòn nhiều'
+                      }</strong></p>
+                      <p>Phụ kiện trả lại: <strong>{rental.returnReport.accessories || 'Không có'}</strong></p>
+                      {rental.returnReport.damages && <p>Hao mòn/Hư hỏng phát sinh: <strong style={{ color: '#ef4444' }}>{rental.returnReport.damages}</strong></p>}
+                      {rental.returnReport.notes && <p>Ghi chú thêm: <strong>{rental.returnReport.notes}</strong></p>}
+                      {rental.returnReport.recordedAt && <p>Thời gian hoàn trả: <strong>{formatDateTime(rental.returnReport.recordedAt)}</strong></p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Chữ ký hai bên */}
           <div className="contract-section-title">Chữ ký điện tử hai bên</div>
