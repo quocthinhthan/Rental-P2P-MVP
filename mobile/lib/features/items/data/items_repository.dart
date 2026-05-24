@@ -7,11 +7,17 @@ class ItemsRepository {
 
   final ApiClient api;
 
-  Future<List<ItemSummary>> searchItems(String search, {String? category}) async {
+  Future<List<ItemSummary>> searchItems(
+    String search, {
+    String? category,
+    int page = 1,
+    int limit = 16,
+  }) async {
     final result = await api.get('/items', query: {
       if (search.trim().isNotEmpty) 'search': search.trim(),
       if (category != null && category.isNotEmpty) 'category': category,
-      'limit': '50',
+      'page': page.toString(),
+      'limit': limit.toString(),
     }) as List<dynamic>;
 
     return result

@@ -38,34 +38,98 @@ class ItemsPage extends StatefulWidget {
 }
 
 class _ItemsPageState extends State<ItemsPage> {
+  static const _pageSize = 16;
+
   final search = TextEditingController();
+  final _scrollController = ScrollController();
   List<ItemSummary> items = [];
   bool loading = true;
+  bool loadingMore = false;
+  bool hasMore = true;
+  int _page = 1;
+  int _loadToken = 0;
   int _selectedCategory = 0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     loadItems();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    search.dispose();
+    super.dispose();
+  }
+
+  String? get _selectedCategoryQuery =>
+      _selectedCategory == 0 ? null : _kCategories[_selectedCategory].$1;
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || loading || loadingMore || !hasMore) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 520) {
+      loadMoreItems();
+    }
+  }
+
   Future<void> loadItems() async {
-    setState(() => loading = true);
+    final token = ++_loadToken;
+    setState(() {
+      loading = true;
+      loadingMore = false;
+      hasMore = true;
+      _page = 1;
+    });
     try {
-      final result = await widget.repository.searchItems(search.text);
-      setState(() => items = result);
+      final result = await widget.repository.searchItems(
+        search.text,
+        category: _selectedCategoryQuery,
+        page: _page,
+        limit: _pageSize,
+      );
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        items = result;
+        hasMore = result.length == _pageSize;
+      });
     } catch (error) {
       if (!mounted) return;
       showError(context, error);
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && token == _loadToken) setState(() => loading = false);
     }
   }
 
-  List<ItemSummary> get _filteredItems {
-    if (_selectedCategory == 0) return items;
-    final cat = _kCategories[_selectedCategory].$1.toLowerCase();
-    return items.where((i) => i.category.toLowerCase().contains(cat)).toList();
+  Future<void> loadMoreItems() async {
+    if (loading || loadingMore || !hasMore) return;
+    final token = _loadToken;
+    final nextPage = _page + 1;
+    setState(() => loadingMore = true);
+    try {
+      final result = await widget.repository.searchItems(
+        search.text,
+        category: _selectedCategoryQuery,
+        page: nextPage,
+        limit: _pageSize,
+      );
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _page = nextPage;
+        items = [...items, ...result];
+        hasMore = result.length == _pageSize;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      showError(context, error);
+    } finally {
+      if (mounted && token == _loadToken) setState(() => loadingMore = false);
+    }
   }
 
   int _columnsFor(double width) {
@@ -77,14 +141,13 @@ class _ItemsPageState extends State<ItemsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredItems;
-
     return Scaffold(
       backgroundColor: AppColors.page,
       body: RefreshIndicator(
         onRefresh: loadItems,
         color: AppColors.orange,
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // Sticky Header with Search
             SliverAppBar(
@@ -213,7 +276,11 @@ class _ItemsPageState extends State<ItemsPage> {
             SliverToBoxAdapter(
               child: _CategoryGrid(
                 selected: _selectedCategory,
-                onSelect: (i) => setState(() => _selectedCategory = i),
+                onSelect: (i) {
+                  if (_selectedCategory == i) return;
+                  setState(() => _selectedCategory = i);
+                  loadItems();
+                },
               ),
             ),
 
@@ -243,7 +310,7 @@ class _ItemsPageState extends State<ItemsPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${filtered.length} món',
+                          '${items.length}${hasMore ? '+' : ''} món',
                           style: const TextStyle(
                             color: AppColors.orange,
                             fontSize: 12,
@@ -264,7 +331,7 @@ class _ItemsPageState extends State<ItemsPage> {
                   child: CircularProgressIndicator(color: AppColors.orange),
                 ),
               )
-            else if (filtered.isEmpty)
+            else if (items.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
@@ -282,7 +349,7 @@ class _ItemsPageState extends State<ItemsPage> {
                     return SliverGrid(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final item = filtered[index];
+                          final item = items[index];
                           return _AnimatedGridTile(
                             index: index,
                             child: ItemTile(
@@ -304,7 +371,7 @@ class _ItemsPageState extends State<ItemsPage> {
                             ),
                           );
                         },
-                        childCount: filtered.length,
+                        childCount: items.length,
                       ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: columns,
@@ -314,6 +381,18 @@ class _ItemsPageState extends State<ItemsPage> {
                       ),
                     );
                   },
+                ),
+              ),
+            if (!loading && loadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.orange,
+                      strokeWidth: 2.6,
+                    ),
+                  ),
                 ),
               ),
           ],
