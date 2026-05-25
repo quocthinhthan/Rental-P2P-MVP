@@ -311,17 +311,33 @@ function Header() {
             </div>
           </div>
 
-          {/* Giỏ Hàng / Đơn Thuê */}
-          <div className="col-md-2 col-xl-3 text-end">
-            <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center">
+          {/* Favorites & Cart Header Actions */}
+          <div className="col-md-2 col-xl-3 text-end d-flex align-items-center justify-content-end gap-3 header-actions-container">
+            {/* Nút yêu thích nhanh */}
+            <Link to="/favorites" className="text-decoration-none fav-link d-inline-flex align-items-center" title="Sản phẩm yêu thích">
+              <div className="position-relative fav-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
+                <i className="fas fa-heart text-danger fs-5"></i>
+              </div>
+              <div className="text-start ms-2 d-none d-xl-block">
+                <small className="text-muted d-block" style={{ fontSize: '11px', marginBottom: '-4px' }}>Yêu thích</small>
+                <span className="text-dark fw-bold fav-text">Đã lưu</span>
+              </div>
+            </Link>
+
+            <div className="header-divider d-none d-xl-block"></div>
+
+            {/* Đơn thuê */}
+            <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center" title="Quản lý đơn thuê">
               <div className="position-relative cart-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
                 <i className="fas fa-shopping-cart text-primary fs-5"></i>
-                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
-                  {rentalBadgeCount}
-                </span>
+                {rentalBadgeCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
+                    {rentalBadgeCount}
+                  </span>
+                )}
               </div>
-              <div className="text-start ms-3">
-                <small className="text-muted d-block" style={{ fontSize: '12px', marginBottom: '-4px' }}>Quản lý</small>
+              <div className="text-start ms-2 d-none d-xl-block">
+                <small className="text-muted d-block" style={{ fontSize: '11px', marginBottom: '-4px' }}>Quản lý</small>
                 <span className="text-dark fw-bold cart-text">Đơn thuê</span>
               </div>
             </Link>
@@ -398,24 +414,32 @@ function Header() {
               <div className="collapse navbar-collapse" id="navbarCollapse">
                 {/* Dùng ms-auto để căn phải như template */}
                 <div className="navbar-nav ms-auto py-0 font-weight-bold">
-                  <Link to="/" className="nav-item nav-link active">Trang chủ</Link>
-                  <Link to="/shop" className="nav-item nav-link">Cửa hàng</Link>
+                  <Link to="/" className={`nav-item nav-link ${location.pathname === '/' ? 'active' : ''}`}>Trang chủ</Link>
+                  <Link to="/shop" className={`nav-item nav-link ${location.pathname.startsWith('/shop') ? 'active' : ''}`}>Cửa hàng</Link>
 
-                  {/* Dropdown cho các trang phụ (nếu cần giống template) */}
+                  {/* Dropdown cho các trang phụ */}
                   <div className="nav-item dropdown">
-                    <span className="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" style={{ cursor: 'pointer' }}>Trang phụ</span>
+                    <span className={`nav-link dropdown-toggle ${['/about', '/faq'].includes(location.pathname) ? 'active' : ''}`} data-bs-toggle="dropdown" role="button" style={{ cursor: 'pointer' }}>Trang phụ</span>
                     <div className="dropdown-menu m-0">
-                      <Link to="/about" className="dropdown-item">Giới thiệu</Link>
-                      <Link to="/faq" className="dropdown-item">Câu hỏi thường gặp</Link>
+                      <Link to="/about" className={`dropdown-item ${location.pathname === '/about' ? 'active' : ''}`}>Giới thiệu</Link>
+                      <Link to="/faq" className={`dropdown-item ${location.pathname === '/faq' ? 'active' : ''}`}>Câu hỏi thường gặp</Link>
                     </div>
                   </div>
 
-                  <Link to="/contact" className="nav-item nav-link me-2">Liên hệ</Link>
+                  <Link to="/contact" className={`nav-item nav-link me-2 ${location.pathname === '/contact' ? 'active' : ''}`}>Liên hệ</Link>
                 </div>
 
-                {/* Nút Hotline bên phải */}
-                <a href="tel:+841234567890" className="btn btn-danger text-white rounded-pill py-2 px-4 mb-3 mb-lg-0 fw-bold d-flex align-items-center">
-                  <i className="fa fa-mobile-alt me-2"></i> +84 364 123 957
+                {/* Nút Hotline CSKH hỗ trợ bên phải */}
+                <a href="tel:+84364123957" className="btn nav-hotline-btn text-white rounded-pill mb-3 mb-lg-0 fw-bold d-inline-flex align-items-center" title="Hỗ trợ chăm sóc khách hàng 24/7">
+                  <span className="hotline-icon-wrapper me-2">
+                    <i className="fas fa-headset animate-pulse-gentle"></i>
+                  </span>
+                  <div className="text-start lh-1 hotline-content">
+                    <small className="hotline-subtext d-block">
+                      <span className="status-dot-active me-1"></span>CSKH HỖ TRỢ 24/7
+                    </small>
+                    <span className="hotline-number">+84 364 123 957</span>
+                  </div>
                 </a>
               </div>
             </nav>

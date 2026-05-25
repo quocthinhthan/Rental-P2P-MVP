@@ -1280,7 +1280,7 @@ function RentalDetailPage() {
 
                 {rental?.contract && (
                   <button
-                    className="btn-xs btn-primary-xs w-full mt-2"
+                    className="btn-xs btn-primary-xs w-full"
                     type="button"
                     onClick={() => setIsViewContractOpen(true)}
                   >
@@ -1350,7 +1350,7 @@ function RentalDetailPage() {
               <div style={{ backgroundColor: '#f9fafb', borderRadius: '10px', padding: '16px', borderLeft: '4px solid #ffb524', marginBottom: '16px' }}>
                 <p style={{ margin: '0 0 10px 0' }}>
                   <strong>📝 Tình trạng thực tế:</strong>{' '}
-                  <span className="badge bg-secondary" style={{ backgroundColor: '#e2e8f0', color: '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}>
+                  <span className="badge" style={{ backgroundColor: '#c8e0c1', color: '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}>
                     {translateCondition(viewHandoverDetails.report.condition)}
                   </span>
                 </p>
