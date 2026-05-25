@@ -1,7 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 function Footer() {
+  const location = useLocation();
+  const isHelpOrFaq = ['/help', '/faq'].includes(location.pathname);
+
   return (
     <>
       {/* Footer Start */}
@@ -11,82 +14,84 @@ function Footer() {
       >
         <div className="container py-5">
           {/* Top Info */}
-          <div
-            className="row g-4 rounded mb-5"
-            style={{ background: 'rgba(255, 255, 255, .03)' }}
-          >
-            {/* Address */}
-            <div className="col-md-6 col-lg-6 col-xl-3">
-              <div className="rounded p-4">
-                <div
-                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                  style={{ width: '70px', height: '70px' }}
-                >
-                  <i className="fas fa-map-marker-alt fa-2x text-primary"></i>
-                </div>
+          {!isHelpOrFaq && (
+            <div
+              className="row g-4 rounded mb-5"
+              style={{ background: 'rgba(255, 255, 255, .03)' }}
+            >
+              {/* Address */}
+              <div className="col-md-6 col-lg-6 col-xl-3">
+                <div className="rounded p-4">
+                  <div
+                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
+                    style={{ width: '70px', height: '70px' }}
+                  >
+                    <i className="fas fa-map-marker-alt fa-2x text-primary"></i>
+                  </div>
 
-                <div>
-                  <h4 className="text-white">Địa chỉ</h4>
-                  <p className="mb-2">
-                    19 Nguyễn Hữu Thọ, P. Tân Hưng, TP.HCM
-                  </p>
+                  <div>
+                    <h4 className="text-white">Địa chỉ</h4>
+                    <p className="mb-2">
+                      19 Nguyễn Hữu Thọ, P. Tân Hưng, TP.HCM
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="col-md-6 col-lg-6 col-xl-3">
+                <div className="rounded p-4">
+                  <div
+                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
+                    style={{ width: '70px', height: '70px' }}
+                  >
+                    <i className="fas fa-envelope fa-2x text-primary"></i>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white">Email</h4>
+                    <p className="mb-2">
+                      thanquocthinh287@gmail.com
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className="col-md-6 col-lg-6 col-xl-3">
+                <div className="rounded p-4">
+                  <div
+                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
+                    style={{ width: '70px', height: '70px' }}
+                  >
+                    <i className="fa fa-phone-alt fa-2x text-primary"></i>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white">Điện thoại</h4>
+                    <p className="mb-2">0364123957</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Website */}
+              <div className="col-md-6 col-lg-6 col-xl-3">
+                <div className="rounded p-4">
+                  <div
+                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
+                    style={{ width: '70px', height: '70px' }}
+                  >
+                    <i className="fab fa-firefox-browser fa-2x text-primary"></i>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white">Website</h4>
+                    <p className="mb-2">rentalp2p.com.vn</p>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Email */}
-            <div className="col-md-6 col-lg-6 col-xl-3">
-              <div className="rounded p-4">
-                <div
-                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                  style={{ width: '70px', height: '70px' }}
-                >
-                  <i className="fas fa-envelope fa-2x text-primary"></i>
-                </div>
-
-                <div>
-                  <h4 className="text-white">Email</h4>
-                  <p className="mb-2">
-                    thanquocthinh287@gmail.com
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div className="col-md-6 col-lg-6 col-xl-3">
-              <div className="rounded p-4">
-                <div
-                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                  style={{ width: '70px', height: '70px' }}
-                >
-                  <i className="fa fa-phone-alt fa-2x text-primary"></i>
-                </div>
-
-                <div>
-                  <h4 className="text-white">Điện thoại</h4>
-                  <p className="mb-2">0364123957</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Website */}
-            <div className="col-md-6 col-lg-6 col-xl-3">
-              <div className="rounded p-4">
-                <div
-                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                  style={{ width: '70px', height: '70px' }}
-                >
-                  <i className="fab fa-firefox-browser fa-2x text-primary"></i>
-                </div>
-
-                <div>
-                  <h4 className="text-white">Website</h4>
-                  <p className="mb-2">rentalp2p.com.vn</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Footer Content */}
           <div className="row g-5">
