@@ -108,129 +108,12 @@ function Header() {
 
   return (
     <>
-      {/* Topbar Start */}
-      <div className="container-fluid px-5 d-none border-bottom d-lg-block topbar-wrapper">
-        <div className="row gx-0 align-items-center">
-
-          <div className="col-lg-4 text-center text-lg-start mb-lg-0">
-            <div className="d-inline-flex align-items-center topbar-text" style={{ height: '45px' }}>
-              <Link to="/help" className="text-muted me-2 topbar-link text-decoration-none">Trợ giúp</Link><small> / </small>
-              <Link to="/faq" className="text-muted mx-2 topbar-link text-decoration-none">FAQ</Link><small> / </small>
-              <Link to="/contact" className="text-muted ms-2 topbar-link text-decoration-none">Liên hệ</Link>
-            </div>
-          </div>
-          <div className="col-lg-4 text-center d-flex align-items-center justify-content-center topbar-text">
-            <small className="text-dark">Gọi tới:</small>
-            <span className="text-muted ms-2 fw-medium">(+84) 1234 567 890</span>
-          </div>
-
-          <div className="col-lg-4 text-center text-lg-end">
-            <div className="d-inline-flex align-items-center" style={{ height: '45px' }}>
-              <div className="dropdown custom-dropdown">
-                {/* Nút nhấn Dropdown hiện đại */}
-                <button
-                  type="button"
-                  className="btn user-dropdown-toggle text-decoration-none"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-
-                >
-                  <div className="user-avatar">
-                    {isLoggedIn && user?.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.fullName}
-                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <i className="fa fa-user"></i>
-                    )}
-                  </div>
-                  <span className="user-name fw-bold">
-                    {isLoggedIn && user ? user.fullName : 'Tài khoản'}
-                  </span>
-                  <i className="fa fa-chevron-down dropdown-icon"></i>
-                </button>
-
-                {/* Dropdown Menu */}
-                <div className="dropdown-menu dropdown-menu-end custom-dropdown-menu mt-2">
-                  {isLoggedIn && user ? (
-                    <>
-                      <div className="dropdown-header">
-                        <p className="mb-0 text-muted fs-7">Xin chào,</p>
-                        <h6 className="mb-0 text-dark fw-bold">{user.fullName}</h6>
-                      </div>
-                      <hr className="dropdown-divider mx-3 my-2" />
-                      <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
-                      </Link>
-                      <Link to="/favorites" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-heart me-2 item-icon text-danger"></i>Sản phẩm yêu thích
-                      </Link>
-                      <Link to="/account" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-user-cog me-2 item-icon"></i>Tài khoản của tôi
-                      </Link>
-                      <Link to="/post-item" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-plus-circle me-2 item-icon"></i>Đăng đồ cho thuê
-                      </Link>
-                      {user && user.role === 'admin' && (
-                        <>
-                          <li><hr className="dropdown-divider" /></li>
-                          <li>
-                            <Link to="/admin/dashboard" className="custom-dropdown-item">
-                              <i className="fas fa-chart-line me-2 item-icon"></i>
-                              Tổng quan admin
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="/admin/items" className="custom-dropdown-item">
-                              <i className="fas fa-boxes me-2 item-icon"></i>
-                              Quản lý sản phẩm
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="/admin/item-reports" className="custom-dropdown-item">
-                              <i className="fas fa-flag me-2 item-icon"></i>
-                              Báo cáo sản phẩm
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="/admin/disputes" className="custom-dropdown-item">
-                              <i className="fas fa-gavel me-2 item-icon"></i>
-                              Xử lý tranh chấp
-                            </Link>
-                          </li>
-                        </>
-                      )}
-                      <hr className="dropdown-divider mx-3 my-2" />
-                      <button onClick={handleLogout} className="dropdown-item custom-dropdown-item text-danger logout-btn">
-                        <i className="fas fa-sign-out-alt me-2 item-icon"></i>Đăng xuất
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link to="/login" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-sign-in-alt me-2 item-icon"></i>Đăng nhập
-                      </Link>
-                      <Link to="/register" className="dropdown-item custom-dropdown-item">
-                        <i className="fas fa-user-plus me-2 item-icon"></i>Đăng ký
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Topbar End */}
-
       {/* Search Header Start */}
-      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm mb-3 search-header-wrapper">
+      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm search-header-wrapper mb-3">
         <div className="row gx-0 align-items-center">
 
           {/* Logo */}
-          <div className="col-md-3 col-xl-3 text-start">
+          <div className="col-lg-3 col-xl-3 text-start">
             <Link to="/" className="navbar-brand p-0 text-decoration-none d-inline-block">
               <h1 className="display-6 text-primary m-0 fw-bold d-flex align-items-center">
                 <i className="fas fa-sync-alt text-secondary me-2 brand-icon-spin"></i>RentalP2P
@@ -239,7 +122,7 @@ function Header() {
           </div>
 
           {/* Thanh Tìm Kiếm Hiện Đại */}
-          <div className="col-md-7 col-xl-6 text-center">
+          <div className="col-lg-6 col-xl-6 text-center">
             <div className="header-search-cluster">
               <form className="d-flex custom-search-bar" onSubmit={handleSearch}>
                 <span className="search-field-icon">
@@ -248,7 +131,7 @@ function Header() {
                 <input
                   className="form-control border-0 bg-transparent py-2 px-3 shadow-none search-main-input"
                   type="text"
-                  placeholder="Bạn đang tìm thuê gì hôm nay?"
+                  placeholder="Tìm kiếm sản phẩm..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -311,36 +194,128 @@ function Header() {
             </div>
           </div>
 
-          {/* Favorites & Cart Header Actions */}
-          <div className="col-md-2 col-xl-3 text-end d-flex align-items-center justify-content-end gap-3 header-actions-container">
-            {/* Nút yêu thích nhanh */}
-            <Link to="/favorites" className="text-decoration-none fav-link d-inline-flex align-items-center" title="Sản phẩm yêu thích">
-              <div className="position-relative fav-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
-                <i className="fas fa-heart text-danger fs-5"></i>
-              </div>
-              <div className="text-start ms-2 d-none d-xl-block">
-                <small className="text-muted d-block" style={{ fontSize: '11px', marginBottom: '-4px' }}>Yêu thích</small>
-                <span className="text-dark fw-bold fav-text">Đã lưu</span>
-              </div>
-            </Link>
+          {/* Favorites & Cart & User Header Actions */}
+          <div className="col-lg-3 col-xl-3 text-end d-flex align-items-center justify-content-end gap-2 header-actions-container">
+            {isLoggedIn && (
+              <>
+                {/* Nút yêu thích nhanh */}
+                <Link to="/favorites" className="text-decoration-none fav-link header-action-btn d-inline-flex align-items-center" title="Sản phẩm yêu thích">
+                  <div className="position-relative fav-icon-wrapper action-icon-circle d-flex justify-content-center align-items-center rounded-circle border">
+                    <i className="fas fa-heart text-danger fs-5"></i>
+                  </div>
+                  <span className="action-text">Yêu thích</span>
+                </Link>
 
-            <div className="header-divider d-none d-xl-block"></div>
+                <div className="header-divider d-none d-xl-block"></div>
 
-            {/* Đơn thuê */}
-            <Link to="/my-rentals" className="text-decoration-none cart-link d-inline-flex align-items-center" title="Quản lý đơn thuê">
-              <div className="position-relative cart-icon-wrapper d-flex justify-content-center align-items-center rounded-circle border">
-                <i className="fas fa-shopping-cart text-primary fs-5"></i>
-                {rentalBadgeCount > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
-                    {rentalBadgeCount}
-                  </span>
+                {/* Đơn thuê */}
+                <Link to="/my-rentals" className="text-decoration-none cart-link header-action-btn d-inline-flex align-items-center" title="Quản lý đơn thuê">
+                  <div className="position-relative cart-icon-wrapper action-icon-circle d-flex justify-content-center align-items-center rounded-circle border">
+                    <i className="fas fa-shopping-cart text-primary fs-5"></i>
+                    {rentalBadgeCount > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white">
+                        {rentalBadgeCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="action-text">Đơn thuê</span>
+                </Link>
+
+                <div className="header-divider d-none d-xl-block"></div>
+              </>
+            )}
+
+            {/* Tài khoản Người dùng */}
+            <div className="dropdown custom-dropdown align-self-center">
+              <button
+                type="button"
+                className="btn text-decoration-none d-inline-flex align-items-center border-0 bg-transparent p-0 user-dropdown-trigger header-action-btn"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <div className="position-relative user-icon-wrapper action-icon-circle d-flex justify-content-center align-items-center rounded-circle border overflow-hidden">
+                  {isLoggedIn && user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <i className="fas fa-user text-primary fs-5"></i>
+                  )}
+                </div>
+                <span className="action-text-permanent d-inline-flex align-items-center">
+                  {isLoggedIn && user ? user.fullName.split(' ').pop() : 'Tài khoản'}
+                  <i className="fas fa-chevron-down ms-1 dropdown-arrow-icon" style={{ fontSize: '9px', color: '#94a3b8' }}></i>
+                </span>
+              </button>
+
+              <div className="dropdown-menu dropdown-menu-end custom-dropdown-menu mt-2">
+                {isLoggedIn && user ? (
+                  <>
+                    <div className="dropdown-header">
+                      <p className="mb-0 text-muted fs-7">Xin chào,</p>
+                      <h6 className="mb-0 text-dark fw-bold">{user.fullName}</h6>
+                    </div>
+                    <hr className="dropdown-divider mx-3 my-2" />
+                    <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
+                    </Link>
+                    <Link to="/favorites" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-heart me-2 item-icon text-danger"></i>Sản phẩm yêu thích
+                    </Link>
+                    <Link to="/account" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-user-cog me-2 item-icon"></i>Tài khoản của tôi
+                    </Link>
+                    <Link to="/post-item" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-plus-circle me-2 item-icon"></i>Đăng đồ cho thuê
+                    </Link>
+                    {user && user.role === 'admin' && (
+                      <>
+                        <li><hr className="dropdown-divider" /></li>
+                        <li>
+                          <Link to="/admin/dashboard" className="custom-dropdown-item">
+                            <i className="fas fa-chart-line me-2 item-icon"></i>
+                            Tổng quan admin
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/admin/items" className="custom-dropdown-item">
+                            <i className="fas fa-boxes me-2 item-icon"></i>
+                            Quản lý sản phẩm
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/admin/item-reports" className="custom-dropdown-item">
+                            <i className="fas fa-flag me-2 item-icon"></i>
+                            Báo cáo sản phẩm
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/admin/disputes" className="custom-dropdown-item">
+                            <i className="fas fa-gavel me-2 item-icon"></i>
+                            Xử lý tranh chấp
+                          </Link>
+                        </li>
+                      </>
+                    )}
+                    <hr className="dropdown-divider mx-3 my-2" />
+                    <button onClick={handleLogout} className="dropdown-item custom-dropdown-item text-danger logout-btn">
+                      <i className="fas fa-sign-out-alt me-2 item-icon"></i>Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-sign-in-alt me-2 item-icon"></i>Đăng nhập
+                    </Link>
+                    <Link to="/register" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-user-plus me-2 item-icon"></i>Đăng ký
+                    </Link>
+                  </>
                 )}
               </div>
-              <div className="text-start ms-2 d-none d-xl-block">
-                <small className="text-muted d-block" style={{ fontSize: '11px', marginBottom: '-4px' }}>Quản lý</small>
-                <span className="text-dark fw-bold cart-text">Đơn thuê</span>
-              </div>
-            </Link>
+            </div>
           </div>
 
         </div>
@@ -416,22 +391,19 @@ function Header() {
                 <div className="navbar-nav ms-auto py-0 font-weight-bold">
                   <Link to="/" className={`nav-item nav-link ${location.pathname === '/' ? 'active' : ''}`}>Trang chủ</Link>
                   <Link to="/shop" className={`nav-item nav-link ${location.pathname.startsWith('/shop') ? 'active' : ''}`}>Cửa hàng</Link>
+                  <Link to="/about" className={`nav-item nav-link ${location.pathname === '/about' ? 'active' : ''}`}>Về chúng tôi</Link>
 
                   {/* Dropdown cho các trang phụ */}
                   <div className="nav-item dropdown">
                     <span
-                      className={`nav-link dropdown-toggle ${['/about', '/help', '/faq'].some(p => location.pathname.startsWith(p)) ? 'active' : ''}`}
+                      className={`nav-link dropdown-toggle ${['/help', '/faq'].some(p => location.pathname.startsWith(p)) ? 'active' : ''}`}
                       data-bs-toggle="dropdown"
                       role="button"
                       style={{ cursor: 'pointer' }}
                     >
-                      Trang phụ
+                      Hỗ trợ
                     </span>
                     <div className="dropdown-menu m-0">
-                      <Link to="/about" className={`dropdown-item ${location.pathname === '/about' ? 'active' : ''}`}>
-                        <i className="fas fa-info-circle me-2" />Giới thiệu
-                      </Link>
-                      <div className="dropdown-divider my-1" />
                       <Link to="/help" className={`dropdown-item ${location.pathname === '/help' ? 'active' : ''}`}>
                         <i className="fas fa-life-ring me-2" />Trung tâm trợ giúp
                       </Link>
