@@ -1,13 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getItemStatusI18nKey, ItemStatus } from '../../constants/enums';
 import { getItemCardImage } from '../../utils/cloudinaryImage';
 import UserTrustSummary from '../Trust/TrustBadge';
+import { useAuth } from '../../contexts/AuthContext';
+import apiService from '../../services/api';
+import Swal from 'sweetalert2';
 import '../../styles/ItemCard.css';
 
-function ItemCard({ item }) {
+function ItemCard({ item, onFavoriteToggle }) {
   const { t } = useTranslation();
+  const { isLoggedIn } = useAuth();
+  const [isFav, setIsFav] = useState(item.isFavorited || false);
+
+  const handleFavoriteClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Đăng nhập ngay',
+        text: 'Vui lòng đăng nhập để lưu sản phẩm yêu thích.',
+        icon: 'info',
+        confirmButtonColor: '#ffb524',
+      });
+      return;
+    }
+    try {
+      if (isFav) {
+        await apiService.removeFavorite(item._id);
+        setIsFav(false);
+        if (onFavoriteToggle) onFavoriteToggle(item._id, false);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Đã xóa khỏi danh sách yêu thích',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      } else {
+        await apiService.addFavorite(item._id);
+        setIsFav(true);
+        if (onFavoriteToggle) onFavoriteToggle(item._id, true);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Đã thêm vào danh sách yêu thích',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'Không thể cập nhật danh sách yêu thích',
+        showConfirmButton: false,
+        timer: 2000,
+      });
+    }
+  };
+
   const imageUrl = item.mainImage || 'https://via.placeholder.com/300x300.png?text=No+Image';
   const imageSources = getItemCardImage(imageUrl);
   const statusKey = getItemStatusI18nKey(item.status);
@@ -43,12 +99,21 @@ function ItemCard({ item }) {
               style={{ height: '230px', objectFit: 'cover', backfaceVisibility: 'hidden' }}
             />
 
+            {/* Floating Heart Favorite Toggle Button */}
+            <button
+              onClick={handleFavoriteClick}
+              className={`btn-fav-card-toggle ${isFav ? 'is-active' : ''}`}
+              title={isFav ? 'Bỏ yêu thích' : 'Yêu thích'}
+            >
+              <i className={isFav ? 'fas fa-heart' : 'far fa-heart'} />
+            </button>
+
             <span className={`badge position-absolute top-0 start-0 m-2 ${isAvailable ? 'bg-success' : 'bg-secondary'}`}>
               {t(statusKey)}
             </span>
 
             {item.isFeatured && (
-              <span className="badge position-absolute top-0 end-0 m-2 badge-featured-vip fw-bold shadow-sm">
+              <span className="badge position-absolute badge-featured-vip fw-bold shadow-sm">
                 🌟 {t('item.featured', 'Nổi bật')}
               </span>
             )}

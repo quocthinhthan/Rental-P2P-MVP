@@ -1,0 +1,60 @@
+/* --- Favorites Page Container styling --- */
+.fav-page-container {
+  min-height: 75vh;
+  background-color: #f8fafc;
+}
+
+.fav-page-title {
+  font-size: 1.65rem;
+  color: #1e293b;
+  letter-spacing: -0.02em;
+}
+
+.fav-page-subtitle {
+  font-size: 0.9rem;
+}
+
+.fav-page-count-badge {
+  font-size: 0.8rem;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.fav-page-spinner-wrap {
+  min-height: 30vh;
+}
+
+.fav-page-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.fav-page-error-alert {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 0.9rem;
+}
+
+.fav-page-empty-card {
+  padding: 80px 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.fav-page-empty-icon-wrap {
+  width: 80px;
+  height: 80px;
+  font-size: 2.25rem;
+}
+
+.fav-page-explore-btn {
+  font-size: 0.9rem;
+  background-color: #ffb524;
+  border: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.fav-page-explore-btn:hover {
+  background-color: #e09f1f !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 181, 36, 0.25);
+}

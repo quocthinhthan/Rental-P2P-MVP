@@ -164,6 +164,9 @@ function Header() {
                       <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
                         <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
                       </Link>
+                      <Link to="/favorites" className="dropdown-item custom-dropdown-item">
+                        <i className="fas fa-heart me-2 item-icon text-danger"></i>Sản phẩm yêu thích
+                      </Link>
                       <Link to="/account" className="dropdown-item custom-dropdown-item">
                         <i className="fas fa-user-cog me-2 item-icon"></i>Tài khoản của tôi
                       </Link>

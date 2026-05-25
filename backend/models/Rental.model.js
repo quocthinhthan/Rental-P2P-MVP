@@ -1,47 +1,73 @@
+// backend/models/Rental.model.js
 const mongoose = require('mongoose');
 const { RentalStatus, PaymentStatus } = require('../enums/rental.enum');
 const { generateUniqueCode } = require('../utils/codeGenerator');
 
 const RentalSchema = new mongoose.Schema({
   code: { type: String, trim: true, uppercase: true, immutable: true },
-  itemId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'Item' 
+  itemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'Item'
   },
-  renterId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'User' 
+  renterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User'
   },
-  // Thêm ownerId để tiện truy vấn cho "MyRentalsView"
+  // ownerId — denormalized for fast "MyRentalsView" queries
   ownerId: {
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'User' 
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User'
   },
   startDate: { type: Date, required: true },
-  endDate: { type: Date, required: true },
-  rentalFee: { type: Number },
-  depositAmount: { type: Number },
-  totalAmount: { type: Number },
-  commissionRate: { type: Number, default: 10 },
+  endDate:   { type: Date, required: true },
+  rentalFee:        { type: Number },
+  depositAmount:    { type: Number },
+  totalAmount:      { type: Number },
+  commissionRate:   { type: Number, default: 10 },
   commissionAmount: { type: Number },
-  payoutAmount: { type: Number },
+  payoutAmount:     { type: Number },
   paymentStatus: {
     type: String,
     enum: Object.values(PaymentStatus),
     default: PaymentStatus.PENDING
   },
-  note: { type: String, default: '' },
+  note:               { type: String, default: '' },
   cancellationReason: { type: String, default: '' },
-  cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  cancelledAt: { type: Date, default: null },
+  cancelledBy:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  cancelledAt:        { type: Date, default: null },
 
-  contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' }, // Link tới hợp đồng
-  pickupImages: [{ type: String }], // Ảnh lúc nhận đồ
-  returnImages: [{ type: String }], // Ảnh lúc trả đồ
-  
+  contractId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' },
+  pickupImages: [{ type: String }], // kept for backward-compat (also captured in pickupReport)
+  returnImages: [{ type: String }], // kept for backward-compat (also captured in returnReport)
+
+  /**
+   * Pickup handover report — recorded by whichever party triggers pickup.
+   * Stores condition, accessories checklist, and free-text notes.
+   */
+  pickupReport: {
+    condition:   { type: String, enum: ['good', 'fair', 'damaged'], default: 'good' },
+    accessories: { type: String, default: '' },
+    notes:       { type: String, default: '' },
+    recordedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    recordedAt:  { type: Date }
+  },
+
+  /**
+   * Return handover report — recorded by whichever party triggers completion.
+   * 'damages' captures any new damage compared to pickup state.
+   */
+  returnReport: {
+    condition:   { type: String, enum: ['good', 'fair', 'damaged'], default: 'good' },
+    accessories: { type: String, default: '' },
+    notes:       { type: String, default: '' },
+    damages:     { type: String, default: '' },
+    recordedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    recordedAt:  { type: Date }
+  },
+
   status: {
     type: String,
     enum: Object.values(RentalStatus),

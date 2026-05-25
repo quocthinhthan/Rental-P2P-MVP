@@ -1,16 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth.middleware');
-const { 
-  searchItems, 
-  createItem, 
-  updateItem, 
-  deleteItem, 
+const {
+  searchItems,
+  createItem,
+  updateItem,
+  deleteItem,
   checkOwner,
   getCategories,
   getBestsellerItems,
   suggestPrice,
-  reportItem
+  reportItem,
+  addBlockedDates,
+  removeBlockedDates
 } = require('../controllers/items.controller');
 
 // ĐẶT TRÊN CÙNG ĐỂ KHÔNG BỊ NHẦM VỚI CÁC ROUTE KHÁC
@@ -37,4 +39,10 @@ router.route('/:id')
   .put(protect, checkOwner, updateItem)
   .delete(protect, checkOwner, deleteItem);
 
-module.exports = router; 
+// Owner-only: blocked-date calendar management
+// POST   /api/items/:id/blocked-dates          — add a new block
+// DELETE /api/items/:id/blocked-dates/:blockId  — remove a specific block
+router.post('/:id/blocked-dates',           protect, checkOwner, addBlockedDates);
+router.delete('/:id/blocked-dates/:blockId', protect, checkOwner, removeBlockedDates);
+
+module.exports = router;

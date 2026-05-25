@@ -220,6 +220,15 @@ function ItemDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState(null);
 
+  /* ── state: favorites ── */
+  const [isFav, setIsFav] = useState(false);
+
+  /* ── state: owner calendar block ── */
+  const [blockStart, setBlockStart] = useState(null);
+  const [blockEnd, setBlockEnd] = useState(null);
+  const [blockReason, setBlockReason] = useState('');
+  const [isBlocking, setIsBlocking] = useState(false);
+
   /* ── state: active gallery image ── */
   const [activeImg, setActiveImg] = useState(0);
 
@@ -284,6 +293,7 @@ function ItemDetailPage() {
         const detailRes = await apiService.getItemDetails(itemId);
         const fetched = detailRes.data;
         setItem(fetched);
+        setIsFav(fetched.isFavorited || false);
 
         const ownerId  = fetched?.owner?._id;
         const category = fetched?.category;
@@ -385,6 +395,32 @@ function ItemDetailPage() {
   const handleRentalSubmit = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) { navigate('/login'); return; }
+
+    if (startDate && endDate) {
+      const chosenStart = new Date(startDate);
+      chosenStart.setHours(0, 0, 0, 0);
+      const chosenEnd = new Date(endDate);
+      chosenEnd.setHours(0, 0, 0, 0);
+
+      const hasOverlap = excludeDates.some(interval => {
+        const intervalStart = new Date(interval.start);
+        intervalStart.setHours(0, 0, 0, 0);
+        const intervalEnd = new Date(interval.end);
+        intervalEnd.setHours(0, 0, 0, 0);
+        return intervalStart <= chosenEnd && intervalEnd >= chosenStart;
+      });
+
+      if (hasOverlap) {
+        Swal.fire({
+          title: 'Trùng lịch bận! 📅',
+          text: 'Khoảng thời gian bạn chọn trùng với lịch đã bị khóa hoặc đã được đặt thuê. Vui lòng chọn khoảng thời gian khác không chứa ngày bận.',
+          icon: 'warning',
+          confirmButtonColor: '#ffb524'
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const res = await apiService.createRentalRequest(itemId, startDate, endDate, note);
@@ -414,8 +450,117 @@ function ItemDetailPage() {
     }
   };
 
-  const excludeDates =
-    item?.bookedDates?.map((r) => ({ start: new Date(r.startDate), end: new Date(r.endDate) })) || [];
+  const handleFavoriteToggle = async () => {
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Đăng nhập ngay',
+        text: 'Vui lòng đăng nhập để lưu sản phẩm yêu thích.',
+        icon: 'info',
+        confirmButtonColor: '#ffb524',
+      });
+      return;
+    }
+    try {
+      if (isFav) {
+        await apiService.removeFavorite(item._id);
+        setIsFav(false);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Đã xóa khỏi danh sách yêu thích',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      } else {
+        await apiService.addFavorite(item._id);
+        setIsFav(true);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Đã thêm vào danh sách yêu thích',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'Thao tác thất bại',
+        showConfirmButton: false,
+        timer: 2000,
+      });
+    }
+  };
+
+  const handleBlockDatesSubmit = async (e) => {
+    e.preventDefault();
+    if (!blockStart || !blockEnd) {
+      Swal.fire('Thiếu thông tin', 'Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc để khóa lịch.', 'warning');
+      return;
+    }
+    try {
+      setIsBlocking(true);
+      await apiService.addBlockedDates(itemId, {
+        startDate: blockStart,
+        endDate: blockEnd,
+        reason: blockReason.trim() || 'Bận cá nhân / Bảo trì',
+      });
+      Swal.fire({
+        title: 'Thành công! 🎉',
+        text: 'Đã khóa lịch thủ công cho sản phẩm.',
+        icon: 'success',
+        confirmButtonColor: '#ffb524'
+      });
+      setBlockStart(null);
+      setBlockEnd(null);
+      setBlockReason('');
+      
+      const detailRes = await apiService.getItemDetails(itemId);
+      setItem(detailRes.data);
+    } catch (err) {
+      Swal.fire('Khóa lịch thất bại ⚠️', err.response?.data?.message || 'Có lỗi xảy ra khi khóa lịch.', 'error');
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
+  const handleDeleteBlockDate = async (blockId) => {
+    const result = await Swal.fire({
+      title: 'Mở khóa lịch?',
+      text: 'Sản phẩm sẽ sẵn sàng cho thuê trở lại vào các ngày này.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ffb524',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Mở khóa',
+      cancelButtonText: 'Hủy',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await apiService.removeBlockedDate(itemId, blockId);
+      Swal.fire({
+        title: 'Đã mở khóa! 🎉',
+        text: 'Đã xóa lịch bận thủ công thành công.',
+        icon: 'success',
+        confirmButtonColor: '#ffb524'
+      });
+      
+      const detailRes = await apiService.getItemDetails(itemId);
+      setItem(detailRes.data);
+    } catch (err) {
+      Swal.fire('Thất bại', err.response?.data?.message || 'Không thể mở khóa lịch.', 'error');
+    }
+  };
+
+  const excludeDates = [
+    ...(item?.bookedDates?.map((r) => ({ start: new Date(r.startDate), end: new Date(r.endDate) })) || []),
+    ...(item?.blockedDates?.map((r) => ({ start: new Date(r.startDate), end: new Date(r.endDate) })) || [])
+  ];
 
   /* ─────────────────────────────────────
      Loading / Error states
@@ -554,8 +699,35 @@ function ItemDetailPage() {
               </div>
             )}
 
-            {/* Title */}
-            <h1 className="idp-product-title">{item.name}</h1>
+            {/* Title with Favorite Button */}
+            <div className="d-flex align-items-center justify-content-between gap-3 mb-2 flex-wrap">
+              <h1 className="idp-product-title mb-0" style={{ flex: 1 }}>{item.name}</h1>
+              {!isOwner && (
+                <button
+                  type="button"
+                  className="btn-favorite-toggle"
+                  onClick={handleFavoriteToggle}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#fff',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    color: isFav ? '#ef4444' : '#9ca3af',
+                    fontSize: '1.2rem'
+                  }}
+                  title={isFav ? 'Bỏ yêu thích' : 'Yêu thích sản phẩm'}
+                >
+                  <i className={isFav ? 'fas fa-heart text-danger' : 'far fa-heart'} />
+                </button>
+              )}
+            </div>
 
             {/* Row 1: Low-key Metadata (Category, Code, Rating, Report on far right) */}
             <div className="idp-meta-top-row d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
@@ -731,27 +903,117 @@ function ItemDetailPage() {
 
                     {/* Hộp lịch bận sắp tới cho chủ sở hữu */}
                     <div className="idp-schedule-box">
-                      <div className="idp-schedule-header">
+                      <div className="idp-schedule-header" style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '10px', marginBottom: '12px' }}>
                         <i className="far fa-calendar-alt text-primary me-2" />
-                        <span>Lịch bận sắp tới</span>
+                        <span className="fw-bold" style={{ color: '#1f2937' }}>Quản lý lịch bận sắp tới</span>
                       </div>
-                      {availability.activeBookings.length === 0 ? (
-                        <div className="idp-schedule-empty text-center text-muted py-3">
-                          ✨ Chưa có lịch bận sắp tới cho sản phẩm của bạn.
-                        </div>
-                      ) : (
-                        <div className="idp-schedule-list">
-                          {availability.activeBookings.map((booking, idx) => (
-                            <div key={idx} className="idp-schedule-item">
-                              <span className="idp-schedule-bullet" />
-                              <span className="idp-schedule-dates">
-                                {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
-                              </span>
-                              <span className="idp-schedule-status-tag">Đã đặt</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      
+                      {/* Đơn thuê đã đặt */}
+                      <div className="mb-3">
+                        <span className="small text-muted fw-bold text-uppercase d-block mb-2">📅 Lịch đơn thuê từ khách hàng:</span>
+                        {availability.activeBookings.length === 0 ? (
+                          <div className="idp-schedule-empty text-muted py-2 small ps-2">
+                            Chưa có khách đặt thuê lịch sắp tới.
+                          </div>
+                        ) : (
+                          <div className="idp-schedule-list">
+                            {availability.activeBookings.map((booking, idx) => (
+                              <div key={idx} className="idp-schedule-item d-flex justify-content-between align-items-center mb-2" style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '6px 12px' }}>
+                                <span className="idp-schedule-dates small">
+                                  {booking.start.toLocaleDateString('vi-VN')} - {booking.end.toLocaleDateString('vi-VN')}
+                                </span>
+                                <span className="badge bg-success-light text-success px-2 py-1" style={{ fontSize: '0.75rem', borderRadius: '4px' }}>Đã đặt</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Lịch khóa thủ công */}
+                      <div className="mb-3" style={{ borderTop: '1px dashed #e5e7eb', paddingTop: '12px' }}>
+                        <span className="small text-muted fw-bold text-uppercase d-block mb-2">🔒 Lịch bạn đã khóa thủ công:</span>
+                        {!item.blockedDates || item.blockedDates.length === 0 ? (
+                          <div className="idp-schedule-empty text-muted py-2 small ps-2">
+                            Chưa có ngày nào bị khóa thủ công.
+                          </div>
+                        ) : (
+                          <div className="idp-schedule-list">
+                            {item.blockedDates.map((block) => (
+                              <div key={block._id} className="d-flex justify-content-between align-items-center mb-2" style={{ backgroundColor: '#fff5f5', border: '1px solid #fee2e2', borderRadius: '8px', padding: '8px 12px' }}>
+                                <div>
+                                  <span className="fw-semibold small text-danger d-block">
+                                    {new Date(block.startDate).toLocaleDateString('vi-VN')} - {new Date(block.endDate).toLocaleDateString('vi-VN')}
+                                  </span>
+                                  <span className="text-muted" style={{ fontSize: '0.75rem' }}>{block.reason || 'Bận cá nhân'}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDeleteBlockDate(block._id)}
+                                  style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '6px' }}
+                                  title="Mở khóa lịch"
+                                >
+                                  <i className="fas fa-unlock-alt" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Form Khóa lịch nhanh */}
+                      <div className="mt-3" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                        <span className="small text-muted fw-bold text-uppercase d-block mb-2">🔐 Khóa lịch bận mới:</span>
+                        <form onSubmit={handleBlockDatesSubmit} className="bg-light p-3 rounded-3" style={{ border: '1px solid #e5e7eb' }}>
+                          <div className="mb-2">
+                            <label className="small fw-semibold text-dark mb-1 d-block">Khoảng ngày bận <span className="text-danger">*</span></label>
+                            <DatePicker
+                              selected={blockStart}
+                              onChange={(dates) => {
+                                const [start, end] = dates;
+                                setBlockStart(start);
+                                setBlockEnd(end);
+                              }}
+                              startDate={blockStart}
+                              endDate={blockEnd}
+                              selectsRange
+                              minDate={new Date()}
+                              excludeDateIntervals={excludeDates}
+                              placeholderText="Chọn ngày bắt đầu - kết thúc"
+                              className="form-control"
+                              style={{ borderRadius: '8px', fontSize: '0.85rem' }}
+                              required
+                              disabled={isBlocking}
+                            />
+                          </div>
+                          <div className="mb-3">
+                            <label className="small fw-semibold text-dark mb-1 d-block">Lý do khóa <span className="text-muted">(Tùy chọn)</span></label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="Ví dụ: Bảo trì, bận cá nhân..."
+                              value={blockReason}
+                              onChange={(e) => setBlockReason(e.target.value)}
+                              style={{ borderRadius: '8px', fontSize: '0.85rem', padding: '6px 12px' }}
+                              maxLength={100}
+                              disabled={isBlocking}
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="btn btn-warning w-100 fw-semibold text-white d-flex align-items-center justify-content-center"
+                            style={{ borderRadius: '8px', padding: '8px', fontSize: '0.85rem', backgroundColor: '#ffb524', border: 'none' }}
+                            disabled={!blockStart || !blockEnd || isBlocking}
+                          >
+                            {isBlocking ? (
+                              <span className="spinner-border spinner-border-sm me-2" />
+                            ) : (
+                              <i className="fas fa-lock me-2" />
+                            )}
+                            Xác nhận khóa lịch
+                          </button>
+                        </form>
+                      </div>
                     </div>
                   </>
                 )}
