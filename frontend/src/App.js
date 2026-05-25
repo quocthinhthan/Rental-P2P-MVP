@@ -24,6 +24,9 @@ import VNPayReturnPage from './pages/VNPayReturnPage';
 import PublicUserProfilePage from './pages/PublicUserProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
+import HelpWidget from './components/help/HelpWidget';
+import HelpCenterPage from './pages/HelpCenterPage';
+import FAQPage from './pages/FAQPage';
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminDisputeDetailPage from './pages/AdminDisputeDetailPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -59,6 +62,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/help" element={<HelpCenterPage />} />
+        <Route path="/faq" element={<FAQPage />} />
         <Route path="/vnpay-return" element={<VNPayReturnPage />} />
         <Route path="*" element={<NotFoundPage />} />
 
@@ -90,6 +95,9 @@ function App() {
       >
         <i className="fa fa-arrow-up"></i>
       </button>
+
+      {/* Help Center Widget — floating FAQ/guide panel */}
+      <HelpWidget />
     </>
   );
 }

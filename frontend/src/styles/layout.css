@@ -29,6 +29,15 @@
     color: var(--text-secondary);
 }
 
+.topbar-link {
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+.topbar-link:hover {
+    color: var(--primary-color) !important;
+    text-decoration: underline !important;
+}
+
 /* Nút Toggle Dropdown Hiện Đại */
 .user-dropdown-toggle {
     display: flex;

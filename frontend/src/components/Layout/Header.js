@@ -114,9 +114,9 @@ function Header() {
 
           <div className="col-lg-4 text-center text-lg-start mb-lg-0">
             <div className="d-inline-flex align-items-center topbar-text" style={{ height: '45px' }}>
-              <span className="text-muted me-2">Trợ giúp</span><small> / </small>
-              <span className="text-muted mx-2">Hỗ trợ</span><small> / </small>
-              <span className="text-muted ms-2">Liên hệ</span>
+              <Link to="/help" className="text-muted me-2 topbar-link text-decoration-none">Trợ giúp</Link><small> / </small>
+              <Link to="/faq" className="text-muted mx-2 topbar-link text-decoration-none">FAQ</Link><small> / </small>
+              <Link to="/contact" className="text-muted ms-2 topbar-link text-decoration-none">Liên hệ</Link>
             </div>
           </div>
           <div className="col-lg-4 text-center d-flex align-items-center justify-content-center topbar-text">
@@ -419,10 +419,25 @@ function Header() {
 
                   {/* Dropdown cho các trang phụ */}
                   <div className="nav-item dropdown">
-                    <span className={`nav-link dropdown-toggle ${['/about', '/faq'].includes(location.pathname) ? 'active' : ''}`} data-bs-toggle="dropdown" role="button" style={{ cursor: 'pointer' }}>Trang phụ</span>
+                    <span
+                      className={`nav-link dropdown-toggle ${['/about', '/help', '/faq'].some(p => location.pathname.startsWith(p)) ? 'active' : ''}`}
+                      data-bs-toggle="dropdown"
+                      role="button"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      Trang phụ
+                    </span>
                     <div className="dropdown-menu m-0">
-                      <Link to="/about" className={`dropdown-item ${location.pathname === '/about' ? 'active' : ''}`}>Giới thiệu</Link>
-                      <Link to="/faq" className={`dropdown-item ${location.pathname === '/faq' ? 'active' : ''}`}>Câu hỏi thường gặp</Link>
+                      <Link to="/about" className={`dropdown-item ${location.pathname === '/about' ? 'active' : ''}`}>
+                        <i className="fas fa-info-circle me-2" />Giới thiệu
+                      </Link>
+                      <div className="dropdown-divider my-1" />
+                      <Link to="/help" className={`dropdown-item ${location.pathname === '/help' ? 'active' : ''}`}>
+                        <i className="fas fa-life-ring me-2" />Trung tâm trợ giúp
+                      </Link>
+                      <Link to="/faq" className={`dropdown-item ${location.pathname === '/faq' ? 'active' : ''}`}>
+                        <i className="fas fa-comments me-2" />Câu hỏi thường gặp
+                      </Link>
                     </div>
                   </div>
 
