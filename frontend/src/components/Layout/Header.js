@@ -109,7 +109,7 @@ function Header() {
   return (
     <>
       {/* Search Header Start */}
-      <div className="container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm search-header-wrapper mb-3">
+      <div className={`container-fluid px-5 py-3 d-none d-lg-block bg-white shadow-sm search-header-wrapper ${location.pathname.startsWith('/admin') ? 'mb-3' : ''}`}>
         <div className="row gx-0 align-items-center">
 
           {/* Logo */}

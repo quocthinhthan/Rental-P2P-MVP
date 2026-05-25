@@ -920,3 +920,75 @@
     display: inline-flex;
     align-items: center;
 }
+
+/* =========================================
+   PREMIUM CUSTOM FOOTER STYLING
+   ========================================= */
+.footer {
+    background: #1e293b !important; /* Premium Slate Dark Background */
+    border-top: 1px solid #334155;
+    padding-top: 48px !important;
+    padding-bottom: 32px !important;
+}
+
+.footer .footer-item h4 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 20px !important;
+}
+
+.footer .footer-item a {
+    color: #94a3b8 !important; /* Soft slate gray links */
+    font-size: 0.9rem;
+    line-height: 28px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.footer .footer-item a i {
+    font-size: 0.8rem;
+    transition: transform 0.25s ease;
+}
+
+.footer .footer-item a:hover {
+    color: var(--primary-color) !important; /* Elegant orange on hover */
+    letter-spacing: 0px !important; /* Remove letter-spacing expansion as it shifts layout */
+    transform: translateX(4px); /* Smooth modern sliding effect instead */
+}
+
+.footer .footer-item a:hover i {
+    transform: translateX(2px);
+    color: var(--primary-color) !important;
+}
+
+.footer .footer-item p {
+    color: #94a3b8 !important;
+    font-size: 0.9rem;
+    line-height: 24px;
+}
+
+.footer-contact-info span {
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.copyright {
+    background: #111827 !important; /* Deeper dark for copyright */
+    border-top: 1px solid #1f2937 !important;
+    color: #6b7280 !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+.copyright a {
+    color: #94a3b8 !important;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.copyright a:hover {
+    color: var(--primary-color) !important;
+}
