@@ -638,43 +638,52 @@ exports.cancelRental = async (req, res) => {
 
 // PATCH /api/rentals/:id/complete
 exports.completeRental = async (req, res) => {
-  const { returnImages } = req.body; 
+  const { returnImages, condition, accessories, notes, damages } = req.body;
 
   try {
-      const rental = await Rental.findById(req.params.id);
-      if (!rental) return res.status(404).json({ message: 'Rental not found' });
-      
-      if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
-          return res.status(403).json({ message: 'Forbidden' });
-      }
-      
-      // Dùng Enum
-      if (rental.status !== RentalStatus.IN_PROGRESS) {
-        return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang diễn ra' });
-      }
-      if (!returnImages || returnImages.length === 0) {
-        return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
-      }
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Rental not found' });
 
-      const savedRental = await Rental.findByIdAndUpdate(
-        rental._id,
-        {
-          returnImages,
-          status: RentalStatus.COMPLETED
-        },
-        { new: true }
-      );
-      await updateItemRuntimeStatus(rental.itemId);
+    if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
 
-      await Promise.all([
-        recalculateUserTrustScore(rental.renterId),
-        recalculateUserTrustScore(rental.ownerId)
-      ]);
+    if (rental.status !== RentalStatus.IN_PROGRESS) {
+      return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang diễn ra' });
+    }
+    if (!returnImages || returnImages.length === 0) {
+      return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
+    }
 
-      
-      res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });
+    // Build return report
+    const returnReport = {
+      condition:   ['good', 'fair', 'damaged'].includes(condition) ? condition : 'good',
+      accessories: typeof accessories === 'string' ? accessories.trim() : '',
+      notes:       typeof notes === 'string'       ? notes.trim()       : '',
+      damages:     typeof damages === 'string'     ? damages.trim()     : '',
+      recordedBy:  req.user._id,
+      recordedAt:  new Date()
+    };
+
+    const savedRental = await Rental.findByIdAndUpdate(
+      rental._id,
+      {
+        returnImages,
+        returnReport,
+        status: RentalStatus.COMPLETED
+      },
+      { new: true }
+    );
+    await updateItemRuntimeStatus(rental.itemId);
+
+    await Promise.all([
+      recalculateUserTrustScore(rental.renterId),
+      recalculateUserTrustScore(rental.ownerId)
+    ]);
+
+    res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });
   } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -753,13 +762,12 @@ exports.getContractByRentalId = async (req, res) => {
 
 // PATCH /api/rentals/:id/pickup - Giao/Nhận đồ (Up ảnh lúc nhận)
 exports.pickupItem = async (req, res) => {
-  const { pickupImages } = req.body;
-  
+  const { pickupImages, condition, accessories, notes } = req.body;
+
   try {
     const rental = await Rental.findById(req.params.id);
     if (!rental) return res.status(404).json({ message: 'Không tìm thấy đơn' });
-    
-    // Dùng Enum
+
     if (rental.status !== RentalStatus.CONFIRMED) {
       return res.status(400).json({ message: 'Đơn thuê chưa được xác nhận' });
     }
@@ -772,9 +780,18 @@ exports.pickupItem = async (req, res) => {
       return res.status(400).json({ message: 'Cả 2 bên phải ký hợp đồng điện tử trước khi giao nhận đồ!' });
     }
 
+    // Build pickup report
+    const pickupReport = {
+      condition:   ['good', 'fair', 'damaged'].includes(condition) ? condition : 'good',
+      accessories: typeof accessories === 'string' ? accessories.trim() : '',
+      notes:       typeof notes === 'string'       ? notes.trim()       : '',
+      recordedBy:  req.user._id,
+      recordedAt:  new Date()
+    };
+
     rental.pickupImages = pickupImages;
-    // Dùng Enum
-    rental.status = RentalStatus.IN_PROGRESS; 
+    rental.pickupReport = pickupReport;
+    rental.status = RentalStatus.IN_PROGRESS;
     await rental.save();
 
     res.status(200).json({ message: 'Đã xác nhận giao đồ', rental });

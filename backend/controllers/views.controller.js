@@ -3,6 +3,7 @@ const Rental = require('../models/Rental.model');
 const Review = require('../models/Review.model');
 const Dispute = require('../models/Dispute.model');
 const Contract = require('../models/Contract.model');
+const User = require('../models/User.model');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
 const { RentalStatus } = require('../enums/rental.enum');
@@ -20,53 +21,77 @@ exports.getItemDetailView = async (req, res) => {
 
   try {
     const item = await Item.findById(req.params.id)
-      .populate('ownerId', 'fullName avatarUrl phoneNumber _id ekycStatus averageRating totalReviews trustScore'); 
+      .populate('ownerId', 'fullName avatarUrl phoneNumber _id ekycStatus averageRating totalReviews trustScore');
 
     if (!item) {
       return res.status(404).json({ message: MESSAGES.ITEM.NOT_FOUND });
     }
-    
-    // Tìm các đơn thuê đã được xác nhận/đang thuê/chờ xác nhận của vật phẩm này trong tương lai
+
+    // Active rentals that block the calendar
     const activeRentalStatuses = [
-        RentalStatus.CONFIRMED,
-        RentalStatus.IN_PROGRESS,
-        RentalStatus.PENDING_CONFIRMATION
+      RentalStatus.CONFIRMED,
+      RentalStatus.IN_PROGRESS,
+      RentalStatus.PENDING_CONFIRMATION
     ];
-    const confirmedRentals = await Rental.find({ 
-        itemId: req.params.id, 
-        status: { $in: activeRentalStatuses },
-        endDate: { $gte: new Date() } 
+    const confirmedRentals = await Rental.find({
+      itemId: req.params.id,
+      status: { $in: activeRentalStatuses },
+      endDate: { $gte: new Date() }
     }).select('startDate endDate');
 
+    // isFavorited — check only when caller is authenticated
+    let isFavorited = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+        const currentUser = await User.findById(decoded.id).select('favorites');
+        if (currentUser) {
+          isFavorited = currentUser.favorites.some(id => id.equals(item._id));
+        }
+      } catch (_) {
+        // token invalid or expired — treat as unauthenticated, isFavorited stays false
+      }
+    }
 
     const hasMapLocation = (
-        item.location &&
-        Array.isArray(item.location.coordinates) &&
-        item.location.coordinates.length === 2
+      item.location &&
+      Array.isArray(item.location.coordinates) &&
+      item.location.coordinates.length === 2
+    );
+
+    // Filter out past blocked dates to keep payload lean
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingBlockedDates = (item.blockedDates || []).filter(
+      b => new Date(b.endDate) >= today
     );
 
     const viewData = {
-        _id: item._id,
-        code: item.code,
-        name: item.name,
-        description: item.description,
-        category: item.category, // Bổ sung category
-        status: item.status,     // Bổ sung status
-        isFeatured: item.isFeatured,
-        images: item.images,
-        pricePerDay: item.pricePerDay,
-        baseValue: item.baseValue,
-        depositPercentage: item.depositPercentage,
-        address: item.address,
-        mapLocation: hasMapLocation ? {
-          lng: item.location.coordinates[0],
-          lat: item.location.coordinates[1]
-        } : null,
-        owner: item.ownerId ? {
-          ...toSafeUserTrustSummary(item.ownerId),
-          phoneNumber: item.ownerId.phoneNumber
-        } : null,
-        bookedDates: confirmedRentals 
+      _id:               item._id,
+      code:              item.code,
+      name:              item.name,
+      description:       item.description,
+      category:          item.category,
+      status:            item.status,
+      isFeatured:        item.isFeatured,
+      images:            item.images,
+      pricePerDay:       item.pricePerDay,
+      baseValue:         item.baseValue,
+      depositPercentage: item.depositPercentage,
+      address:           item.address,
+      mapLocation: hasMapLocation ? {
+        lng: item.location.coordinates[0],
+        lat: item.location.coordinates[1]
+      } : null,
+      owner: item.ownerId ? {
+        ...toSafeUserTrustSummary(item.ownerId),
+        phoneNumber: item.ownerId.phoneNumber
+      } : null,
+      bookedDates:      confirmedRentals,
+      blockedDates:     upcomingBlockedDates,
+      isFavorited
     };
 
     res.status(200).json(viewData);
@@ -250,6 +275,12 @@ exports.getMyRentalsView = async (req, res) => {
             contractId: rental.contractId,
             pickupImages: rental.pickupImages || [],
             returnImages: rental.returnImages || [],
+            pickupReport: (rental.pickupReport && rental.pickupReport.recordedBy) ? rental.pickupReport : null,
+            returnReport: (rental.returnReport && rental.returnReport.recordedBy) ? rental.returnReport : null,
+            actualReturnDate: rental.actualReturnDate || null,
+            overdueDays: rental.overdueDays || 0,
+            lateFeeAmount: rental.lateFeeAmount || 0,
+            extensionRequest: rental.extensionRequest || null,
             contract: contract ? {
               _id: contract._id,
               ownerSignedAt: contract.ownerSignedAt,

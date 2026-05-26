@@ -1,15 +1,41 @@
 /* =========================================
+   VARIABLES & DESIGN TOKENS
+========================================= */
+:root {
+    --primary-color: #f97316; /* Vibrant Orange */
+    --primary-hover: #ea580c; /* Deep Orange */
+    --primary-rgb: 249, 115, 22; /* Primary RGB channels for opacity */
+    --secondary-color: #f59e0b; /* Amber */
+    --secondary-rgb: 245, 158, 11;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --bg-light: #f8fafc;
+}
+
+/* =========================================
    TOPBAR & USER DROPDOWN STYLES
 ========================================= */
 
 .topbar-wrapper {
-    background-color: #fcfcfc;
+    background-color: var(--bg-light);
     position: relative;
     z-index: 1300;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .topbar-text {
     font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.topbar-link {
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+.topbar-link:hover {
+    color: var(--primary-color) !important;
+    text-decoration: underline !important;
 }
 
 /* Nút Toggle Dropdown Hiện Đại */
@@ -26,8 +52,8 @@
 
 .user-dropdown-toggle:hover,
 .custom-dropdown:hover .user-dropdown-toggle {
-    background-color: #f1f5f9;
-    border-color: #e2e8f0;
+    background-color: rgba(var(--primary-rgb), 0.05);
+    border-color: rgba(var(--primary-rgb), 0.15);
 }
 
 /* Ẩn dấu mũi tên mặc định của Bootstrap */
@@ -50,13 +76,14 @@
 }
 
 .user-dropdown-toggle:hover .user-avatar {
-    background-color: #0d6efd; /* Đổi sang màu primary khi hover */
+    background-color: var(--primary-color); /* Đổi sang màu primary khi hover */
     color: white;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
 }
 
 .user-name {
-    font-weight: 500;
-    color: #475569;
+    font-weight: 600;
+    color: var(--text-primary);
     font-size: 0.9rem;
 }
 
@@ -75,14 +102,10 @@
    DROPDOWN MENU 
 ========================================= */
 
-/* =========================================
-   DROPDOWN MENU 
-========================================= */
-
 .custom-dropdown-menu {
     border: none;
     border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); /* Chỉnh bóng đổ gọn lại một chút */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); /* Chỉnh bóng đổ gọn lại một chút */
     padding: 12px 0;
     min-width: 240px;
     z-index: 1350;
@@ -138,13 +161,13 @@
 
 /* Hiệu ứng khi hover vào mục */
 .custom-dropdown-item:hover {
-    background-color: #f8fafc;
-    color: #0d6efd;
+    background-color: #fff7ed;
+    color: var(--primary-color);
     padding-left: 28px; /* Hiệu ứng thụt lề nhẹ khi hover */
 }
 
 .custom-dropdown-item:hover .item-icon {
-    color: #0d6efd;
+    color: var(--primary-color);
 }
 
 /* Tùy chỉnh riêng cho nút Đăng xuất (Màu đỏ) */
@@ -157,35 +180,63 @@
     color: #ef4444;
 }
 
-
 /* =========================================
    NAVBAR & MENU THEO TEMPLATE
 ========================================= */
 
-/* Font chữ in đậm cho các thẻ Link trên Navbar */
 .nav-bar {
     position: relative;
     z-index: 1100;
 }
 
-.navbar-nav .nav-link {
-    font-weight: 600 !important; /* In đậm chữ giống template */
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.9) !important;
-    padding: 25px 15px !important; /* Tạo độ rộng trên/dưới cho Navbar */
-    transition: color 0.3s ease;
+/* Cải tiến dải màu cam gradient và đổ bóng mượt mà */
+.nav-bar .bg-primary {
+    background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important;
+    box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.18);
 }
 
-.navbar-nav .nav-link:hover,
-.navbar-nav .nav-link.active {
+.nav-bar .navbar {
+    background: transparent !important;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 700 !important; /* In đậm chữ giống template */
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.92) !important;
+    padding: 22px 18px !important; /* Tạo độ rộng trên/dưới cho Navbar */
+    position: relative;
+    transition: all 0.3s ease !important;
+}
+
+/* Micro-animations sliding underline */
+.navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 3px;
+    bottom: 12px;
+    left: 50%;
+    background-color: #ffffff;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+.navbar-nav .nav-link:hover {
     color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+    width: 50%;
 }
 
 /* Đảm bảo dropdown menu phẳng và hiện đại */
 .navbar-nav .dropdown-menu {
     border: none;
-    border-radius: 4px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .dropdown-item {
@@ -213,7 +264,7 @@
 }
 
 .custom-cat-item:hover {
-    background-color: #f8f9fa;
+    background-color: #fff7ed;
     padding-left: 25px !important; /* Thụt lề nhẹ khi hover tạo cảm giác tương tác */
 }
 
@@ -222,7 +273,7 @@
 }
 
 .custom-cat-item:hover a {
-    color: #0d6efd !important; /* Đổi sang màu primary */
+    color: var(--primary-color) !important; /* Đổi sang màu primary */
 }
 
 /* Ẩn dấu mũi tên mặc định của dropdown (nếu có) */
@@ -232,18 +283,20 @@
 }
 
 /* =========================================
-   SEARCH HEADER STYLES
+   SEARCH HEADER STYLES (ELEGANT BLUE THEME FOR SEARCH & LOCATION)
 ========================================= */
 
 .search-header-wrapper {
     position: relative;
     z-index: 1200;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 /* Logo Animation */
 .brand-icon-spin {
     transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
 .navbar-brand:hover .brand-icon-spin {
     transform: rotate(180deg);
 }
@@ -258,7 +311,7 @@
     z-index: 2;
 }
 
-/* Khung bọc thanh tìm kiếm */
+/* Khung bọc thanh tìm kiếm - REVERTED TO ELEGANT BLUE */
 .custom-search-bar {
     position: relative;
     background:
@@ -335,6 +388,7 @@
     margin: 8px 0;
 }
 
+/* Nút vị trí "Tìm đồ quanh đây" - REVERTED TO ELEGANT BLUE */
 .header-location-btn {
     display: inline-flex;
     align-items: center;
@@ -414,17 +468,20 @@
     font-size: 0.95rem;
 }
 
-/* Nút tìm kiếm */
-.search-btn {
+/* Nút tìm kiếm - RESTORED TO PREMIUM ORANGE GRADIENT WITH SPECIFICITY FIX */
+.btn.btn-primary.search-btn {
     border-radius: 50px !important;
     min-width: 48px;
-    box-shadow: 0 8px 18px rgba(13, 110, 253, 0.24);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+    border: none !important;
+    box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.24) !important;
     transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.search-btn:hover {
-    transform: translateY(-1px) scale(1.03); /* Phóng to nhẹ khi trỏ chuột */
-    box-shadow: 0 10px 22px rgba(13, 110, 253, 0.32);
+.btn.btn-primary.search-btn:hover {
+    background: linear-gradient(135deg, var(--primary-hover), var(--primary-color)) !important;
+    transform: translateY(-1px) scale(1.03) !important;
+    box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.32) !important;
 }
 
 @media (max-width: 1399.98px) {
@@ -450,7 +507,6 @@
     }
 }
 
-
 /* =========================================
    CART ICON STYLES (Đơn Thuê)
 ========================================= */
@@ -459,28 +515,34 @@
 }
 
 .cart-icon-wrapper {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     background-color: #ffffff;
+    border-color: #e2e8f0 !important;
     transition: all 0.3s ease;
 }
 
 .cart-text {
+    font-size: 13px;
+    color: var(--text-primary);
     transition: color 0.3s ease;
 }
 
 /* Hiệu ứng khi hover vào khối Đơn thuê */
 .cart-link:hover .cart-icon-wrapper {
-    background-color: #0d6efd;
-    border-color: #0d6efd !important;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color) !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.15);
 }
 
 .cart-link:hover .cart-icon-wrapper i {
     color: #ffffff !important;
+    transform: scale(1.15);
 }
 
 .cart-link:hover .cart-text {
-    color: #0d6efd !important;
+    color: var(--primary-color) !important;
 }
 
 /* =========================================
@@ -534,23 +596,23 @@
 /* --- HIỆU ỨNG HOVER --- */
 
 .category-item:hover {
-    background-color: #f0f7ff; /* Màu xanh nhạt cực nhẹ */
+    background-color: #fff7ed; /* Màu cam cực nhẹ */
     padding-left: 25px; /* Thụt vào nhẹ */
 }
 
 .category-item:hover .category-name {
-    color: #0d6efd; /* Màu Primary */
+    color: var(--primary-color); /* Màu Primary */
 }
 
 .category-item:hover .category-icon-box {
-    background-color: #0d6efd;
+    background-color: var(--primary-color);
     color: #fff;
 }
 
 .category-item:hover .arrow-icon {
     opacity: 1;
     transform: translateX(0);
-    color: #0d6efd;
+    color: var(--primary-color);
 }
 
 /* Xóa border cuối cùng */
@@ -604,6 +666,7 @@
     border-radius: 12px;
     padding: 8px 0;
     z-index: 1250;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     animation: slideInUp 0.2s ease-out forwards;
 }
 
@@ -640,4 +703,175 @@
     transform: rotate(45deg);
     border-left: 1px solid #f3f4f6;
     border-top: 1px solid #f3f4f6;
+}
+
+/* =========================================
+   CUSTOM HOTLINE CSKH WIDGET
+========================================= */
+.nav-hotline-btn {
+    background: #ffffff !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(var(--primary-rgb), 0.2) !important;
+    padding: 6px 18px !important;
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.12);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    position: relative;
+    overflow: hidden;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nav-hotline-btn:hover {
+    background: #fff7ed !important;
+    color: var(--primary-hover) !important;
+    border-color: rgba(var(--primary-rgb), 0.4) !important;
+    box-shadow: 0 6px 20px rgba(var(--primary-rgb), 0.22);
+    transform: translateY(-2px) scale(1.02);
+}
+
+.hotline-icon-wrapper {
+    width: 30px;
+    height: 30px;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.nav-hotline-btn:hover .hotline-icon-wrapper {
+    background: var(--primary-color);
+    color: #ffffff;
+    transform: rotate(-15deg) scale(1.1);
+}
+
+.hotline-content {
+    margin-left: 6px;
+}
+
+.hotline-subtext {
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+}
+
+.hotline-number {
+    font-size: 0.9rem;
+    font-weight: 700; /* GIẢM FONT WEIGHT CỦA SỐ ĐIỆN THOẠI CHO TINH TẾ */
+    color: var(--text-primary);
+    letter-spacing: 0.2px;
+}
+
+.nav-hotline-btn:hover .hotline-number {
+    color: var(--primary-hover);
+}
+
+/* Chấm Online nhấp nháy */
+.status-dot-active {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #10b981; /* Emerald Green */
+    border-radius: 50%;
+    position: relative;
+}
+
+.status-dot-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #10b981;
+    border-radius: 50%;
+    animation: statusPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes statusPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+/* Headset subtle pulse animation */
+.animate-pulse-gentle {
+    animation: pulseGentle 2s infinite ease-in-out;
+}
+
+@keyframes pulseGentle {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 0.85;
+    }
+}
+
+/* =========================================
+   QUICK FAVORITES SHORTCUT
+========================================= */
+.fav-link {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.fav-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    background-color: #ffffff;
+    border-color: #e2e8f0 !important;
+    transition: all 0.3s ease;
+}
+
+.fav-icon-wrapper i {
+    color: #ef4444 !important;
+    transition: all 0.3s ease;
+}
+
+.fav-text {
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.fav-link:hover .fav-icon-wrapper {
+    background-color: #fef2f2;
+    border-color: #fca5a5 !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
+}
+
+.fav-link:hover .fav-icon-wrapper i {
+    transform: scale(1.2);
+}
+
+.fav-link:hover .fav-text {
+    color: #ef4444 !important;
+}
+
+.header-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+}
+
+.header-actions-container {
+    display: inline-flex;
+    align-items: center;
 }

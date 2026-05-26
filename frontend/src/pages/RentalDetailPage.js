@@ -38,6 +38,16 @@ const formatDate = (value) => {
   return date.toLocaleDateString('vi-VN');
 };
 
+const translateCondition = (cond) => {
+  if (!cond) return 'Chưa ghi nhận';
+  const mapping = {
+    good: 'Tốt / Nguyên vẹn',
+    fair: 'Bình thường / Hao mòn nhẹ',
+    damaged: 'Hư hỏng / Hao mòn nhiều'
+  };
+  return mapping[cond] || cond;
+};
+
 const formatDateTime = (value) => {
   if (!value) return '-';
   const date = new Date(value);
@@ -751,6 +761,7 @@ function RentalDetailPage() {
   const [handoverState, setHandoverState] = useState({ type: null, rental: null });
   const [reviewRental, setReviewRental] = useState(null);
   const [isViewContractOpen, setIsViewContractOpen] = useState(false);
+  const [viewHandoverDetails, setViewHandoverDetails] = useState(null);
 
   const loadRental = useCallback(async () => {
     try {
@@ -815,7 +826,7 @@ function RentalDetailPage() {
   const canPickup = !isDisputed && rental?.status === 'confirmed' && isFullySigned;
   const needsSignatureBeforePickup = !isDisputed && rental?.status === 'confirmed' && !isFullySigned;
   const canReturn = !isDisputed && rental?.status === 'in_progress';
-  const showCreateDispute = canCreateDispute(rental, dispute);
+  const showCreateDispute = canCreateDispute(rental, dispute) && !rental?.review?.hasMyReview;
   const canReview = rental?.status === 'completed' && !rental?.review?.hasMyReview;
   const hasBothReviews = Boolean(rental?.review?.hasMyReview && rental?.review?.hasCounterpartyReview);
   const canPayEscrow = !isDisputed && !isOwnerView && rental?.status === 'pending_payment';
@@ -1050,12 +1061,32 @@ function RentalDetailPage() {
                 <div className="process-card">
                   <span className="process-step-number">2</span>
                   <h4>Bàn giao</h4>
+                  {rental.pickupReport && rental.pickupReport.recordedAt && (
+                    <button
+                      className="btn-xs btn-primary-xs mt-1 mb-2 d-block w-full"
+                      type="button"
+                      onClick={() => setViewHandoverDetails({ type: 'pickup', report: rental.pickupReport })}
+                      style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: '6px' }}
+                    >
+                      <i className="fas fa-file-invoice me-1"></i> Xem chi tiết bàn giao
+                    </button>
+                  )}
                   <p>Ảnh bàn giao giúp hai bên xác nhận tình trạng vật phẩm khi bắt đầu thuê.</p>
                   <ImageGallery images={rental.pickupImages} emptyText="Chưa có ảnh bàn giao trong dữ liệu hiện tại." />
                 </div>
                 <div className="process-card">
                   <span className="process-step-number">3</span>
                   <h4>Trả đồ</h4>
+                  {rental.returnReport && rental.returnReport.recordedAt && (
+                    <button
+                      className="btn-xs btn-primary-xs mt-1 mb-2 d-block w-full"
+                      type="button"
+                      onClick={() => setViewHandoverDetails({ type: 'return', report: rental.returnReport })}
+                      style={{ fontSize: '0.78rem', padding: '6px 10px', borderRadius: '6px' }}
+                    >
+                      <i className="fas fa-file-invoice me-1"></i> Xem chi tiết hoàn trả
+                    </button>
+                  )}
                   <p>Ảnh trả đồ được dùng để đối chiếu khi hoàn tất đơn thuê.</p>
                   <ImageGallery images={rental.returnImages} emptyText="Chưa có ảnh trả đồ trong dữ liệu hiện tại." />
                 </div>
@@ -1207,7 +1238,7 @@ function RentalDetailPage() {
 
                 {rental?.contract && (
                   <button
-                    className="btn-xs btn-primary-xs w-full mt-2"
+                    className="btn-xs btn-primary-xs w-full"
                     type="button"
                     onClick={() => setIsViewContractOpen(true)}
                   >
@@ -1246,8 +1277,83 @@ function RentalDetailPage() {
       <ContractModal
         isOpen={isViewContractOpen}
         contract={rental?.contract}
+        rental={rental}
         onClose={() => setIsViewContractOpen(false)}
       />
+
+      {/* ══ MODAL CHI TIẾT BÀN GIAO / HOÀN TRẢ ══ */}
+      {viewHandoverDetails && (
+        <div className="rental-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="rental-modal" style={{ maxWidth: '480px' }}>
+            <div className="rental-modal-header" style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '10px', marginBottom: '14px' }}>
+              <div>
+                <p className="rental-modal-eyebrow">
+                  {viewHandoverDetails.type === 'pickup' ? '📦 Bàn giao nhận đồ' : '🔄 Hoàn trả trả đồ'}
+                </p>
+                <h3>
+                  {viewHandoverDetails.type === 'pickup' ? 'Biên bản Bàn giao Vật dụng' : 'Biên bản Hoàn trả Vật dụng'}
+                </h3>
+              </div>
+              <button
+                className="modal-close-btn"
+                type="button"
+                onClick={() => setViewHandoverDetails(null)}
+                style={{ border: 'none', background: 'transparent', fontSize: '1.4rem', color: '#9ca3af', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="handover-modal-body" style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.6', textAlign: 'left' }}>
+              <div style={{ backgroundColor: '#f9fafb', borderRadius: '10px', padding: '16px', borderLeft: '4px solid #ffb524', marginBottom: '16px' }}>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  <strong>📝 Tình trạng thực tế:</strong>{' '}
+                  <span className="badge" style={{ backgroundColor: '#c8e0c1', color: '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}>
+                    {translateCondition(viewHandoverDetails.report.condition)}
+                  </span>
+                </p>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  <strong>🔌 Phụ kiện đi kèm:</strong> {viewHandoverDetails.report.accessories || 'Không có'}
+                </p>
+                {viewHandoverDetails.type === 'return' && (
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    <strong>⚠️ Hao mòn phát sinh:</strong> <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{viewHandoverDetails.report.damages || 'Không có'}</span>
+                  </p>
+                )}
+                <p style={{ margin: 0 }}>
+                  <strong>💬 Ghi chú thêm:</strong> {viewHandoverDetails.report.notes || 'Không có ghi chú.'}
+                </p>
+              </div>
+
+              <div style={{ padding: '0 4px', fontSize: '0.82rem', color: '#6b7280' }}>
+                <p style={{ margin: '0 0 4px 0' }}>
+                  👤 Người thực hiện:{' '}
+                  <strong>
+                    {getId(viewHandoverDetails.report.recordedBy) === getId(user)
+                      ? 'Bạn'
+                      : (type === 'asRenter' ? rental?.owner?.fullName : rental?.renter?.fullName) || 'Đối tác'}
+                  </strong>
+                </p>
+                <p style={{ margin: 0 }}>
+                  🕒 Thời gian ghi nhận:{' '}
+                  <strong>{formatDateTime(viewHandoverDetails.report.recordedAt)}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="rental-modal-actions" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '12px', marginTop: '16px' }}>
+              <button
+                className="btn-xs btn-primary-xs"
+                type="button"
+                onClick={() => setViewHandoverDetails(null)}
+                style={{ backgroundColor: '#ffb524', border: 'none', color: '#fff', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Đóng lại
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
