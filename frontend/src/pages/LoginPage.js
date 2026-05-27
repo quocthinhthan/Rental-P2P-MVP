@@ -43,7 +43,7 @@ function LoginPage() {
         <div className="auth-bg-shape shape-3"></div>
         <div className="auth-form-container">
           <Link to="/" className="auth-logo">
-            <i className="fas fa-box-open"></i> RentEase
+            <i className="fas fa-box-open"></i> RentalP2P
           </Link>
           
           <h1 className="auth-title">Chào mừng trở lại! 👋</h1>
