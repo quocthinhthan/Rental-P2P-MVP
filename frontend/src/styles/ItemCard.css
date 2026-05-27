@@ -61,7 +61,7 @@
   }
 }
 
-/* Premium Featured VIP Badge (Warm Gold Theme) - Positioned to the left of the heart icon */
+/* Premium Featured VIP Badge (Warm Gold Theme) */
 .badge-featured-vip {
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
   border: 1.5px solid #f59e0b !important;
@@ -73,9 +73,8 @@
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12) !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  top: 10px !important;
-  right: 50px !important; /* Elegant spacing to the left of the heart button */
   margin: 0 !important;
+  display: inline-block;
 }
 
 /* --- Floating Heart Favorite Toggle Button --- */
@@ -135,16 +134,16 @@
   opacity: 1 !important;
 }
 
-/* Featured VIP Card - Premium Slate-to-Ice Gradient, Slate Border */
+/* Featured VIP Card - Premium Warm Glow, Subtle Gold Border */
 .product-item--featured {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
-  border: 1.5px solid #cbd5e1 !important;
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #fefdf8 100%) !important;
+  border: 2px solid rgba(245, 158, 11, 0.45) !important;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.06) !important;
 }
 
 .product-item--featured:hover {
-  border-color: #ffd700 !important; /* Elegant gold border only on hover */
-  box-shadow: 0 12px 30px rgba(255, 215, 0, 0.15) !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 12px 30px rgba(245, 158, 11, 0.18) !important;
   transform: translateY(-5px) !important;
 }
 
