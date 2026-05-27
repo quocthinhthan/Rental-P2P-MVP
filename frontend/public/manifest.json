@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "RentalP2P",
+  "name": "RentalP2P - Cho thuê đồ dùng cá nhân P2P",
   "icons": [
     {
       "src": "favicon.ico",
