@@ -409,7 +409,7 @@ function HelpCenterPage() {
                   className="hcp-faq__answer"
                   hidden={openFaq !== idx}
                 >
-                  <p>{item.a}</p>
+                  <p dangerouslySetInnerHTML={{ __html: item.a }} />
                 </div>
               </div>
             ))}

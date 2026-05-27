@@ -188,7 +188,7 @@ function FAQPage() {
                           className="faq-accordion__answer"
                           hidden={!isOpen}
                         >
-                          <p>{item.a}</p>
+                          <p dangerouslySetInnerHTML={{ __html: item.a }} />
                         </div>
                       </div>
                     );
