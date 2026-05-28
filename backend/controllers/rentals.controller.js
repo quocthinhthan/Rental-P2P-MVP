@@ -1131,6 +1131,11 @@ exports.approveReturn = async (req, res) => {
       status: RentalStatus.COMPLETED
     });
 
+    publishToQueue({
+      task: 'contract_completed',
+      rentalId: rental._id
+    });
+
     res.status(200).json({ message: 'Xác nhận trả đồ thành công. Đơn hàng đã hoàn thành.', rental });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });

@@ -99,11 +99,12 @@ The rental lifecycle is:
 2. Renter pays a deposit through the mock VNPay flow (SweetAlert confirmation popup shown before redirect).
 3. Owner confirms the rental.
 4. Backend automatically creates an electronic contract.
-5. Renter and owner both sign the contract. When fully signed, the `notification-worker` generates a PDF and emails it to both parties.
+5. Renter and owner both sign the contract. When fully signed, the `notification-worker` generates a PDF (excluding the handover annex) and emails it to both parties.
 6. One party records pickup with `PATCH /api/rentals/{id}/pickup` (stores `pickupReport`, does NOT advance status).
 7. The other party reviews the pickup report in `HandoverModal` and confirms with `PATCH /api/rentals/{id}/approve-pickup` — status advances to `in_progress`.
 8. One party records return with `PATCH /api/rentals/{id}/complete` (stores `returnReport`, does NOT advance status).
 9. The other party reviews and confirms with `PATCH /api/rentals/{id}/approve-return` — status advances to `completed`.
+10. Upon successful completion confirmation, the `notification-worker` generates and emails both parties the finalized contract PDF featuring the completed **Phụ lục Bàn giao & Hoàn trả** (Handover & Return Annex).
 
 Rentals can be cancelled before handover. If escrow was already paid, cancellation/rejection marks `paymentStatus` as `refunded`; after pickup, users should use the dispute flow instead of cancellation.
 
@@ -186,7 +187,7 @@ When touching these APIs from the frontend:
 - **Review Breakdown Dashboards:** The reviews tab on details page displays dynamic visual dashboards that compute 1-to-5 star breakdowns based on the user's transaction history reviews. Ensure review cards use standard typography tokens for responsive and beautiful mobile and desktop rendering.
 - **Smart Availability & Busy Schedule:** Product details page (`ItemDetailPage.js`) dynamically computes Today's availability status based on local timezone-safe `item.bookedDates` normalization (AVAILABLE "Còn trống", AVAILABLE_TODAY "Còn trống hôm nay", or RENTED "Đang được thuê"). It also displays a premium "Lịch bận sắp tới" (Upcoming Schedule) list widget for both renters (first 3 entries with '+ more' label) and owners (full entries list) to aid rental planning.
 - **Bidirectional Handover Flow:** `HandoverModal.jsx` serves both the recorder (fills form + images) and the reviewer (sees pre-populated read-only data, can toggle edit mode to correct details/swap images, then confirm). Both parties share the same action button label (`Xác nhận giao đồ` / `Hoàn tất thuê / Trả đồ`). The modal dispatches `approvePickup`/`approveReturn` with optional override payload when reviewer edits.
-- **PDF Contract Email:** `notification-worker` listens for `contract_fully_signed` queue events and auto-generates a styled PDF (using `pdfkit`, with side-by-side signature images) and emails it to both parties via the existing `transporter`.
+- **PDF Contract Email:** `notification-worker` listens for `contract_fully_signed` (emails initial PDF without annex) and `contract_completed` (emails final PDF with detailed pickup + return reports annex) queue events. The PDF is built using `pdfkit` featuring side-by-side signature images and is sent to both parties via the existing `transporter`.
 - **Bank Account Enforcement (Frontend Only):** Renters are blocked from booking if `user.bankAccount` is incomplete (`ItemDetailPage.js`). Owners are blocked from creating/updating listings if `user.bankAccount` is incomplete (`PostItemPage.js`). No backend validation exists — this is a frontend-only gate.
 
 
