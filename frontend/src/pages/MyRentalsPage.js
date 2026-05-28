@@ -57,12 +57,25 @@ const getMiniLifecycleIndex = (rental) => {
     case 'in_progress': return 3;
     case 'completed':
     case 'refunded': return 4;
-    case 'rejected':
-    case 'cancelled': return 1;
+    case 'rejected': return 1;
+    case 'cancelled': {
+      if (rental) {
+        if (rental.paymentStatus === 'pending' || rental.status === 'pending_payment') {
+          return 0; // Hủy ở bước thanh toán
+        }
+        const hasContract = rental.contractId || rental.contract;
+        if (hasContract) {
+          const isSigned = rental.isFullySigned || rental.contract?.isFullySigned;
+          return isSigned ? 3 : 2; // Hủy ở bước bàn giao (3) hoặc hợp đồng (2)
+        }
+        return 1; // Hủy ở bước xác nhận
+      }
+      return 1;
+    }
     case 'disputed': {
       const dispute = rental?.dispute || rental?.activeDispute || rental?.latestDispute;
       const previousStatus = dispute?.previousRentalStatus;
-      return getMiniLifecycleIndex({ status: previousStatus || 'confirmed' });
+      return getMiniLifecycleIndex({ ...rental, status: previousStatus || 'confirmed' });
     }
     default: return 0;
   }
