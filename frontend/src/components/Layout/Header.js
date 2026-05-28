@@ -268,6 +268,9 @@ function Header() {
                     <Link to="/my-rentals" className="dropdown-item custom-dropdown-item">
                       <i className="fas fa-clipboard-list me-2 item-icon"></i>Quản lý đơn thuê
                     </Link>
+                    <Link to="/financial-dashboard" className="dropdown-item custom-dropdown-item">
+                      <i className="fas fa-wallet me-2 item-icon text-success"></i>Quản lý tài chính / Doanh thu
+                    </Link>
                     <Link to="/favorites" className="dropdown-item custom-dropdown-item">
                       <i className="fas fa-heart me-2 item-icon text-danger"></i>Sản phẩm yêu thích
                     </Link>

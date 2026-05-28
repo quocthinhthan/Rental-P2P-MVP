@@ -42,7 +42,7 @@ Mounted backend API groups in `server.js`:
 - `/api/auth`: register, login, logout, current user, profile, eKYC, forgot/reset password.
 - `/api/items`: item search/list, categories, bestsellers, create/update/delete, price suggestion, item report, owner blocked-dates management.
 - `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup (with checklist), approve-pickup, completion (with checklist), approve-return, rental messages.
-- `/api/views`: BFF-style read endpoints for item detail (includes blockedDates + isFavorited) and the current user's rentals.
+- `/api/views`: BFF-style read endpoints for item detail (includes blockedDates + isFavorited), the current user's rentals, and user financial/revenue stats.
 - `/api/admin`: dashboard, user moderation, item moderation, featured/status updates, item reports.
 - `/api/upload`: Cloudinary image upload/delete.
 - `/api/users`: public profile, favorites (wishlist) management.
@@ -148,6 +148,7 @@ Verify the exact implementation before using or modifying these endpoints:
 - `POST /api/items/{id}/blocked-dates` — owner only; body: `{ startDate, endDate, reason? }`
 - `DELETE /api/items/{id}/blocked-dates/{blockId}` — owner only
 - `GET /api/users/me/favorites` — authenticated; returns array of item summaries
+- `GET /api/views/financial-stats` — authenticated; returns owner stats, renter stats, and recent transactions
 - `POST /api/users/me/favorites/{itemId}` — authenticated; idempotent, max 100
 - `DELETE /api/users/me/favorites/{itemId}` — authenticated; idempotent
 - `GET /api/reviews/items/{itemId}` — public; returns product-specific averageRating, totalReviews, and reviews list

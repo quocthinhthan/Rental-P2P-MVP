@@ -136,6 +136,8 @@ export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}
 
 export const getMyRentals = (config = {}) => api.get('/views/my-rentals', config);
 
+export const getFinancialStats = (range = 'all') => api.get(`/views/financial-stats?range=${encodeURIComponent(range)}`);
+
 // === Reviews ===
 export const createReview = ({ rentalId, rating, comment }) =>
   api.post('/reviews', { rentalId, rating, comment });
@@ -330,6 +332,8 @@ const apiService = {
   getFavorites,
   addFavorite,
   removeFavorite,
+  // Financial Stats
+  getFinancialStats,
 };
 
 export default apiService;

@@ -339,3 +339,235 @@ exports.getMyRentalsView = async (req, res) => {
     res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
+
+// GET /api/views/financial-stats
+exports.getFinancialStatsView = async (req, res) => {
+  const userId = req.user._id;
+  const range = req.query.range || 'all';
+
+  try {
+    // 1. Phân tích bộ lọc thời gian
+    let daysLimit = 0;
+    let groupType = 'month'; // 'day' hoặc 'month'
+    let numBuckets = 6; // Mặc định 6 tháng gần nhất
+
+    if (range === '7d') {
+      daysLimit = 7;
+      groupType = 'day';
+      numBuckets = 7;
+    } else if (range === '30d') {
+      daysLimit = 30;
+      groupType = 'day';
+      numBuckets = 30;
+    } else if (range === '90d') {
+      daysLimit = 90;
+      groupType = 'month';
+      numBuckets = 3;
+    } else if (range === '1y') {
+      daysLimit = 365;
+      groupType = 'month';
+      numBuckets = 12;
+    } else {
+      // all
+      daysLimit = 0;
+      groupType = 'month';
+      numBuckets = 6;
+    }
+
+    // Lấy toàn bộ đơn hàng liên quan đến người dùng này
+    const rentals = await Rental.find({
+      $or: [
+        { ownerId: userId },
+        { renterId: userId }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'itemId',
+        select: '_id code name pricePerDay images'
+      });
+
+    let ownerReceived = 0;
+    let ownerPending = 0;
+    let ownerCommission = 0;
+    let ownerCompletedCount = 0;
+    let ownerTotalCount = 0;
+
+    let renterSpent = 0;
+    let renterPendingFee = 0;
+    let renterPendingDeposit = 0;
+    let renterCompletedCount = 0;
+    let renterTotalCount = 0;
+
+    // 2. Tạo sẵn các hộp (buckets) dữ liệu để đảm bảo không bị trống
+    const buckets = [];
+    const ownerMonthly = {};
+    const renterMonthly = {};
+
+    if (groupType === 'day') {
+      for (let i = numBuckets - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }); // "DD/MM"
+        buckets.push(dateStr);
+        ownerMonthly[dateStr] = 0;
+        renterMonthly[dateStr] = 0;
+      }
+    } else {
+      for (let i = numBuckets - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(1); // Tránh lỗi ngày 31 nhảy tháng
+        d.setMonth(d.getMonth() - i);
+        const monthStr = d.toISOString().slice(0, 7); // "YYYY-MM"
+        buckets.push(monthStr);
+        ownerMonthly[monthStr] = 0;
+        renterMonthly[monthStr] = 0;
+      }
+    }
+
+    const itemStats = {}; // itemId -> summary
+    const now = new Date();
+
+    // 3. Phân lọc và tính toán dòng tiền
+    const filteredRentals = [];
+
+    for (const rental of rentals) {
+      const isOwner = rental.ownerId.toString() === userId.toString();
+      const isRenter = rental.renterId.toString() === userId.toString();
+
+      // Kiểm tra xem đơn hàng có nằm trong giới hạn thời gian lọc hay không
+      let isWithinLimit = true;
+      if (daysLimit > 0) {
+        const diffTime = Math.abs(now - rental.createdAt);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        isWithinLimit = diffDays <= daysLimit;
+      }
+
+      if (isWithinLimit) {
+        filteredRentals.push(rental);
+
+        const fee = rental.rentalFee || 0;
+        const deposit = rental.depositAmount || 0;
+        const payout = rental.payoutAmount !== undefined ? rental.payoutAmount : (rental.rentalFee ? rental.rentalFee * 0.9 : 0);
+        const commission = rental.commissionAmount !== undefined ? rental.commissionAmount : (rental.rentalFee ? rental.rentalFee * 0.1 : 0);
+
+        if (isOwner) {
+          ownerTotalCount++;
+          if (rental.status === RentalStatus.COMPLETED) {
+            ownerReceived += payout;
+            ownerCommission += commission;
+            ownerCompletedCount++;
+
+            if (rental.itemId) {
+              const itemIdStr = rental.itemId._id.toString();
+              if (!itemStats[itemIdStr]) {
+                itemStats[itemIdStr] = {
+                  _id: rental.itemId._id,
+                  name: rental.itemId.name,
+                  code: rental.itemId.code,
+                  mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+                  rentalCount: 0,
+                  earned: 0
+                };
+              }
+              itemStats[itemIdStr].rentalCount++;
+              itemStats[itemIdStr].earned += payout;
+            }
+          } else if ([RentalStatus.CONFIRMED, RentalStatus.IN_PROGRESS, RentalStatus.DISPUTED].includes(rental.status)) {
+            ownerPending += payout;
+          }
+        }
+
+        if (isRenter) {
+          renterTotalCount++;
+          if (rental.status === RentalStatus.COMPLETED) {
+            renterSpent += fee;
+            renterCompletedCount++;
+          } else if ([RentalStatus.CONFIRMED, RentalStatus.IN_PROGRESS, RentalStatus.DISPUTED].includes(rental.status)) {
+            renterPendingFee += fee;
+            renterPendingDeposit += deposit;
+          }
+        }
+      }
+
+      // Nhóm biểu đồ (tất cả các trạng thái completed đều được cộng vào cột tương ứng)
+      let bucketKey = '';
+      if (groupType === 'day') {
+        bucketKey = rental.createdAt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      } else {
+        bucketKey = rental.createdAt.toISOString().slice(0, 7); // "YYYY-MM"
+      }
+
+      if (buckets.includes(bucketKey)) {
+        const payout = rental.payoutAmount !== undefined ? rental.payoutAmount : (rental.rentalFee ? rental.rentalFee * 0.9 : 0);
+        const fee = rental.rentalFee || 0;
+
+        if (isOwner && rental.status === RentalStatus.COMPLETED) {
+          ownerMonthly[bucketKey] += payout;
+        }
+        if (isRenter && rental.status === RentalStatus.COMPLETED) {
+          renterMonthly[bucketKey] += fee;
+        }
+      }
+    }
+
+    const itemEarningsArray = Object.values(itemStats).sort((a, b) => b.earned - a.earned);
+
+    const monthlyEarningsArray = buckets.map(key => ({
+      label: key, // Định dạng "DD/MM" hoặc "YYYY-MM"
+      amount: ownerMonthly[key]
+    }));
+
+    const monthlySpendingArray = buckets.map(key => ({
+      label: key,
+      amount: renterMonthly[key]
+    }));
+
+    // Lấy tối đa 10 giao dịch tài chính thuộc bộ lọc thời gian
+    const recentTransactions = filteredRentals.slice(0, 10).map(rental => {
+      const isOwner = rental.ownerId.toString() === userId.toString();
+      return {
+        _id: rental._id,
+        code: rental.code,
+        role: isOwner ? 'owner' : 'renter',
+        itemName: rental.itemId ? rental.itemId.name : 'Sản phẩm đã xóa',
+        itemImage: (rental.itemId?.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+        startDate: rental.startDate,
+        endDate: rental.endDate,
+        amount: isOwner ? (rental.payoutAmount !== undefined ? rental.payoutAmount : (rental.rentalFee * 0.9 || 0)) : (rental.rentalFee || 0),
+        rentalFee: rental.rentalFee || 0,
+        depositAmount: rental.depositAmount || 0,
+        status: rental.status,
+        paymentStatus: rental.paymentStatus,
+        createdAt: rental.createdAt
+      };
+    });
+
+    res.status(200).json({
+      ownerStats: {
+        totalEarned: ownerReceived,
+        pendingPayout: ownerPending,
+        commissionPaid: ownerCommission,
+        totalRentalsCount: ownerTotalCount,
+        completedRentalsCount: ownerCompletedCount,
+        averageEarningsPerRental: ownerCompletedCount > 0 ? Math.round(ownerReceived / ownerCompletedCount) : 0,
+        itemEarnings: itemEarningsArray,
+        monthlyEarnings: monthlyEarningsArray
+      },
+      renterStats: {
+        totalSpent: renterSpent,
+        pendingRefund: renterPendingDeposit,
+        pendingFee: renterPendingFee,
+        totalRentalsCount: renterTotalCount,
+        completedRentalsCount: renterCompletedCount,
+        monthlySpending: monthlySpendingArray
+      },
+      recentTransactions
+    });
+
+  } catch (error) {
+    console.error('[ERROR] getFinancialStatsView:', error);
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
+  }
+};
+

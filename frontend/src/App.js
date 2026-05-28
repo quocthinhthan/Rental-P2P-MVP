@@ -23,6 +23,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
 import PublicUserProfilePage from './pages/PublicUserProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
+import FinancialDashboardPage from './pages/FinancialDashboardPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 import HelpWidget from './components/help/HelpWidget';
 import HelpCenterPage from './pages/HelpCenterPage';
@@ -74,6 +75,7 @@ function App() {
           <Route path="/my-rentals" element={<MyRentalsPage />} />
           <Route path="/my-rentals/:rentalId" element={<RentalDetailPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/financial-dashboard" element={<FinancialDashboardPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
