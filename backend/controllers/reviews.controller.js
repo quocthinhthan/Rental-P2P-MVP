@@ -2,6 +2,7 @@
 const Review = require('../models/Review.model');
 const Rental = require('../models/Rental.model');
 const User = require('../models/User.model');
+const Item = require('../models/Item.model');
 const mongoose = require('mongoose');
 const {
   recalculateUserTrustScore,
@@ -126,6 +127,83 @@ exports.getUserReviews = async (req, res) => {
         currentPage: page,
         limitPerPage: limit,
         hasMore: user.totalReviews > (page * limit)
+      },
+      reviews
+    });
+  } catch (error) {
+    console.error('[DEBUG] LỖI:', error);
+    return res.status(500).json({ message: 'Lỗi hệ thống', error: error.message });
+  }
+};
+
+// GET /api/reviews/items/:itemId?page=1&limit=5
+exports.getItemReviews = async (req, res) => {
+  const { itemId } = req.params;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 5;
+  const skip = (page - 1) * limit;
+
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(400).json({ message: 'Item ID không hợp lệ' });
+  }
+
+  try {
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+    }
+
+    const ownerId = item.ownerId;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const expiredHiddenReviews = await Review.find({
+      revieweeId: ownerId,
+      isPublic: false,
+      createdAt: { $lte: sevenDaysAgo }
+    });
+
+    if (expiredHiddenReviews.length > 0) {
+      console.log(`[DEBUG] Tự động công khai ${expiredHiddenReviews.length} đánh giá ẩn quá 7 ngày`);
+      const expiredIds = expiredHiddenReviews.map((review) => review._id);
+      await Review.updateMany(
+        { _id: { $in: expiredIds } },
+        { $set: { isPublic: true } }
+      );
+      await recalculateUserTrustScore(ownerId);
+    }
+
+    // 1. Tìm tất cả các đơn thuê của sản phẩm này
+    const rentals = await Rental.find({ itemId }).select('_id');
+    const rentalIds = rentals.map((r) => r._id);
+
+    // 2. Tìm tất cả đánh giá công khai có rentalId thuộc rentalIds và revieweeId là ownerId
+    const query = {
+      rentalId: { $in: rentalIds },
+      revieweeId: ownerId,
+      isPublic: true
+    };
+
+    const totalReviews = await Review.countDocuments(query);
+    const reviews = await Review.find(query)
+      .populate('reviewerId', 'fullName avatarUrl')
+      .populate('rentalId', 'startDate endDate')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Tính rating trung bình riêng cho sản phẩm này
+    const stats = await Review.aggregate([
+      { $match: query },
+      { $group: { _id: null, averageRating: { $avg: '$rating' } } }
+    ]);
+    const averageRating = stats.length > 0 ? stats[0].averageRating : 0;
+
+    return res.status(200).json({
+      averageRating,
+      totalReviews,
+      pagination: {
+        currentPage: page,
+        limitPerPage: limit,
+        hasMore: totalReviews > (page * limit)
       },
       reviews
     });

@@ -5,6 +5,7 @@ import HandoverModal from '../components/Rentals/HandoverModal';
 import RentalChatPanel from '../components/Rentals/RentalChatPanel';
 import SignatureModal from '../components/Rentals/SignatureModal';
 import ContractModal from '../components/Rentals/ContractModal';
+import DisputeModal from '../components/Rentals/DisputeModal';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import { formatRentalCode } from '../utils/itemCode';
@@ -70,22 +71,16 @@ const getDisputeFromRental = (rental) => (
   (Array.isArray(rental?.disputes) ? rental.disputes[0] : null)
 );
 
-const isCompletedWithinSevenDays = (rental) => {
-  if (rental?.status !== 'completed') return false;
-  const baseDate = new Date(rental.updatedAt || rental.completedAt || rental.endDate);
-  if (Number.isNaN(baseDate.getTime())) return false;
-  return Date.now() - baseDate.getTime() <= 7 * 24 * 60 * 60 * 1000;
-};
-
 const hasPickupProof = (rental) => Array.isArray(rental?.pickupImages) && rental.pickupImages.length > 0;
 
 const canCreateDispute = (rental, dispute) => {
   if (!rental || dispute?.status) return false;
-  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed'].includes(rental.status)) {
+  // Sau khi bàn giao rồi (in_progress, completed) thì không được tranh chấp nữa, ẩn nút tranh chấp
+  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed', 'in_progress', 'completed'].includes(rental.status)) {
     return false;
   }
 
-  return hasPickupProof(rental) || rental.status === 'in_progress' || isCompletedWithinSevenDays(rental);
+  return rental.status === 'confirmed';
 };
 
 
@@ -774,6 +769,7 @@ function RentalDetailPage() {
   const [reviewRental, setReviewRental] = useState(null);
   const [isViewContractOpen, setIsViewContractOpen] = useState(false);
   const [viewHandoverDetails, setViewHandoverDetails] = useState(null);
+  const [isDisputeOpen, setIsDisputeOpen] = useState(false);
 
   const loadRental = useCallback(async () => {
     try {
@@ -830,14 +826,24 @@ function RentalDetailPage() {
     rental?.contract?.isFullySigned ||
     (rental?.contract?.ownerSignedAt && rental?.contract?.renterSignedAt)
   );
+  const currentUserId = user?._id || '';
+  const pickupRecordedBy = rental?.pickupReport?.recordedBy?._id || rental?.pickupReport?.recordedBy || '';
+  const returnRecordedBy = rental?.returnReport?.recordedBy?._id || rental?.returnReport?.recordedBy || '';
+
+  const isWaitingPickupApproval = rental?.status === 'confirmed' && rental?.pickupReport?.recordedBy && !rental?.pickupReport?.approvedBy;
+  const isWaitingReturnApproval = rental?.status === 'in_progress' && rental?.returnReport?.recordedBy && !rental?.returnReport?.approvedBy;
+
+  const isMyPickupReport = isWaitingPickupApproval && (pickupRecordedBy === currentUserId);
+  const isMyReturnReport = isWaitingReturnApproval && (returnRecordedBy === currentUserId);
+
   const hasCurrentUserSigned = isOwnerView
     ? Boolean(rental?.contract?.ownerSignedAt)
     : Boolean(rental?.contract?.renterSignedAt);
   const canSignContract = !isDisputed && rental?.status === 'confirmed' && !isFullySigned && !hasCurrentUserSigned;
   const isWaitingForOtherSignature = !isDisputed && rental?.status === 'confirmed' && !isFullySigned && hasCurrentUserSigned;
-  const canPickup = !isDisputed && rental?.status === 'confirmed' && isFullySigned;
+  const canPickup = !isDisputed && rental?.status === 'confirmed' && isFullySigned && !rental?.pickupReport?.recordedBy;
   const needsSignatureBeforePickup = !isDisputed && rental?.status === 'confirmed' && !isFullySigned;
-  const canReturn = !isDisputed && rental?.status === 'in_progress';
+  const canReturn = !isDisputed && rental?.status === 'in_progress' && !rental?.returnReport?.recordedBy;
   const showCreateDispute = canCreateDispute(rental, dispute) && !rental?.review?.hasMyReview;
   const canReview = rental?.status === 'completed' && !rental?.review?.hasMyReview;
   const hasBothReviews = Boolean(rental?.review?.hasMyReview && rental?.review?.hasCounterpartyReview);
@@ -852,6 +858,7 @@ function RentalDetailPage() {
   const showContractReadyState = isFullySigned && rental?.status === 'confirmed';
   const showReviewState = rental?.status === 'completed' && rental?.review?.hasMyReview;
   const showExistingDisputeState = !showCreateDispute && !isDisputed && Boolean(dispute?.status);
+  const canRebook = !isOwnerView && ['cancelled', 'rejected', 'completed'].includes(rental?.status);
   const hasVisibleAction = Boolean(
     canPayEscrow ||
     canOwnerConfirmReject ||
@@ -861,11 +868,14 @@ function RentalDetailPage() {
     needsSignatureBeforePickup ||
     canPickup ||
     canReturn ||
+    isWaitingPickupApproval ||
+    isWaitingReturnApproval ||
     canReview ||
     showReviewState ||
     canCancelRental ||
     showCreateDispute ||
-    showExistingDisputeState
+    showExistingDisputeState ||
+    canRebook
   );
   const itemImage = rental?.item?.mainImage || 'https://via.placeholder.com/900x600';
   const counterparty = isOwnerView
@@ -886,11 +896,23 @@ function RentalDetailPage() {
     }
   };
 
+  const showRefundNotice = ['cancelled', 'completed', 'refunded'].includes(rental?.status) || dispute?.status === 'resolved';
+
   const handlePayEscrow = async () => {
     try {
       setActionLoading('pay');
       const response = await apiService.createVNPayUrl(rental._id);
-      window.location.href = response.data.paymentUrl;
+      
+      Swal.fire({
+        title: 'Thanh toán ký quỹ 💳',
+        text: 'Hệ thống sẽ chuyển hướng bạn đến cổng thanh toán VNPay để thực hiện thanh toán ký quỹ (tiền đặt cọc) bảo đảm an toàn giao dịch.',
+        icon: 'info',
+        confirmButtonText: 'Tiến hành thanh toán',
+        confirmButtonColor: '#ffb524',
+        allowOutsideClick: false
+      }).then(() => {
+        window.location.href = response.data.paymentUrl;
+      });
     } catch (err) {
       setActionLoading('');
       Swal.fire('Lỗi thanh toán', getErrorMessage(err, 'Không thể tạo liên kết thanh toán VNPay.'), 'error');
@@ -927,45 +949,8 @@ function RentalDetailPage() {
     }
   };
 
-  const handleCreateDispute = async () => {
-    const { value: formData } = await Swal.fire({
-      title: 'Báo cáo sự cố',
-      html: `
-        <p style="color:#6b7280;margin-bottom:12px">Mô tả rõ sự cố. Đơn thuê sẽ bị đóng băng trong thời gian xử lý tranh chấp.</p>
-        <textarea id="dispute-reason" class="swal2-textarea" style="height:120px;resize:vertical;" placeholder="Ví dụ: hàng không đúng mô tả, bị hư hỏng, một bên không phản hồi..."></textarea>
-        <input id="dispute-evidence" class="swal2-input" placeholder="URL hình ảnh bằng chứng, phân tách bằng dấu phẩy (tùy chọn)" />
-      `,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f97316',
-      confirmButtonText: 'Gửi báo cáo',
-      cancelButtonText: 'Hủy',
-      preConfirm: () => {
-        const reason = document.getElementById('dispute-reason').value.trim();
-        const evidenceText = document.getElementById('dispute-evidence').value.trim();
-        if (!reason) {
-          Swal.showValidationMessage('Vui lòng mô tả sự cố trước khi gửi');
-          return false;
-        }
-        return {
-          reason,
-          evidenceImages: evidenceText ? evidenceText.split(',').map((url) => url.trim()).filter(Boolean) : [],
-        };
-      },
-    });
-
-    if (!formData) return;
-
-    try {
-      setActionLoading('dispute');
-      await apiService.createDispute(rental._id, formData.reason, formData.evidenceImages);
-      await loadRental();
-      Swal.fire('Đã gửi báo cáo!', 'Đơn thuê đã chuyển sang trạng thái tranh chấp.', 'success');
-    } catch (err) {
-      Swal.fire('Lỗi!', getErrorMessage(err, 'Không thể gửi báo cáo.'), 'error');
-    } finally {
-      setActionLoading('');
-    }
+  const handleCreateDispute = () => {
+    setIsDisputeOpen(true);
   };
 
   if (loading) {
@@ -1198,6 +1183,18 @@ function RentalDetailPage() {
             <section className="rental-detail-panel rental-action-panel">
               <SectionHeader eyebrow="Thao tác" title="Hành động tiếp theo" />
 
+              {showRefundNotice && (
+                <div className="alert alert-info py-2.5 px-3 small border-0 mb-3 shadow-sm text-start" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', borderLeft: '4px solid #3b82f6', borderRadius: '6px' }}>
+                  <div className="d-flex align-items-start gap-2">
+                    <i className="fas fa-info-circle mt-1" style={{ fontSize: '1.1rem' }}></i>
+                    <div>
+                      <strong className="d-block mb-1">Thông báo hoàn cọc tự động</strong>
+                      Hệ thống sẽ hoàn trả tiền cọc/ký quỹ tự động vào tài khoản ngân hàng đã đăng ký của bạn trong vòng 72h. Nếu sau 72h chưa nhận được tiền, vui lòng liên hệ bộ phận CSKH để được hỗ trợ khẩn cấp.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isDisputed && (
                 <div className="dispute-freeze-box">
                   <strong>Đơn thuê đang có tranh chấp.</strong>
@@ -1253,10 +1250,34 @@ function RentalDetailPage() {
                   </button>
                 )}
 
+                {isWaitingPickupApproval && (
+                  isMyPickupReport ? (
+                    <div className="w-100 p-3 mb-3 text-center rounded border" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a', display: 'block', whiteSpace: 'normal', wordBreak: 'break-word', fontWeight: '600', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                      <i className="fas fa-hourglass-half me-1"></i> Đã ghi nhận biên bản giao đồ. Đang chờ đối phương xác nhận...
+                    </div>
+                  ) : (
+                    <button className="btn-xs btn-info-xs" onClick={() => setHandoverState({ type: 'pickup', rental, report: rental?.pickupReport })} disabled={Boolean(actionLoading)}>
+                      Xác nhận giao đồ
+                    </button>
+                  )
+                )}
+
                 {canReturn && (
                   <button className="btn-xs btn-info-xs" onClick={() => setHandoverState({ type: 'return', rental })} disabled={Boolean(actionLoading)}>
                     Hoàn tất thuê / Trả đồ
                   </button>
+                )}
+
+                {isWaitingReturnApproval && (
+                  isMyReturnReport ? (
+                    <div className="w-100 p-3 mb-3 text-center rounded border" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a', display: 'block', whiteSpace: 'normal', wordBreak: 'break-word', fontWeight: '600', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                      <i className="fas fa-hourglass-half me-1"></i> Đã ghi nhận biên bản trả đồ. Đang chờ đối phương xác nhận...
+                    </div>
+                  ) : (
+                    <button className="btn-xs btn-info-xs" onClick={() => setHandoverState({ type: 'return', rental, report: rental?.returnReport })} disabled={Boolean(actionLoading)}>
+                      Hoàn tất thuê / Trả đồ
+                    </button>
+                  )
                 )}
 
                 {canCancelRental && (
@@ -1285,6 +1306,12 @@ function RentalDetailPage() {
 
                 {showExistingDisputeState && (
                   <span className="contract-state contract-state-waiting">Đơn này đã có tranh chấp liên quan</span>
+                )}
+
+                {canRebook && (
+                  <button className="btn-xs btn-info-xs w-full" onClick={() => navigate(`/items/${rental.itemId || rental.item?._id}`)}>
+                    <i className="fas fa-redo me-1"></i> Thuê lại sản phẩm
+                  </button>
                 )}
 
                 {!hasVisibleAction && (
@@ -1317,6 +1344,7 @@ function RentalDetailPage() {
         isOpen={Boolean(handoverState.rental)}
         rental={handoverState.rental}
         type={handoverState.type}
+        report={handoverState.report}
         onClose={() => setHandoverState({ type: null, rental: null })}
         onSuccess={loadRental}
       />
@@ -1380,6 +1408,24 @@ function RentalDetailPage() {
                 </p>
               </div>
 
+              {((viewHandoverDetails.type === 'pickup' && rental?.pickupImages?.length > 0) ||
+                (viewHandoverDetails.type === 'return' && rental?.returnImages?.length > 0)) && (
+                <div style={{ marginBottom: '16px', padding: '0 4px' }}>
+                  <strong style={{ fontSize: '0.86rem', display: 'block', marginBottom: '6px' }}>🖼️ Hình ảnh minh chứng:</strong>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {(viewHandoverDetails.type === 'pickup' ? rental.pickupImages : rental.returnImages).map((imgUrl, idx) => (
+                      <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer">
+                        <img 
+                          src={imgUrl} 
+                          alt={`Proof ${idx + 1}`} 
+                          style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} 
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ padding: '0 4px', fontSize: '0.82rem', color: '#6b7280' }}>
                 <p style={{ margin: '0 0 4px 0' }}>
                   👤 Người thực hiện:{' '}
@@ -1396,7 +1442,7 @@ function RentalDetailPage() {
               </div>
             </div>
 
-            <div className="rental-modal-actions" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '12px', marginTop: '16px' }}>
+            <div className="rental-modal-actions" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '12px', marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button
                 className="btn-xs btn-primary-xs"
                 type="button"
@@ -1409,6 +1455,13 @@ function RentalDetailPage() {
           </div>
         </div>
       )}
+
+      <DisputeModal
+        isOpen={isDisputeOpen}
+        rental={rental}
+        onClose={() => setIsDisputeOpen(false)}
+        onSuccess={loadRental}
+      />
     </div>
   );
 }

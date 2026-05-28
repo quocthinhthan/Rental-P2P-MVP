@@ -14,7 +14,11 @@ Use this skill when changing frontend rental lifecycle UI. The current rental de
 5. Đang thuê
 6. Hoàn tất
 
-Do not add a separate dispute step. Dispute state is shown by badge, alert text, and step state on the existing timeline.
+Handover (step 4) is now **two-phase**:
+- Recorder calls `pickup` / `complete` → saves report, status unchanged.
+- Counterpart reviews in `HandoverModal` and calls `approve-pickup` / `approve-return` → status advances.
+
+While the first party has recorded but the counterpart has not yet approved, treat the handover step as *active* (not yet completed).
 
 ## Standard Rental Status Mapping
 
@@ -127,6 +131,7 @@ Important: never use `previousRentalStatus === 'confirmed'` alone to force the t
 - Active dispute maps to a frontend timeline state such as `disputed_in_progress`.
 - Resolved renter-win maps to a frontend timeline state such as `dispute_resolved_at_in_progress`.
 - Avoid simple `rental.status -> step index` mapping when a dispute object is present.
-- The frontend `Bao cao su co` action should only appear after handover evidence exists, while the rental is `in_progress`, or during the allowed post-completion dispute window. Do not show it immediately after owner confirmation while the rental is only waiting for contract signing or pickup.
+- The dispute action button must only appear when the rental is `confirmed` status AND before `approve-pickup` has been called (i.e., while `rental.pickupReport` is absent or `in_progress` has not started). Once the rental is `in_progress` or `completed`, hide the dispute button on the frontend.
 - Keep the 6 existing step labels unchanged unless the product owner explicitly asks to rename the timeline.
 - Preserve icon visibility. This app loads FontAwesome 5, so timeline icons should use FA5 class names such as `fas fa-clock`, not old FA4 names such as `fa-clock-o`.
+- After a terminal rental state (`cancelled`, `rejected`, `completed`, resolved dispute), renter sees a **"Thuê lại sản phẩm"** button linking to the item detail page.

@@ -24,6 +24,12 @@ const UserSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpire: Date,
 
+  bankAccount: {
+    bankName: { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    accountHolder: { type: String, default: '' }
+  },
+
   /**
    * Wishlist — array of saved Item IDs.
    * Capped at 100 (enforced in controller).

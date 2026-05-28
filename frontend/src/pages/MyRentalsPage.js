@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
 import {
@@ -10,6 +10,31 @@ import Swal from 'sweetalert2';
 import { formatRentalCode } from '../utils/itemCode';
 import UserTrustSummary from '../components/Trust/TrustBadge';
 import '../styles/MyRentalsPage.css';
+
+// ─── Filter definitions ──────────────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { key: 'all',     label: 'Tất cả',         icon: 'fas fa-layer-group',   match: null },
+  { key: 'active',  label: 'Đang hoạt động', icon: 'fas fa-bolt',          match: ['pending_payment','pending_confirmation','confirmed','in_progress','disputed'] },
+  { key: 'pending_payment',     label: 'Chờ thanh toán', icon: 'fas fa-credit-card',  match: ['pending_payment'] },
+  { key: 'pending_confirmation',label: 'Chờ xác nhận',  icon: 'fas fa-hourglass-half',match: ['pending_confirmation'] },
+  { key: 'confirmed',           label: 'Đã xác nhận',   icon: 'fas fa-file-signature',match: ['confirmed'] },
+  { key: 'in_progress',         label: 'Đang thuê',     icon: 'fas fa-sync-alt',      match: ['in_progress'] },
+  { key: 'disputed',            label: 'Tranh chấp',    icon: 'fas fa-gavel',         match: ['disputed'] },
+  { key: 'completed',           label: 'Hoàn tất',      icon: 'fas fa-check-circle',  match: ['completed','refunded'] },
+  { key: 'ended',               label: 'Đã kết thúc',   icon: 'fas fa-ban',           match: ['cancelled','rejected'] },
+];
+
+function applyStatusFilter(rentals, filterKey) {
+  if (filterKey === 'all' || !filterKey) return rentals;
+  const filter = STATUS_FILTERS.find((f) => f.key === filterKey);
+  if (!filter || !filter.match) return rentals;
+  return rentals.filter((r) => filter.match.includes(r.status));
+}
+
+function countForFilter(rentals, filter) {
+  if (!filter.match) return rentals.length;
+  return rentals.filter((r) => filter.match.includes(r.status)).length;
+}
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
@@ -245,7 +270,39 @@ function RentalEmptyState({ title, description, action }) {
   );
 }
 
-function RentalListSection({ title, subtitle, rentals, type }) {
+function StatusFilterBar({ allRentals, activeFilter, onFilterChange }) {
+  // Only show filters that have at least one match OR are 'all'/'active'
+  const visibleFilters = STATUS_FILTERS.filter((f) => {
+    if (f.key === 'all' || f.key === 'active') return true;
+    return countForFilter(allRentals, f) > 0;
+  });
+
+  return (
+    <div className="rental-filter-bar" role="group" aria-label="Lọc theo trạng thái">
+      {visibleFilters.map((f) => {
+        const count = countForFilter(allRentals, f);
+        const isActive = activeFilter === f.key;
+        return (
+          <button
+            key={f.key}
+            type="button"
+            className={`rental-filter-pill${isActive ? ' active' : ''}${f.key === 'active' ? ' pill-active-group' : ''}`}
+            onClick={() => onFilterChange(f.key)}
+            aria-pressed={isActive}
+          >
+            <i className={f.icon} aria-hidden="true" />
+            <span className="pill-label">{f.label}</span>
+            <span className="pill-count">{count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RentalListSection({ title, subtitle, rentals, allRentals, type, activeFilter, onFilterChange }) {
+  const filtered = useMemo(() => applyStatusFilter(rentals, activeFilter), [rentals, activeFilter]);
+
   return (
     <>
       <div className="rental-section-heading">
@@ -253,19 +310,29 @@ function RentalListSection({ title, subtitle, rentals, type }) {
           <p className="section-kicker">Quản lý giao dịch</p>
           <h2 className="section-title">{title}</h2>
         </div>
-        <span className="section-count">{rentals.length} đơn</span>
+        <span className="section-count">{filtered.length} / {rentals.length} đơn</span>
       </div>
 
-      {rentals.length === 0 ? (
+      <StatusFilterBar
+        allRentals={allRentals || rentals}
+        activeFilter={activeFilter}
+        onFilterChange={onFilterChange}
+      />
+
+      {filtered.length === 0 ? (
         <RentalEmptyState
-          title="Chưa có đơn thuê"
-          description={type === 'asRenter'
-            ? 'Khi bạn thuê một vật phẩm, đơn sẽ xuất hiện tại đây để theo dõi tiến trình.'
-            : 'Khi có người gửi yêu cầu thuê đồ, bạn sẽ thấy đơn cần xử lý trong khu vực này.'}
+          title={activeFilter === 'all' ? 'Chưa có đơn thuê' : 'Không có đơn nào phù hợp'}
+          description={
+            activeFilter !== 'all'
+              ? 'Thử chọn "Tất cả" để xem toàn bộ đơn thuê.'
+              : type === 'asRenter'
+                ? 'Khi bạn thuê một vật phẩm, đơn sẽ xuất hiện tại đây để theo dõi tiến trình.'
+                : 'Khi có người gửi yêu cầu thuê đồ, bạn sẽ thấy đơn cần xử lý trong khu vực này.'
+          }
         />
       ) : (
-        <div className="rental-list-grid">
-          {rentals.map((rental) => (
+        <div className="rental-list-grid rental-list-filtered">
+          {filtered.map((rental) => (
             <RentalSummaryCard key={rental._id} rental={rental} type={type} />
           ))}
         </div>
@@ -280,6 +347,8 @@ function MyRentalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('asRenter');
+  const [renterFilter, setRenterFilter] = useState('all');
+  const [ownerFilter, setOwnerFilter] = useState('all');
 
   const fetchMyRentals = useCallback(async () => {
     try {
@@ -372,7 +441,10 @@ function MyRentalsPage() {
               title="Vật phẩm tôi đang thuê"
               subtitle="Theo dõi trạng thái thanh toán, hợp đồng, bàn giao và tranh chấp của từng đơn thuê."
               rentals={rentals.asRenter}
+              allRentals={rentals.asRenter}
               type="asRenter"
+              activeFilter={renterFilter}
+              onFilterChange={setRenterFilter}
             />
           )}
 
@@ -381,7 +453,10 @@ function MyRentalsPage() {
               title="Yêu cầu thuê đồ"
               subtitle="Xem nhanh người thuê, thời gian thuê và những đơn cần bạn xác nhận hoặc xử lý."
               rentals={rentals.asOwner}
+              allRentals={rentals.asOwner}
               type="asOwner"
+              activeFilter={ownerFilter}
+              onFilterChange={setOwnerFilter}
             />
           )}
 

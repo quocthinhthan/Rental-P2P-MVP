@@ -68,6 +68,14 @@ exports.updateProfile = async (req, res) => {
   user.address = req.body.address || user.address;
   user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
   
+  if (req.body.bankAccount) {
+    user.bankAccount = {
+      bankName: req.body.bankAccount.bankName !== undefined ? req.body.bankAccount.bankName : user.bankAccount?.bankName || '',
+      accountNumber: req.body.bankAccount.accountNumber !== undefined ? req.body.bankAccount.accountNumber : user.bankAccount?.accountNumber || '',
+      accountHolder: req.body.bankAccount.accountHolder !== undefined ? req.body.bankAccount.accountHolder : user.bankAccount?.accountHolder || ''
+    };
+  }
+
   if (req.body.idCardNumber && user.ekycStatus !== 'verified') {
     user.idCardNumber = req.body.idCardNumber;
     user.ekycStatus = 'verified';
@@ -89,6 +97,7 @@ exports.updateProfile = async (req, res) => {
     address: updatedUser.address,
     avatarUrl: updatedUser.avatarUrl,
     ekycStatus: updatedUser.ekycStatus,
+    bankAccount: updatedUser.bankAccount,
     trustScore: updatedTrustUser?.trustScore,
     trustLevel: updatedTrustUser ? getTrustLevelFromScore(updatedTrustUser.trustScore) : undefined
   });
@@ -118,6 +127,7 @@ exports.loginUser = async (req, res) => {
           avatarUrl: user.avatarUrl,
           role: user.role,
           ekycStatus: user.ekycStatus,
+          bankAccount: user.bankAccount,
           trustScore: user.trustScore,
           averageRating: user.averageRating,
           totalReviews: user.totalReviews
