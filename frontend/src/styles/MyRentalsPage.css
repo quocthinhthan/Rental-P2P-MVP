@@ -279,7 +279,7 @@
 .rental-detail-main { display: grid; gap: 18px; }
 .rental-detail-sidebar, .rental-action-panel { position: sticky; top: 18px; }
 .detail-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
-.detail-actions .btn-xs, .detail-actions .contract-state { width: 100%; min-height: 42px; border-radius: 8px; justify-content: center; }
+.detail-actions .btn-xs, .detail-actions .contract-state { width: 100%; min-height: 42px; border-radius: 8px; justify-content: center; white-space: normal; text-align: center; }
 
 .rental-hero-section, .rental-detail-panel {
   background: var(--surface); border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 14px 34px rgba(15, 23, 42, .07);

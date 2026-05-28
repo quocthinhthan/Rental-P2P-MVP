@@ -10,7 +10,7 @@ const QUEUE_NAME = 'notification_queue';
 const RABBITMQ_URI = process.env.RABBITMQ_URI || 'amqp://rabbitmq';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/p2p_rental';
 
-let User, Rental, Item;
+let User, Rental, Item, Contract;
 
 const connectDB = async () => {
   if (mongoose.connection.readyState >= 1) return;
@@ -22,6 +22,7 @@ const connectDB = async () => {
     User = require('./User.model.js');
     Rental = require('./Rental.model.js');
     Item = require('./Item.model.js');
+    Contract = require('./Contract.model.js');
   } catch (err) {
     console.error('[WORKER] MongoDB connection error:', err.message);
     throw err;
@@ -47,13 +48,230 @@ const formatDate = (dateString) => {
   });
 };
 
+const https = require('https');
+
+const fetchImageBuffer = (url) => {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to fetch image: status code ${res.statusCode}`));
+        return;
+      }
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+};
+
+const sanitizeUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('//')) return `https:${url}`;
+  return url;
+};
+
 // Send email notifications
 const sendNotification = async (data) => {
-  if (!User || !Rental || !Item) {
+  if (!User || !Rental || !Item || !Contract) {
     throw new Error('Models not initialized. Requeuing task.');
   }
 
   try {
+
+    if (data.task === 'contract_fully_signed') {
+      console.log(`[WORKER] Processing contract_fully_signed for rental ${data.rentalId}`);
+
+      const contract = await Contract.findOne({ rentalId: data.rentalId }).lean();
+      if (!contract) {
+        console.error(`[WORKER] Contract not found for rental ${data.rentalId}`);
+        return;
+      }
+
+      // Fetch signature buffers
+      let ownerSigBuffer = null;
+      let renterSigBuffer = null;
+
+      if (contract.ownerSignatureUrl) {
+        try {
+          const finalUrl = sanitizeUrl(contract.ownerSignatureUrl);
+          console.log(`[WORKER] Fetching owner signature image from: ${finalUrl}`);
+          ownerSigBuffer = await fetchImageBuffer(finalUrl);
+        } catch (err) {
+          console.error('[WORKER] Failed to fetch owner signature image:', err.message);
+        }
+      }
+
+      if (contract.renterSignatureUrl) {
+        try {
+          const finalUrl = sanitizeUrl(contract.renterSignatureUrl);
+          console.log(`[WORKER] Fetching renter signature image from: ${finalUrl}`);
+          renterSigBuffer = await fetchImageBuffer(finalUrl);
+        } catch (err) {
+          console.error('[WORKER] Failed to fetch renter signature image:', err.message);
+        }
+      }
+
+      const rental = await Rental.findById(data.rentalId)
+        .populate('renterId', 'fullName email')
+        .populate('ownerId', 'fullName email')
+        .lean();
+
+      if (!rental) {
+        console.error(`[WORKER] Rental not found for ID ${data.rentalId}`);
+        return;
+      }
+
+      const PDFDocument = require('pdfkit');
+      const doc = new PDFDocument({ margin: 50 });
+      let buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      
+      const pdfPromise = new Promise((resolve, reject) => {
+        doc.on('end', () => {
+          resolve(Buffer.concat(buffers));
+        });
+        doc.on('error', reject);
+      });
+
+      try {
+        doc.registerFont('Arial', 'C:\\Windows\\Fonts\\Arial.ttf');
+        doc.registerFont('Arial-Bold', 'C:\\Windows\\Fonts\\Arialbd.ttf');
+        doc.font('Arial');
+      } catch (fontErr) {
+        console.warn('[WORKER] Failed to load Windows Arial font, falling back to Helvetica:', fontErr.message);
+      }
+
+      doc.fontSize(10).fillColor('#475569').text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', { align: 'center' });
+      doc.fontSize(10).fillColor('#475569').text('Độc lập - Tự do - Hạnh phúc', { align: 'center' });
+      doc.moveDown(0.5);
+      doc.fontSize(8).fillColor('#94a3b8').text('----------------------------------', { align: 'center' });
+      doc.moveDown(1);
+
+      doc.fontSize(18).fillColor('#0f172a').font('Arial-Bold').text('HỢP ĐỒNG THUÊ TÀI SẢN NỘI BỘ', { align: 'center' });
+      doc.fontSize(9).fillColor('#64748b').font('Arial').text(`Số hợp đồng: ${contract._id || 'Chưa cấp mã'}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      const contractDate = new Date(contract.createdAt || Date.now());
+      doc.fontSize(9).fillColor('#334155').text(`Hôm nay, ngày ${contractDate.getDate()} tháng ${contractDate.getMonth() + 1} năm ${contractDate.getFullYear()}, tại hệ thống Rental P2P, chúng tôi gồm các bên dưới đây đồng ý ký kết hợp đồng thuê tài sản này:`, { align: 'left', lineGap: 3 });
+      doc.moveDown(1);
+
+      doc.fontSize(12).fillColor('#0284c7').font('Arial-Bold').text('1. CÁC BÊN THAM GIA HỢP ĐỒNG');
+      doc.fontSize(9).fillColor('#334155').font('Arial');
+      doc.moveDown(0.5);
+
+      doc.font('Arial-Bold').text('Bên Cho Thuê (Bên A):');
+      doc.font('Arial').text(`  - Họ và tên: ${contract.ownerInfo?.fullName || 'Chưa cập nhật'}`);
+      doc.text(`  - Số CMND/CCCD: ${contract.ownerInfo?.idCardNumber || 'Chưa xác thực eKYC'}`);
+      doc.text('  - Vai trò trên hệ thống: Chủ sở hữu');
+      doc.moveDown(0.5);
+
+      doc.font('Arial-Bold').text('Bên Thuê (Bên B):');
+      doc.font('Arial').text(`  - Họ và tên: ${contract.renterInfo?.fullName || 'Chưa cập nhật'}`);
+      doc.text(`  - Số CMND/CCCD: ${contract.renterInfo?.idCardNumber || 'Chưa xác thực eKYC'}`);
+      doc.text('  - Vai trò trên hệ thống: Người thuê đồ');
+      doc.moveDown(1.5);
+
+      doc.fontSize(12).fillColor('#0284c7').font('Arial-Bold').text('2. CHI TIẾT TÀI SẢN THUÊ & CHI PHÍ');
+      doc.fontSize(9).fillColor('#334155').font('Arial');
+      doc.moveDown(0.5);
+
+      const formatCurrency = (val) => `${Number(val || 0).toLocaleString('vi-VN')} VNĐ`;
+      const start = new Date(contract.rentalPeriod?.startDate);
+      const end = new Date(contract.rentalPeriod?.endDate);
+      const rentalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      const depositVal = contract.totalPrice - ((contract.itemInfo?.pricePerDay || 0) * rentalDays);
+
+      doc.text(`  - Tên sản phẩm thuê: ${contract.itemInfo?.name || 'Tài sản thuê'}`);
+      doc.text(`  - Đơn giá thuê / Ngày: ${formatCurrency(contract.itemInfo?.pricePerDay)}`);
+      doc.text(`  - Thời hạn thuê: Từ ngày ${start.toLocaleDateString('vi-VN')} đến ngày ${end.toLocaleDateString('vi-VN')} (${rentalDays} ngày)`);
+      doc.text(`  - Tiền ký quỹ (Tiền cọc): ${formatCurrency(depositVal)}`);
+      doc.font('Arial-Bold').text(`  - Tổng giá trị thanh toán: ${formatCurrency(contract.totalPrice)}`);
+      doc.moveDown(1.5);
+
+      doc.fontSize(12).fillColor('#0284c7').font('Arial-Bold').text('3. ĐIỀU KHOẢN VÀ CAM KẾT');
+      doc.fontSize(9).fillColor('#334155').font('Arial');
+      doc.moveDown(0.5);
+      doc.text(contract.terms || 'Hai bên cam kết giao nhận tài sản đúng như mô tả. Nếu có hư hỏng, hệ thống sẽ sử dụng tiền ký quỹ để đền bù theo quy định của pháp luật.', { lineGap: 3 });
+      doc.moveDown(1.5);
+
+      doc.fontSize(12).fillColor('#0284c7').font('Arial-Bold').text('4. CHỮ KÝ ĐIỆN TỬ HAI BÊN');
+      doc.moveDown(0.5);
+
+      const yStart = doc.y;
+
+      // Column A: Owner
+      doc.x = 50;
+      doc.y = yStart;
+      doc.fontSize(10).fillColor('#0f172a').font('Arial-Bold').text('Đại diện Bên A (Chủ đồ):', { width: 230 });
+      doc.moveDown(0.3);
+      doc.fontSize(8).fillColor('#475569').font('Arial');
+      doc.text(`- Họ tên: ${contract.ownerInfo?.fullName || ''}`, { width: 230 });
+      doc.text(`- Ký lúc: ${new Date(contract.ownerSignedAt).toLocaleString('vi-VN')}`, { width: 230 });
+      doc.text('- Xác thực chữ ký: ĐÃ XÁC NHẬN CHỮ KÝ ĐIỆN TỬ TRÊN HỆ THỐNG', { width: 230 });
+      doc.moveDown(0.5);
+      if (ownerSigBuffer) {
+        try {
+          doc.image(ownerSigBuffer, { width: 140, height: 60 });
+        } catch (imgErr) {
+          console.error('[WORKER] Error drawing owner signature image:', imgErr.message);
+          doc.fontSize(8).fillColor('#dc2626').text('(Lỗi hiển thị hình ảnh chữ ký)', { width: 230 });
+        }
+      }
+
+      // Column B: Renter
+      doc.x = 320;
+      doc.y = yStart;
+      doc.fontSize(10).fillColor('#0f172a').font('Arial-Bold').text('Đại diện Bên B (Người thuê):', { width: 230 });
+      doc.moveDown(0.3);
+      doc.fontSize(8).fillColor('#475569').font('Arial');
+      doc.text(`- Họ tên: ${contract.renterInfo?.fullName || ''}`, { width: 230 });
+      doc.text(`- Ký lúc: ${new Date(contract.renterSignedAt).toLocaleString('vi-VN')}`, { width: 230 });
+      doc.text('- Xác thực chữ ký: ĐÃ XÁC NHẬN CHỮ KÝ ĐIỆN TỬ TRÊN HỆ THỐNG', { width: 230 });
+      doc.moveDown(0.5);
+      if (renterSigBuffer) {
+        try {
+          doc.image(renterSigBuffer, { width: 140, height: 60 });
+        } catch (imgErr) {
+          console.error('[WORKER] Error drawing renter signature image:', imgErr.message);
+          doc.fontSize(8).fillColor('#dc2626').text('(Lỗi hiển thị hình ảnh chữ ký)', { width: 230 });
+        }
+      }
+
+      // Reset x position and complete doc
+      doc.x = 50;
+      doc.moveDown(1.5);
+      doc.end();
+
+      const pdfBuffer = await pdfPromise;
+
+      const mailOptions = {
+        from: `"P2P Rental" <${process.env.EMAIL_USER}>`,
+        to: [rental.ownerId.email, rental.renterId.email].join(','),
+        subject: `📄 Hợp đồng điện tử đã ký kết thành công: "${contract.itemInfo?.name}"`,
+        html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color:#28a745;">Ký kết hợp đồng thành công</h2>
+          <p>Xin chào <strong>${rental.ownerId.fullName}</strong> và <strong>${rental.renterId.fullName}</strong>,</p>
+          <p>Hai bên đã hoàn tất việc ký kết hợp đồng điện tử cho đơn thuê vật phẩm <strong>${contract.itemInfo?.name}</strong>.</p>
+          <p>Đính kèm trong email này là tệp PDF hợp đồng chính thức để hai bên lưu trữ và làm bằng chứng đối chiếu khi giao nhận đồ.</p>
+          <p>Vui lòng tiến hành giao nhận đồ đúng hẹn và kiểm tra kỹ tình trạng sản phẩm trước khi xác nhận trên hệ thống.</p>
+          <br>
+          <p>Trân trọng,<br><strong>P2P Rental Team</strong></p>
+        </div>`,
+        attachments: [
+          {
+            filename: `hop-dong-dien-tu-${rental.code || data.rentalId}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }
+        ]
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`[WORKER] PDF contract email sent successfully to ${rental.ownerId.email} and ${rental.renterId.email}`);
+      return;
+    }
 
     if (data.task === 'forgot_password') {
       console.log(`[WORKER] Processing: forgot password for ${data.email}`);

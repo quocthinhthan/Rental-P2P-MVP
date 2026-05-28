@@ -52,7 +52,9 @@ const RentalSchema = new mongoose.Schema({
     accessories: { type: String, default: '' },
     notes:       { type: String, default: '' },
     recordedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    recordedAt:  { type: Date }
+    recordedAt:  { type: Date },
+    approvedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    approvedAt:  { type: Date, default: null }
   },
 
   /**
@@ -65,7 +67,9 @@ const RentalSchema = new mongoose.Schema({
     notes:       { type: String, default: '' },
     damages:     { type: String, default: '' },
     recordedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    recordedAt:  { type: Date }
+    recordedAt:  { type: Date },
+    approvedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    approvedAt:  { type: Date, default: null }
   },
 
   status: {

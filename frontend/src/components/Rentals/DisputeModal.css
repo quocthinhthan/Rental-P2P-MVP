@@ -1,0 +1,186 @@
+/* frontend/src/components/Rentals/DisputeModal.css */
+
+.dispute-modal-backdrop {
+  z-index: 1060;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dispute-item-modal {
+  width: 100%;
+  max-width: 580px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.dispute-item-form-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dispute-form-group {
+  margin-bottom: 20px;
+}
+
+.dispute-form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.dispute-form-label sup {
+  color: #ef4444;
+}
+
+.dispute-select {
+  width: 100%;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 0 16px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #f8fafc;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.dispute-select:focus {
+  border-color: #f97316;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.dispute-textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #f8fafc;
+  outline: none;
+  resize: none;
+  transition: all 0.2s;
+}
+
+.dispute-textarea:focus {
+  border-color: #f97316;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.dispute-textarea-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.dispute-textarea-footer .char-count {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.dispute-upload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 24px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.dispute-upload-box:hover {
+  border-color: #f97316;
+  background-color: #fffaf5;
+}
+
+.dispute-upload-box.disabled {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.upload-box-icon {
+  font-size: 1.8rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.dispute-upload-box span {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.dispute-upload-box small {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.dispute-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.dispute-preview-item {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dispute-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dispute-remove-image-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(15, 23, 42, 0.7);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background-color 0.2s;
+}
+
+.dispute-remove-image-btn:hover {
+  background-color: #ef4444;
+}

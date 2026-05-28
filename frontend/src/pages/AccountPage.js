@@ -39,6 +39,9 @@ function AccountPage() {
     setValue('phoneNumber', user.phoneNumber || '');
     setValue('address', user.address || '');
     setValue('avatarUrl', user.avatarUrl || '');
+    setValue('bankAccount.bankName', user.bankAccount?.bankName || '');
+    setValue('bankAccount.accountNumber', user.bankAccount?.accountNumber || '');
+    setValue('bankAccount.accountHolder', user.bankAccount?.accountHolder || '');
     // If not verified, open eKYC form by default
     if (!isVerified) setEkycFormOpen(true);
   }, [user, setValue, isVerified]);
@@ -141,7 +144,12 @@ function AccountPage() {
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         address: data.address,
-        avatarUrl
+        avatarUrl,
+        bankAccount: {
+          bankName: data.bankAccount?.bankName || '',
+          accountNumber: data.bankAccount?.accountNumber || '',
+          accountHolder: data.bankAccount?.accountHolder || ''
+        }
       };
 
       if (ekycData?.idNumber) {
@@ -292,6 +300,41 @@ function AccountPage() {
                         className="form-control"
                         placeholder="Quận, Thành phố..."
                         {...register('address')}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ── Section: Thông tin ngân hàng ── */}
+                  <div className="acc-section-title mt-4">
+                    <i className="fas fa-university" />Thông tin ngân hàng nhận hoàn cọc
+                  </div>
+
+                  <div className="row g-3 mb-3">
+                    <div className="col-md-4">
+                      <label className="form-label">Tên ngân hàng</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Vietcombank, MB, Techcombank..."
+                        {...register('bankAccount.bankName')}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Số tài khoản</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="1234567890"
+                        {...register('bankAccount.accountNumber')}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label">Tên chủ tài khoản</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="NGUYEN VAN A"
+                        {...register('bankAccount.accountHolder')}
                       />
                     </div>
                   </div>

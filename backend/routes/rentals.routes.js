@@ -15,7 +15,9 @@ const {
   getContractByRentalId,
   sendMessage,
   getMessages,
-  getRentalDetail
+  getRentalDetail,
+  approvePickup,
+  approveReturn
 } = require('../controllers/rentals.controller');
 const { protect, checkVerified } = require('../middleware/auth.middleware');
 
@@ -48,6 +50,12 @@ router.post('/:id/sign-contract', protect, checkVerified, signContract);
 
 // [CẢ 2 BÊN] Chụp ảnh nhận đồ (Chuyển sang in_progress)
 router.patch('/:id/pickup', protect, checkVerified, pickupItem);
+
+// [CẢ 2 BÊN] Xác nhận bàn giao đồ
+router.patch('/:id/approve-pickup', protect, approvePickup);
+
+// [CẢ 2 BÊN] Xác nhận hoàn trả đồ
+router.patch('/:id/approve-return', protect, approveReturn);
 
 // [CẢ 2 BÊN] Lấy thông tin Hợp đồng để hiển thị lên màn hình
 router.get('/:id/contract', protect, getContractByRentalId);

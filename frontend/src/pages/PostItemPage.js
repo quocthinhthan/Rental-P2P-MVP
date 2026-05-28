@@ -345,6 +345,25 @@ function PostItemPage() {
   };
 
   const onSubmit = async (data) => {
+    const hasBankDetails = user?.bankAccount?.bankName && user?.bankAccount?.accountNumber && user?.bankAccount?.accountHolder;
+    if (!hasBankDetails) {
+      Swal.fire({
+        title: 'Yêu cầu điền thông tin ngân hàng ⚠️',
+        text: 'Để đảm bảo việc nhận thanh toán/tiền thuê tự động từ hệ thống, bạn vui lòng điền thông tin tài khoản ngân hàng trong phần Thông tin cá nhân trước khi đăng vật phẩm cho thuê.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Cập nhật ngay',
+        cancelButtonText: 'Để sau',
+        confirmButtonColor: '#ffb524',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/account');
+        }
+      });
+      return;
+    }
+
     setLoading(true);
     setApiError(null);
     setUploading(true);

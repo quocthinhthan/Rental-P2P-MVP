@@ -166,6 +166,10 @@ export const pickupRental = (rentalId, payload) =>
 export const completeRental = (rentalId, payload) =>
   api.patch(`/rentals/${rentalId}/complete`, typeof payload === 'object' && !Array.isArray(payload) ? payload : { returnImages: payload });
 
+export const approvePickup = (rentalId, data) => api.patch(`/rentals/${rentalId}/approve-pickup`, data);
+
+export const approveReturn = (rentalId, data) => api.patch(`/rentals/${rentalId}/approve-return`, data);
+
 export const getRentalMessages = (rentalId) => api.get(`/rentals/${rentalId}/messages`, {
   skipGlobalLoading: true,
 });
@@ -294,6 +298,8 @@ const apiService = {
   signContract,
   pickupRental,
   completeRental,
+  approvePickup,
+  approveReturn,
   getRentalMessages,
   sendRentalMessage,
   createDispute,

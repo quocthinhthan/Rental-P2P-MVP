@@ -396,6 +396,25 @@ function ItemDetailPage() {
     e.preventDefault();
     if (!isLoggedIn) { navigate('/login'); return; }
 
+    const hasBankDetails = user?.bankAccount?.bankName && user?.bankAccount?.accountNumber && user?.bankAccount?.accountHolder;
+    if (!hasBankDetails) {
+      Swal.fire({
+        title: 'Yêu cầu điền thông tin ngân hàng ⚠️',
+        text: 'Để đảm bảo quyền lợi và hỗ trợ hệ thống hoàn trả tiền cọc/ký quỹ tự động khi kết thúc giao dịch, bạn vui lòng điền thông tin tài khoản ngân hàng trong phần Thông tin cá nhân trước.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Cập nhật ngay',
+        cancelButtonText: 'Để sau',
+        confirmButtonColor: '#ffb524',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/account');
+        }
+      });
+      return;
+    }
+
     if (startDate && endDate) {
       const chosenStart = new Date(startDate);
       chosenStart.setHours(0, 0, 0, 0);
