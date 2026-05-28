@@ -250,9 +250,15 @@ function AccountPage() {
                         type="text"
                         className={`form-control ${errors.fullName ? 'is-invalid' : ''}`}
                         placeholder="Nguyễn Văn A"
+                        readOnly={isVerified}
                         {...register('fullName', { required: 'Vui lòng nhập họ và tên' })}
                       />
                       {errors.fullName && <div className="invalid-feedback">{errors.fullName.message}</div>}
+                      {isVerified && (
+                        <div className="form-text text-success small mt-1">
+                          <i className="fas fa-lock me-1" /> Họ tên đã xác thực theo CCCD (không thể thay đổi).
+                        </div>
+                      )}
                     </div>
                     <div className="col-md-6">
                       <label className="form-label">Email</label>
@@ -332,8 +338,8 @@ function AccountPage() {
                   </div>
 
                   <div className="acc-ekyc-section">
-                    {/* If verified, show banner + toggle button */}
-                    {isVerified && !ekycFormOpen ? (
+                    {/* If verified, show banner (no upload or edit allowed) */}
+                    {isVerified ? (
                       <div className="acc-ekyc-verified-banner">
                         <div className="acc-ekyc-verified-icon">
                           <i className="fas fa-shield-alt" />
@@ -342,13 +348,6 @@ function AccountPage() {
                           <div className="acc-ekyc-verified-title">Danh tính đã được xác thực</div>
                           <div className="acc-ekyc-verified-sub">Tài khoản của bạn đã được xác minh qua CCCD</div>
                         </div>
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary btn-sm acc-ekyc-edit-btn"
-                          onClick={() => setEkycFormOpen(true)}
-                        >
-                          <i className="fas fa-redo-alt me-1" />Xác thực lại
-                        </button>
                       </div>
                     ) : (
                       <>

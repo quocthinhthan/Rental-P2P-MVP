@@ -113,11 +113,18 @@ function Header() {
         <div className="row gx-0 align-items-center">
 
           {/* Logo */}
-          <div className="col-lg-3 col-xl-3 text-start">
+          {/* <div className="col-lg-3 col-xl-3 text-start">
             <Link to="/" className="navbar-brand p-0 text-decoration-none d-inline-block">
               <h1 className="display-6 text-primary m-0 fw-bold d-flex align-items-center">
                 <i className="fas fa-sync-alt text-secondary me-2 brand-icon-spin"></i>RentalP2P
               </h1>
+            </Link>
+          </div> */}
+          
+          {/* Logo */}
+          <div className="col-lg-3 col-xl-3 text-start">
+            <Link to="/" className="navbar-brand p-0 text-decoration-none d-inline-block">
+              <img src="/logo-brand-2.png" alt="RentalP2P Logo" style={{ height: '50px', width: 'auto', objectFit: 'contain' }} />
             </Link>
           </div>
 

@@ -137,14 +137,155 @@ const helpArticles = [
     title: 'Điểm tin cậy là gì?',
     description: 'Hiểu cách hệ thống đánh giá độ uy tín của người dùng.',
     keywords: ['điểm tin cậy', 'uy tín', 'trustscore', 'đánh giá', 'xếp hạng'],
-    content: `<p><strong>Điểm tin cậy</strong> (Trust Score) phản ánh mức độ uy tín của bạn trên nền tảng, được tính dựa trên:</p>
+    content: `<p><strong>Điểm tin cậy</strong> (Trust Score) là một chỉ số cực kỳ quan trọng phản ánh mức độ uy tín, an toàn và tính trách nhiệm của mỗi người dùng trên nền tảng RentalP2P. Điểm số này được tính toán hoàn toàn tự động bằng hệ thống từ <strong>0 đến 100 điểm</strong>.</p>
+
+<div class="alert alert-info mb-4">
+  <h5><i class="fas fa-exclamation-circle me-2"></i>Sự khác biệt cốt lõi:</h5>
+  <p class="mb-0"><strong>Điểm tin cậy (0 - 100):</strong> Đánh giá tính an toàn giao dịch, eKYC, lịch sử chấp hành quy tắc, tranh chấp và vi phạm.</p>
+  <p class="mb-0"><strong>Đánh giá sao (1.0 - 5.0):</strong> Đo lường mức độ hài lòng về chất lượng sản phẩm và dịch vụ của bạn từ các đối tác sau khi hoàn tất giao dịch.</p>
+</div>
+
+<h4 class="text-primary mt-4 mb-3"><i class="fas fa-play-circle me-2"></i>Điểm khởi đầu mặc định</h4>
+<p>Khi một tài khoản mới được tạo lập, hệ thống sẽ cấp mức điểm tin cậy mặc định ban đầu là <strong>50 điểm</strong> (Mức Trung bình - Người dùng mới / Ít dữ liệu). Điểm số này sẽ tự động thay đổi dựa trên hành vi giao dịch thực tế của bạn.</p>
+
+<h4 class="text-success mt-4 mb-3"><i class="fas fa-plus-circle me-2"></i>Quy tắc CỘNG ĐIỂM (Tăng uy tín)</h4>
+<p>Bạn có thể tích lũy thêm điểm tin cậy thông qua các hoạt động xác thực thông tin và giao dịch thành công:</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-hover mb-4">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 35%;">Hành động / Sự kiện</th>
+        <th style="width: 15%; text-align: center;">Điểm cộng</th>
+        <th style="width: 50%;">Chi tiết quy định</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Xác minh danh tính (eKYC)</strong></td>
+        <td class="text-success" style="text-align: center; font-weight: bold;">+20</td>
+        <td>Xác thực thành công thông tin Căn cước công dân (CCCD) với Cơ sở dữ liệu cư dân Quốc gia.</td>
+      </tr>
+      <tr>
+        <td><strong>Hoàn thành đơn thuê</strong></td>
+        <td class="text-success" style="text-align: center; font-weight: bold;">+2 / đơn</td>
+        <td>Cộng cho <strong>cả Người thuê và Chủ tài sản</strong> khi đơn hàng hoàn tất suôn sẻ.<br><small class="text-muted">*Tối đa cộng <strong>+20 điểm</strong> (sau 10 đơn thuê đầu tiên).*</small></td>
+      </tr>
+      <tr>
+        <td><strong>Đánh giá tích cực công khai</strong></td>
+        <td class="text-success" style="text-align: center; font-weight: bold;">Tối đa +10</td>
+        <td>Dựa trên điểm trung bình đánh giá công khai nhận được từ đối tác:<br>
+          • Đạt từ <strong>4.8 ★</strong> trở lên: <strong>+10 điểm</strong><br>
+          • Đạt từ <strong>4.5 ★ đến dưới 4.8 ★</strong>: <strong>+7 điểm</strong><br>
+          • Đạt từ <strong>4.0 ★ đến dưới 4.5 ★</strong>: <strong>+4 điểm</strong>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="text-danger mt-4 mb-3"><i class="fas fa-minus-circle me-2"></i>Quy tắc TRỪ ĐIỂM (Vi phạm & Sự cố)</h4>
+<p>Để bảo vệ cộng đồng, các hành vi vi phạm thỏa thuận, thông tin giả mạo hoặc tranh chấp lỗi sẽ bị khấu trừ điểm nghiêm khắc:</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-hover mb-4">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 35%;">Hành vi / Sự cố vi phạm</th>
+        <th style="width: 15%; text-align: center;">Điểm trừ</th>
+        <th style="width: 50%;">Chi tiết quy định</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>eKYC bị từ chối</strong></td>
+        <td class="text-danger" style="text-align: center; font-weight: bold;">-10</td>
+        <td>Tải lên tài liệu không hợp lệ, mờ, sai lệch thông tin hoặc nghi ngờ giả mạo.</td>
+      </tr>
+      <tr>
+        <td><strong>Nhận đánh giá tiêu cực</strong></td>
+        <td class="text-danger" style="text-align: center; font-weight: bold;">Tối đa -10</td>
+        <td>Dựa trên điểm đánh giá trung bình công khai từ các đối tác cũ:<br>
+          • Điểm trung bình <strong>dưới 3.0 ★</strong>: <strong>-10 điểm</strong><br>
+          • Điểm trung bình từ <strong>3.0 ★ đến dưới 3.5 ★</strong>: <strong>-5 điểm</strong>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Bị xử phạt lỗi khi Tranh chấp</strong></td>
+        <td class="text-danger" style="text-align: center; font-weight: bold;">Tối đa -30</td>
+        <td>Khi tranh chấp kết thúc và Admin phán quyết lỗi thuộc về bạn:<br>
+          • Nhận Cảnh cáo (Warning): <strong>-15 điểm</strong> / lần.<br>
+          • Bị Tạm khóa tài khoản (Suspension): <strong>-30 điểm</strong> / lần.<br>
+          • Bị Cấm vĩnh viễn (Ban): Điểm tin cậy lập tức về <strong>0</strong>.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Sản phẩm đăng tải bị Báo cáo vi phạm</strong></td>
+        <td class="text-danger" style="text-align: center; font-weight: bold;">Tối đa -25</td>
+        <td>Chủ tài sản có sản phẩm vi phạm bị báo cáo và Admin xử lý phê duyệt:<br>
+          • Nhận Cảnh cáo chủ tài sản: <strong>-10 điểm</strong> / báo cáo.<br>
+          • Sản phẩm bị Ẩn hoặc Gỡ (Delist): <strong>-15 điểm</strong> / sản phẩm.<br>
+          • Sản phẩm bị Cấm (Ban Item): <strong>-25 điểm</strong> / sản phẩm.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="text-warning mt-4 mb-3"><i class="fas fa-shield-alt me-2"></i>Quy tắc đặc biệt & Giới hạn điểm</h4>
 <ul>
-  <li>Lịch sử giao dịch và tỷ lệ hoàn thành đúng hạn.</li>
-  <li>Đánh giá từ người thuê / chủ đồ đã giao dịch cùng.</li>
-  <li>Xác minh danh tính (eKYC).</li>
-  <li>Lịch sử tranh chấp và vi phạm (nếu có).</li>
+  <li><strong>Giới hạn điểm tối đa của tài khoản bị khóa tạm thời:</strong> Khi tài khoản bị tạm khóa (có trường <em>suspendedUntil</em> hiệu lực), điểm tin cậy sẽ bị <strong>giới hạn tối đa là 40 điểm</strong>. Dù điểm lý thuyết của bạn có cao hơn, hệ thống vẫn áp đặt mức trần này cho đến khi hết thời hạn khóa.</li>
+  <li><strong>Khóa tài khoản vĩnh viễn:</strong> Nếu bạn bị cấm vĩnh viễn khỏi nền tảng, điểm tin cậy của bạn sẽ lập tức chuyển về <strong>0 điểm</strong>.</li>
+  <li><strong>Giới hạn thang điểm:</strong> Điểm tin cậy luôn được duy trì và làm tròn trong phạm vi chuẩn từ <strong>0 đến 100 điểm</strong>.</li>
 </ul>
-<p>Điểm tin cậy cao giúp bạn được ưu tiên trong kết quả tìm kiếm và tạo thiện cảm với đối tác giao dịch.</p>`,
+
+<h4 class="text-info mt-4 mb-3"><i class="fas fa-id-badge me-2"></i>Phân loại mức độ uy tín (Trust Levels)</h4>
+<p>Dựa trên điểm tin cậy hiện tại, hệ thống tự động xếp hạng hồ sơ của bạn vào các nhóm uy tín sau để hiển thị công khai:</p>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-hover mb-4">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 25%; text-align: center;">Khoảng điểm</th>
+        <th style="width: 25%; text-align: center;">Hạng uy tín</th>
+        <th style="width: 50%;">Ý nghĩa hiển thị & Quyền lợi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="table-success">
+        <td style="text-align: center; font-weight: bold;">90 - 100</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-medal text-warning me-1"></i>Rất uy tín (Very High)</td>
+        <td>Được ưu tiên cao nhất trong kết quả tìm kiếm sản phẩm. Tạo thiện cảm lớn cho đối tác khi gửi/xác nhận thuê đồ.</td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold;">75 - 89</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-check-circle text-success me-1"></i>Uy tín cao (High)</td>
+        <td>Tài khoản có lịch sử hoạt động xuất sắc. Đơn thuê và giao dịch được duyệt nhanh chóng.</td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold;">60 - 74</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-user-check text-info me-1"></i>Khá uy tín (Medium)</td>
+        <td>Mức độ tin cậy ổn định, đáp ứng tốt quy tắc giao dịch chung.</td>
+      </tr>
+      <tr class="table-warning">
+        <td style="text-align: center; font-weight: bold;">40 - 59</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-baby text-muted me-1"></i>Mới / Ít dữ liệu (New)</td>
+        <td>Là mức điểm mặc định ban đầu. Bạn cần tích lũy thêm các đơn hàng thành công hoặc eKYC để gia tăng điểm số.</td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold;">20 - 39</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-exclamation-triangle text-warning me-1"></i>Cần cân nhắc (Low)</td>
+        <td>Tài khoản từng bị cảnh cáo hoặc có tranh chấp lỗi. Cần cải thiện hành vi giao dịch.</td>
+      </tr>
+      <tr class="table-danger">
+        <td style="text-align: center; font-weight: bold;">0 - 19</td>
+        <td style="text-align: center; font-weight: bold;"><i class="fas fa-times-circle text-danger me-1"></i>Rủi ro cao (Very Low)</td>
+        <td>Tài khoản vi phạm nghiêm trọng, bị báo cáo nhiều lần hoặc đang bị khóa. Rất khó khăn khi thực hiện các giao dịch mới.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="alert alert-success mt-4">
+  <p class="mb-0"><strong><i class="fas fa-lightbulb me-2"></i>Lời khuyên duy trì uy tín:</strong> Luôn hoàn thành việc giao nhận đúng hạn, ký hợp đồng điện tử trước khi bàn giao, chụp ảnh tình trạng sản phẩm đầy đủ để lưu trữ bằng chứng và ứng xử văn minh trong các cuộc trò chuyện.</p>
+</div>`,
   },
   {
     id: 'ekyc-verification',
@@ -246,7 +387,15 @@ export const faqItems = [
   },
   {
     q: 'Làm sao để tăng điểm tin cậy của tôi?',
-    a: 'Hoàn thành giao dịch đúng hạn, nhận đánh giá tốt từ các bên giao dịch, xác minh danh tính qua eKYC, và tránh tranh chấp hoặc vi phạm quy tắc nền tảng.',
+    a: `Bạn có thể gia tăng điểm tin cậy của mình bằng các cách sau:<br />
+<ul class="mt-2 mb-2" style="padding-left: 20px;">
+  <li class="mb-1"><strong>Xác minh danh tính (eKYC)</strong> bằng CCCD thành công: Cộng ngay <strong>+20 điểm</strong>.</li>
+  <li class="mb-1"><strong>Hoàn thành đơn thuê suôn sẻ đúng hạn</strong>: Cộng <strong>+2 điểm / đơn</strong> (cộng cho cả Người thuê và Chủ đồ, tối đa +20 điểm).</li>
+  <li class="mb-1"><strong>Tích lũy đánh giá tích cực</strong> công khai từ đối tác: Cộng từ <strong>+4 đến +10 điểm</strong> (khi đạt trung bình từ 4.0★ trở lên).</li>
+</ul>
+Tránh các hành vi vi phạm, bị phán quyết lỗi trong tranh chấp hoặc có sản phẩm bị báo cáo vi phạm để không bị hệ thống trừ điểm.<br />
+<br />
+<em>*Chi tiết về thang điểm, mức cộng/trừ và phân loại uy tín, bạn có thể xem bảng tính điểm đầy đủ ở bài viết <strong>"Điểm tin cậy là gì?"</strong> thuộc mục <strong>"Uy tín"</strong> của Trung tâm trợ giúp.</em>`,
   },
   {
     q: 'Hợp đồng điện tử có giá trị pháp lý không?',
