@@ -208,7 +208,7 @@ const getEffectiveTimelineStatus = (rental, dispute, isFullySigned) => {
   return rental.status;
 };
 
-const getLifecycleIndex = (status) => {
+const getLifecycleIndex = (status, rental) => {
   switch (status) {
     case 'pending_payment':
       return 0;
@@ -227,8 +227,21 @@ const getLifecycleIndex = (status) => {
     case 'refunded':
       return 4;
     case 'rejected':
-    case 'cancelled':
       return 1;
+    case 'cancelled': {
+      if (rental) {
+        if (rental.paymentStatus === 'pending' || rental.status === 'pending_payment') {
+          return 0; // Hủy ở bước thanh toán
+        }
+        const hasContract = rental.contractId || rental.contract;
+        if (hasContract) {
+          const isSigned = rental.isFullySigned || rental.contract?.isFullySigned;
+          return isSigned ? 3 : 2; // Hủy ở bước bàn giao (3) hoặc hợp đồng (2)
+        }
+        return 1; // Hủy ở bước xác nhận
+      }
+      return 1;
+    }
     default:
       return 0;
   }
@@ -300,7 +313,7 @@ const getLifecycleSummary = (rental, dispute) => {
 
 const getRentalTimelineState = (rental, dispute, isFullySigned) => {
   const effectiveStatus = getEffectiveTimelineStatus(rental, dispute, isFullySigned);
-  const activeIndex = getLifecycleIndex(effectiveStatus);
+  const activeIndex = getLifecycleIndex(effectiveStatus, rental);
   const isTerminalStopped = ['rejected', 'cancelled', 'refunded'].includes(effectiveStatus);
   const isFullyCompleted = effectiveStatus === 'completed';
   const isDisputeActive = (
