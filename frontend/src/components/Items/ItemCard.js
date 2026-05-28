@@ -108,15 +108,18 @@ function ItemCard({ item, onFavoriteToggle }) {
               <i className={isFav ? 'fas fa-heart' : 'far fa-heart'} />
             </button>
 
-            <span className={`badge position-absolute top-0 start-0 m-2 ${isAvailable ? 'bg-success' : 'bg-secondary'}`}>
-              {t(statusKey)}
-            </span>
-
-            {item.isFeatured && (
-              <span className="badge position-absolute badge-featured-vip fw-bold shadow-sm">
-                🌟 {t('item.featured', 'Nổi bật')}
+            {/* Top-Left Floating Badge Stack */}
+            <div className="position-absolute top-0 start-0 m-2 d-flex flex-column align-items-start gap-1" style={{ zIndex: 5 }}>
+              <span className={`badge ${isAvailable ? 'bg-success' : 'bg-secondary'} fw-semibold`}>
+                {t(statusKey)}
               </span>
-            )}
+
+              {item.isFeatured && (
+                <span className="badge badge-featured-vip fw-bold shadow-sm">
+                  🌟 {t('item.featured', 'Nổi bật')}
+                </span>
+              )}
+            </div>
 
             <Link
               to={`/items/${item._id}`}

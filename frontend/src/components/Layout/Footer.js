@@ -1,99 +1,15 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 function Footer() {
-  const location = useLocation();
-  const isHelpOrFaq = ['/help', '/faq'].includes(location.pathname);
-
   return (
     <>
       {/* Footer Start */}
       <div
-        className="container-fluid footer py-5 wow fadeIn"
+        className="container-fluid footer pt-5 pb-4 wow fadeIn"
         data-wow-delay="0.2s"
       >
-        <div className="container py-5">
-          {/* Top Info */}
-          {!isHelpOrFaq && (
-            <div
-              className="row g-4 rounded mb-5"
-              style={{ background: 'rgba(255, 255, 255, .03)' }}
-            >
-              {/* Address */}
-              <div className="col-md-6 col-lg-6 col-xl-3">
-                <div className="rounded p-4">
-                  <div
-                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: '70px', height: '70px' }}
-                  >
-                    <i className="fas fa-map-marker-alt fa-2x text-primary"></i>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white">Địa chỉ</h4>
-                    <p className="mb-2">
-                      19 Nguyễn Hữu Thọ, P. Tân Hưng, TP.HCM
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="col-md-6 col-lg-6 col-xl-3">
-                <div className="rounded p-4">
-                  <div
-                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: '70px', height: '70px' }}
-                  >
-                    <i className="fas fa-envelope fa-2x text-primary"></i>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white">Email</h4>
-                    <p className="mb-2">
-                      thanquocthinh287@gmail.com
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="col-md-6 col-lg-6 col-xl-3">
-                <div className="rounded p-4">
-                  <div
-                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: '70px', height: '70px' }}
-                  >
-                    <i className="fa fa-phone-alt fa-2x text-primary"></i>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white">Điện thoại</h4>
-                    <p className="mb-2">0364123957</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Website */}
-              <div className="col-md-6 col-lg-6 col-xl-3">
-                <div className="rounded p-4">
-                  <div
-                    className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: '70px', height: '70px' }}
-                  >
-                    <i className="fab fa-firefox-browser fa-2x text-primary"></i>
-                  </div>
-
-                  <div>
-                    <h4 className="text-white">Website</h4>
-                    <p className="mb-2">rentalp2p.com.vn</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Footer Content */}
+        <div className="container">
           <div className="row g-5">
             {/* About */}
             <div className="col-md-6 col-lg-6 col-xl-3">
@@ -105,6 +21,22 @@ function Footer() {
                   giúp người dùng dễ dàng cho thuê và tìm kiếm các vật dụng cần thiết
                   nhanh chóng và tiện lợi.
                 </p>
+
+                {/* Compact Contact Info List */}
+                <div className="footer-contact-info mt-3 d-flex flex-column gap-2 text-white-50">
+                  <div className="d-flex align-items-center gap-2 small">
+                    <i className="fas fa-map-marker-alt text-primary" style={{ width: '16px' }}></i>
+                    <span>19 Nguyễn Hữu Thọ, P. Tân Hưng, TP.HCM</span>
+                  </div>
+                  <div className="d-flex align-items-center gap-2 small">
+                    <i className="fas fa-envelope text-primary" style={{ width: '16px' }}></i>
+                    <span>thanquocthinh287@gmail.com</span>
+                  </div>
+                  <div className="d-flex align-items-center gap-2 small">
+                    <i className="fas fa-phone-alt text-primary" style={{ width: '16px' }}></i>
+                    <span>0364123957</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -120,7 +52,7 @@ function Footer() {
                   Liên hệ
                 </Link>
 
-                <Link to="/orders">
+                <Link to="/my-rentals">
                   <i className="fas fa-angle-right me-2"></i>
                   Lịch sử đơn thuê
                 </Link>
@@ -147,17 +79,17 @@ function Footer() {
                   Về chúng tôi
                 </Link>
 
-                <Link to="/privacy-policy">
+                <Link to="/help">
                   <i className="fas fa-angle-right me-2"></i>
                   Chính sách bảo mật
                 </Link>
 
-                <Link to="/terms">
+                <Link to="/help">
                   <i className="fas fa-angle-right me-2"></i>
                   Điều khoản sử dụng
                 </Link>
 
-                <Link to="/guide">
+                <Link to="/help">
                   <i className="fas fa-angle-right me-2"></i>
                   Hướng dẫn thuê đồ
                 </Link>
@@ -169,22 +101,22 @@ function Footer() {
               <div className="footer-item d-flex flex-column">
                 <h4 className="text-primary mb-4">Khám phá thêm</h4>
 
-                <Link to="/categories">
+                <Link to="/shop">
                   <i className="fas fa-angle-right me-2"></i>
                   Danh mục sản phẩm
                 </Link>
 
-                <Link to="/wishlist">
+                <Link to="/favorites">
                   <i className="fas fa-angle-right me-2"></i>
                   Danh sách yêu thích
                 </Link>
 
-                <Link to="/tracking">
+                <Link to="/my-rentals">
                   <i className="fas fa-angle-right me-2"></i>
                   Theo dõi đơn thuê
                 </Link>
 
-                <Link to="/become-owner">
+                <Link to="/post-item">
                   <i className="fas fa-angle-right me-2"></i>
                   Đăng cho thuê sản phẩm
                 </Link>
@@ -196,7 +128,7 @@ function Footer() {
       {/* Footer End */}
 
       {/* Copyright Start */}
-      <div className="container-fluid copyright py-4">
+      <div className="container-fluid copyright py-3">
         <div className="container">
           <div className="row g-4 align-items-center">
             <div className="col-md-6 text-center text-md-start mb-md-0">
@@ -216,14 +148,6 @@ function Footer() {
         </div>
       </div>
       {/* Copyright End */}
-
-      {/* Back To Top */}
-      <button
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="btn btn-primary btn-lg-square back-to-top"
-      >
-        <i className="fa fa-arrow-up"></i>
-      </button>
     </>
   );
 }

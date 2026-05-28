@@ -30,14 +30,14 @@ function RentalChatPanel({ rental, currentUser, mode = 'participant' }) {
   const readOnly = mode === 'admin-readonly';
   const socketRef = useRef(null);
   const messagesRef = useRef(null);
-  const collapsedRef = useRef(false);
+  const collapsedRef = useRef(true);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const parties = useMemo(() => {

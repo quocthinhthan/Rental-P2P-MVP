@@ -27,6 +27,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute'; // <-- 1. IMPORT
 import HelpWidget from './components/help/HelpWidget';
 import HelpCenterPage from './pages/HelpCenterPage';
 import FAQPage from './pages/FAQPage';
+import AboutPage from './pages/AboutPage';
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminDisputeDetailPage from './pages/AdminDisputeDetailPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -64,6 +65,7 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/help" element={<HelpCenterPage />} />
         <Route path="/faq" element={<FAQPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/vnpay-return" element={<VNPayReturnPage />} />
         <Route path="*" element={<NotFoundPage />} />
 
