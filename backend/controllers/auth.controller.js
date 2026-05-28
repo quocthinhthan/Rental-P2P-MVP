@@ -43,39 +43,55 @@ exports.registerUser = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  if (user) {
-    user.fullName = req.body.fullName || user.fullName;
-    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
-    user.address = req.body.address || user.address;
-    user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
-    if (req.body.idCardNumber) {
-      user.idCardNumber = req.body.idCardNumber;
-      user.ekycStatus = 'verified';
-    }
-    if (Array.isArray(req.body.idCardImages) && req.body.idCardImages.length > 0) {
-      user.idCardImages = req.body.idCardImages;
-    }
-    
-    // Lưu ý: Thường không cho phép update CCCD ở đây, muốn đổi CCCD phải làm luồng khác
-    // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.
-
-    const updatedUser = await user.save();
-    const updatedTrustUser = await recalculateUserTrustScore(updatedUser._id);
-
-    res.status(200).json({
-      _id: updatedUser._id,
-      fullName: updatedUser.fullName,
-      email: updatedUser.email,
-      phoneNumber: updatedUser.phoneNumber,
-      address: updatedUser.address,
-      avatarUrl: updatedUser.avatarUrl,
-      ekycStatus: updatedUser.ekycStatus,
-      trustScore: updatedTrustUser?.trustScore,
-      trustLevel: updatedTrustUser ? getTrustLevelFromScore(updatedTrustUser.trustScore) : undefined
-    });
-  } else {
-    res.status(404).json({ message: 'Không tìm thấy User' });
+  if (!user) {
+    return res.status(404).json({ message: 'Không tìm thấy User' });
   }
+
+  // Khóa cứng thông tin định danh một khi đã xác thực (verified)
+  if (user.ekycStatus === 'verified') {
+    if (req.body.idCardNumber && req.body.idCardNumber !== user.idCardNumber) {
+      return res.status(400).json({ message: 'Không thể thay đổi số CCCD sau khi tài khoản đã được xác thực!' });
+    }
+    if (req.body.idCardImages && Array.isArray(req.body.idCardImages) && req.body.idCardImages.length > 0) {
+      const areImagesDifferent = JSON.stringify(req.body.idCardImages) !== JSON.stringify(user.idCardImages);
+      if (areImagesDifferent) {
+        return res.status(400).json({ message: 'Không thể thay đổi ảnh CCCD sau khi tài khoản đã được xác thực!' });
+      }
+    }
+    if (req.body.fullName && req.body.fullName !== user.fullName) {
+      return res.status(400).json({ message: 'Không thể thay đổi họ tên sau khi tài khoản đã được xác thực theo CCCD!' });
+    }
+  }
+
+  user.fullName = req.body.fullName || user.fullName;
+  user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+  user.address = req.body.address || user.address;
+  user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
+  
+  if (req.body.idCardNumber && user.ekycStatus !== 'verified') {
+    user.idCardNumber = req.body.idCardNumber;
+    user.ekycStatus = 'verified';
+  }
+  if (Array.isArray(req.body.idCardImages) && req.body.idCardImages.length > 0 && user.ekycStatus !== 'verified') {
+    user.idCardImages = req.body.idCardImages;
+  }
+  
+  // Nếu đổi pass, phải thêm logic so sánh pass cũ. Ở đây tạm update thông tin cơ bản.
+
+  const updatedUser = await user.save();
+  const updatedTrustUser = await recalculateUserTrustScore(updatedUser._id);
+
+  res.status(200).json({
+    _id: updatedUser._id,
+    fullName: updatedUser.fullName,
+    email: updatedUser.email,
+    phoneNumber: updatedUser.phoneNumber,
+    address: updatedUser.address,
+    avatarUrl: updatedUser.avatarUrl,
+    ekycStatus: updatedUser.ekycStatus,
+    trustScore: updatedTrustUser?.trustScore,
+    trustLevel: updatedTrustUser ? getTrustLevelFromScore(updatedTrustUser.trustScore) : undefined
+  });
 };
 
 // POST /api/auth/login
