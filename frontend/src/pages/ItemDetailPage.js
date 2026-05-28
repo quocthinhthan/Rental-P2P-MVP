@@ -444,7 +444,17 @@ function ItemDetailPage() {
     try {
       const res = await apiService.createRentalRequest(itemId, startDate, endDate, note);
       const pay = await apiService.createVNPayUrl(res.data._id);
-      window.location.href = pay.data.paymentUrl;
+      
+      Swal.fire({
+        title: 'Yêu cầu thuê thành công! 🎉',
+        text: 'Yêu cầu thuê đồ của bạn đã được tạo. Hệ thống sẽ chuyển hướng bạn sang cổng thanh toán VNPay để tiến hành đặt cọc (ký quỹ) bảo đảm giao dịch.',
+        icon: 'success',
+        confirmButtonText: 'Tiến hành đặt cọc',
+        confirmButtonColor: '#ffb524',
+        allowOutsideClick: false
+      }).then(() => {
+        window.location.href = pay.data.paymentUrl;
+      });
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Không thể tạo yêu cầu thuê.';
       

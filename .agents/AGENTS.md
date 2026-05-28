@@ -41,7 +41,7 @@ Mounted backend API groups in `server.js`:
 
 - `/api/auth`: register, login, logout, current user, profile, eKYC, forgot/reset password.
 - `/api/items`: item search/list, categories, bestsellers, create/update/delete, price suggestion, item report, owner blocked-dates management.
-- `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup (with checklist), completion (with checklist), rental messages.
+- `/api/rentals`: rental request, VNPay URL/return, confirm/reject, contract, signing, pickup (with checklist), approve-pickup, completion (with checklist), approve-return, rental messages.
 - `/api/views`: BFF-style read endpoints for item detail (includes blockedDates + isFavorited) and the current user's rentals.
 - `/api/admin`: dashboard, user moderation, item moderation, featured/status updates, item reports.
 - `/api/upload`: Cloudinary image upload/delete.
@@ -64,7 +64,7 @@ Mounted backend API groups in `server.js`:
   - `Auth`: protected route.
   - `Common`: spinner and location picker.
   - `Items`: item card/list/report modal.
-  - `Rentals`: contract, signature, handover, chat panels.
+  - `Rentals`: contract, signature, handover (`HandoverModal.jsx` — bidirectional review/edit/approve), chat panels, dispute (`DisputeModal.jsx` — image upload, reason dropdown).
   - `Admin`: admin nav/hero/dispute resolution form.
   - `Trust`: trust badge.
 - `frontend/src/constants/`: frontend enum/status UI mapping. Keep these aligned with backend enums when statuses change.
@@ -96,13 +96,14 @@ Mounted backend API groups in `server.js`:
 The rental lifecycle is:
 
 1. Renter creates a rental request.
-2. Renter pays a deposit through the mock VNPay flow.
+2. Renter pays a deposit through the mock VNPay flow (SweetAlert confirmation popup shown before redirect).
 3. Owner confirms the rental.
 4. Backend automatically creates an electronic contract.
-5. Renter and owner both sign the contract.
-6. Pickup is recorded with proof images.
-7. Return is recorded with proof images.
-8. Rental is completed.
+5. Renter and owner both sign the contract. When fully signed, the `notification-worker` generates a PDF and emails it to both parties.
+6. One party records pickup with `PATCH /api/rentals/{id}/pickup` (stores `pickupReport`, does NOT advance status).
+7. The other party reviews the pickup report in `HandoverModal` and confirms with `PATCH /api/rentals/{id}/approve-pickup` — status advances to `in_progress`.
+8. One party records return with `PATCH /api/rentals/{id}/complete` (stores `returnReport`, does NOT advance status).
+9. The other party reviews and confirms with `PATCH /api/rentals/{id}/approve-return` — status advances to `completed`.
 
 Rentals can be cancelled before handover. If escrow was already paid, cancellation/rejection marks `paymentStatus` as `refunded`; after pickup, users should use the dispute flow instead of cancellation.
 
@@ -110,7 +111,8 @@ Rentals can be cancelled before handover. If escrow was already paid, cancellati
 ## Business Rules
 
 - Pickup is allowed only after the contract is fully signed.
-- Pickup requires `pickupImages`. Both pickup and complete now optionally accept `condition`, `accessories`, `notes` (and `damages` for complete) to populate `pickupReport`/`returnReport` on the Rental document. Existing callers sending only images remain fully compatible.
+- Pickup requires `pickupImages`. Both pickup and complete optionally accept `condition`, `accessories`, `notes` (and `damages` for complete) to populate `pickupReport`/`returnReport`. Saving pickup/complete does NOT advance rental status — it waits for the counterpart to call `approve-pickup`/`approve-return`.
+- `approve-pickup` and `approve-return` can optionally accept edited report fields (`condition`, `accessories`, `notes`, `damages`, `pickupImages`/`returnImages`) to let the reviewer override the original entry before confirming. Advancing rental status only happens on these approve calls.
 - Completion requires `returnImages`.
 - Booking availability is date-range based. `Item.status = rented` is not a global lock for all future rentals; new rental/payment/confirmation checks must reject only overlapping active bookings.
 - Blocking rental statuses for booking overlap are `pending_confirmation`, `confirmed`, `in_progress`, and `disputed`.
@@ -122,6 +124,9 @@ Rentals can be cancelled before handover. If escrow was already paid, cancellati
 - Item violation reporting: A user can only report a specific item once. Item reports require at least a 10-character description and support up to 3 evidence images (each <= 5MB, format: .jpg, .jpeg, .png, .webp, .gif).
 - Admin report adjustments: Once a report is resolved, the original owner penalties/actions (e.g. warnings, trust score deductions) are preserved to keep penalty history consistent. Any subsequent adjustments from the admin reports page only toggle the product's active status (AVAILABLE vs DELISTED) by calling `updateAdminItemStatus` instead of modifying the report action.
 - Favorites (wishlist): `User.favorites` is an array of Item ObjectIds, capped at 100, managed via `$addToSet`/`$pull`. `getItemDetailView` returns `isFavorited: Boolean` when the caller is authenticated (decoded from Bearer token without requiring `protect` middleware on the route, so unauthenticated calls still work).
+- Bank account: `User.bankAccount` subdocument stores `{ bankName, accountNumber, accountHolder }` for automated deposit refund. Enforced **Frontend-only**: renter must fill bank details before booking (checked in `ItemDetailPage.js`); owner must fill bank details before creating/updating an item listing (checked in `PostItemPage.js`). No backend validation.
+- Disputes can only be created while the rental is in `confirmed` status (before handover is approved). Once handover is approved (`in_progress` or `completed`), the dispute button is hidden on the frontend. The backend still enforces its own rules independently.
+- After a rental ends (`cancelled`, `rejected`, `completed`) the renter sees a **"Thuê lại sản phẩm"** button that navigates directly to the item detail page.
 
 
 ## Important APIs
@@ -132,8 +137,10 @@ Verify the exact implementation before using or modifying these endpoints:
 - `PATCH /api/rentals/{id}/cancel`
 - `POST /api/upload`
 - `POST /api/rentals/{id}/sign-contract`
-- `PATCH /api/rentals/{id}/pickup` — body: `{ pickupImages, condition?, accessories?, notes? }`
-- `PATCH /api/rentals/{id}/complete` — body: `{ returnImages, condition?, accessories?, notes?, damages? }`
+- `PATCH /api/rentals/{id}/pickup` — body: `{ pickupImages, condition?, accessories?, notes? }` — saves `pickupReport`, status stays `confirmed`
+- `PATCH /api/rentals/{id}/approve-pickup` — counterpart only; optional body: `{ pickupImages?, condition?, accessories?, notes? }` — advances status to `in_progress`
+- `PATCH /api/rentals/{id}/complete` — body: `{ returnImages, condition?, accessories?, notes?, damages? }` — saves `returnReport`, status stays `in_progress`
+- `PATCH /api/rentals/{id}/approve-return` — counterpart only; optional body: `{ returnImages?, condition?, accessories?, notes?, damages? }` — advances status to `completed`
 - `POST /api/items/{id}/report` (Submit product violation report)
 - `GET /api/admin/item-reports` (Admin get violation reports list)
 - `PATCH /api/admin/item-reports/{reportId}/resolve` (Admin resolve violation report)
@@ -178,6 +185,9 @@ When touching these APIs from the frontend:
 - **XSS Sanitization:** Formatted descriptions are safely rendered using the zero-dependency `sanitizeDescription` utility in `frontend/src/utils/sanitize.js`. This function escapes all input HTML tags for absolute security, and then restores safe formatting tags (like `<b>`, `<strong>`, `<i>`, `<em>`, `<h2>`, `<h3>`, `<h4>`, `<br>`, `<p>`, `<u>`, `<ul>`, `<ol>`, and `<li>`), which are beautifully structured with proper margin and bullet styles in `ItemDetailPage.css`.
 - **Review Breakdown Dashboards:** The reviews tab on details page displays dynamic visual dashboards that compute 1-to-5 star breakdowns based on the user's transaction history reviews. Ensure review cards use standard typography tokens for responsive and beautiful mobile and desktop rendering.
 - **Smart Availability & Busy Schedule:** Product details page (`ItemDetailPage.js`) dynamically computes Today's availability status based on local timezone-safe `item.bookedDates` normalization (AVAILABLE "Còn trống", AVAILABLE_TODAY "Còn trống hôm nay", or RENTED "Đang được thuê"). It also displays a premium "Lịch bận sắp tới" (Upcoming Schedule) list widget for both renters (first 3 entries with '+ more' label) and owners (full entries list) to aid rental planning.
+- **Bidirectional Handover Flow:** `HandoverModal.jsx` serves both the recorder (fills form + images) and the reviewer (sees pre-populated read-only data, can toggle edit mode to correct details/swap images, then confirm). Both parties share the same action button label (`Xác nhận giao đồ` / `Hoàn tất thuê / Trả đồ`). The modal dispatches `approvePickup`/`approveReturn` with optional override payload when reviewer edits.
+- **PDF Contract Email:** `notification-worker` listens for `contract_fully_signed` queue events and auto-generates a styled PDF (using `pdfkit`, with side-by-side signature images) and emails it to both parties via the existing `transporter`.
+- **Bank Account Enforcement (Frontend Only):** Renters are blocked from booking if `user.bankAccount` is incomplete (`ItemDetailPage.js`). Owners are blocked from creating/updating listings if `user.bankAccount` is incomplete (`PostItemPage.js`). No backend validation exists — this is a frontend-only gate.
 
 
 ## Safe Change Checklist

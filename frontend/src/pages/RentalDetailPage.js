@@ -71,22 +71,16 @@ const getDisputeFromRental = (rental) => (
   (Array.isArray(rental?.disputes) ? rental.disputes[0] : null)
 );
 
-const isCompletedWithinSevenDays = (rental) => {
-  if (rental?.status !== 'completed') return false;
-  const baseDate = new Date(rental.updatedAt || rental.completedAt || rental.endDate);
-  if (Number.isNaN(baseDate.getTime())) return false;
-  return Date.now() - baseDate.getTime() <= 7 * 24 * 60 * 60 * 1000;
-};
-
 const hasPickupProof = (rental) => Array.isArray(rental?.pickupImages) && rental.pickupImages.length > 0;
 
 const canCreateDispute = (rental, dispute) => {
   if (!rental || dispute?.status) return false;
-  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed'].includes(rental.status)) {
+  // Sau khi bàn giao rồi (in_progress, completed) thì không được tranh chấp nữa, ẩn nút tranh chấp
+  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed', 'in_progress', 'completed'].includes(rental.status)) {
     return false;
   }
 
-  return hasPickupProof(rental) || rental.status === 'in_progress' || isCompletedWithinSevenDays(rental);
+  return rental.status === 'confirmed';
 };
 
 
@@ -864,6 +858,7 @@ function RentalDetailPage() {
   const showContractReadyState = isFullySigned && rental?.status === 'confirmed';
   const showReviewState = rental?.status === 'completed' && rental?.review?.hasMyReview;
   const showExistingDisputeState = !showCreateDispute && !isDisputed && Boolean(dispute?.status);
+  const canRebook = !isOwnerView && ['cancelled', 'rejected', 'completed'].includes(rental?.status);
   const hasVisibleAction = Boolean(
     canPayEscrow ||
     canOwnerConfirmReject ||
@@ -879,7 +874,8 @@ function RentalDetailPage() {
     showReviewState ||
     canCancelRental ||
     showCreateDispute ||
-    showExistingDisputeState
+    showExistingDisputeState ||
+    canRebook
   );
   const itemImage = rental?.item?.mainImage || 'https://via.placeholder.com/900x600';
   const counterparty = isOwnerView
@@ -906,7 +902,17 @@ function RentalDetailPage() {
     try {
       setActionLoading('pay');
       const response = await apiService.createVNPayUrl(rental._id);
-      window.location.href = response.data.paymentUrl;
+      
+      Swal.fire({
+        title: 'Thanh toán ký quỹ 💳',
+        text: 'Hệ thống sẽ chuyển hướng bạn đến cổng thanh toán VNPay để thực hiện thanh toán ký quỹ (tiền đặt cọc) bảo đảm an toàn giao dịch.',
+        icon: 'info',
+        confirmButtonText: 'Tiến hành thanh toán',
+        confirmButtonColor: '#ffb524',
+        allowOutsideClick: false
+      }).then(() => {
+        window.location.href = response.data.paymentUrl;
+      });
     } catch (err) {
       setActionLoading('');
       Swal.fire('Lỗi thanh toán', getErrorMessage(err, 'Không thể tạo liên kết thanh toán VNPay.'), 'error');
@@ -1300,6 +1306,12 @@ function RentalDetailPage() {
 
                 {showExistingDisputeState && (
                   <span className="contract-state contract-state-waiting">Đơn này đã có tranh chấp liên quan</span>
+                )}
+
+                {canRebook && (
+                  <button className="btn-xs btn-info-xs w-full" onClick={() => navigate(`/items/${rental.itemId || rental.item?._id}`)}>
+                    <i className="fas fa-redo me-1"></i> Thuê lại sản phẩm
+                  </button>
                 )}
 
                 {!hasVisibleAction && (
