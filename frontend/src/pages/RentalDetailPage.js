@@ -75,12 +75,12 @@ const hasPickupProof = (rental) => Array.isArray(rental?.pickupImages) && rental
 
 const canCreateDispute = (rental, dispute) => {
   if (!rental || dispute?.status) return false;
-  // Sau khi bàn giao rồi (in_progress, completed) thì không được tranh chấp nữa, ẩn nút tranh chấp
-  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed', 'in_progress', 'completed'].includes(rental.status)) {
+  // Cho phép tạo tranh chấp khi đơn đã xác nhận (confirmed) hoặc đang trong quá trình thuê (in_progress)
+  if (['pending_payment', 'pending_confirmation', 'rejected', 'cancelled', 'disputed', 'completed'].includes(rental.status)) {
     return false;
   }
 
-  return rental.status === 'confirmed';
+  return ['confirmed', 'in_progress'].includes(rental.status);
 };
 
 
