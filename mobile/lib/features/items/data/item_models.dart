@@ -9,6 +9,8 @@ class ItemSummary {
     required this.pricePerDay,
     required this.status,
     required this.mainImage,
+    this.averageRating = 0.0,
+    this.totalReviews = 0,
   });
 
   final String id;
@@ -18,6 +20,8 @@ class ItemSummary {
   final num pricePerDay;
   final String status;
   final String mainImage;
+  final double averageRating;
+  final int totalReviews;
 
   factory ItemSummary.fromJson(Map<String, dynamic> json) {
     return ItemSummary(
@@ -30,6 +34,104 @@ class ItemSummary {
           : num.tryParse(textOf(json['pricePerDay'])) ?? 0,
       status: textOf(json['status']),
       mainImage: textOf(json['mainImage']),
+      averageRating:
+          (json['averageRating'] is num ? json['averageRating'] as num : 0)
+              .toDouble(),
+      totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class BookedDate {
+  const BookedDate({required this.startDate, required this.endDate});
+  final String startDate;
+  final String endDate;
+
+  factory BookedDate.fromJson(Map<String, dynamic> json) {
+    return BookedDate(
+      startDate: textOf(json['startDate']),
+      endDate: textOf(json['endDate']),
+    );
+  }
+
+  bool containsDate(DateTime date) {
+    try {
+      final start = DateTime.parse(startDate);
+      final end = DateTime.parse(endDate);
+      final d = DateTime(date.year, date.month, date.day);
+      return !d.isBefore(DateTime(start.year, start.month, start.day)) &&
+          !d.isAfter(DateTime(end.year, end.month, end.day));
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+class BlockedDate {
+  const BlockedDate({
+    required this.id,
+    required this.startDate,
+    required this.endDate,
+    this.reason = '',
+  });
+  final String id;
+  final String startDate;
+  final String endDate;
+  final String reason;
+
+  factory BlockedDate.fromJson(Map<String, dynamic> json) {
+    return BlockedDate(
+      id: textOf(json['_id'] ?? json['id']),
+      startDate: textOf(json['startDate']),
+      endDate: textOf(json['endDate']),
+      reason: textOf(json['reason']),
+    );
+  }
+
+  bool containsDate(DateTime date) {
+    try {
+      final start = DateTime.parse(startDate);
+      final end = DateTime.parse(endDate);
+      final d = DateTime(date.year, date.month, date.day);
+      return !d.isBefore(DateTime(start.year, start.month, start.day)) &&
+          !d.isAfter(DateTime(end.year, end.month, end.day));
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+class OwnerSummary {
+  const OwnerSummary({
+    required this.id,
+    required this.fullName,
+    this.avatarUrl = '',
+    this.trustScore = 0,
+    this.averageRating = 0.0,
+    this.totalReviews = 0,
+    this.ekycStatus = 'unverified',
+  });
+  final String id;
+  final String fullName;
+  final String avatarUrl;
+  final num trustScore;
+  final double averageRating;
+  final int totalReviews;
+  final String ekycStatus;
+
+  factory OwnerSummary.fromJson(Map<String, dynamic> json) {
+    return OwnerSummary(
+      id: textOf(json['_id'] ?? json['id']),
+      fullName: textOf(json['fullName']),
+      avatarUrl: textOf(json['avatarUrl']),
+      trustScore: json['trustScore'] is num ? json['trustScore'] as num : 0,
+      averageRating:
+          (json['averageRating'] is num ? json['averageRating'] as num : 0)
+              .toDouble(),
+      totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
+      ekycStatus: textOf(json['ekycStatus']).isEmpty
+          ? 'unverified'
+          : textOf(json['ekycStatus']),
     );
   }
 }
@@ -43,8 +145,17 @@ class ItemDetail {
     required this.status,
     required this.images,
     required this.pricePerDay,
+    required this.baseValue,
+    required this.depositPercentage,
     required this.address,
-    required this.ownerName,
+    required this.owner,
+    this.lat = 0.0,
+    this.lng = 0.0,
+    this.bookedDates = const [],
+    this.blockedDates = const [],
+    this.isFavorited = false,
+    this.averageRating = 0.0,
+    this.totalReviews = 0,
   });
 
   final String id;
@@ -54,13 +165,38 @@ class ItemDetail {
   final String status;
   final List<String> images;
   final num pricePerDay;
+  final num baseValue;
+  final num depositPercentage;
   final String address;
-  final String ownerName;
+  final OwnerSummary owner;
+  final double lat;
+  final double lng;
+  final List<BookedDate> bookedDates;
+  final List<BlockedDate> blockedDates;
+  final bool isFavorited;
+  final double averageRating;
+  final int totalReviews;
+
+  // Backwards compat
+  String get ownerName => owner.fullName;
+
+  bool isDateBlocked(DateTime date) {
+    for (final b in bookedDates) {
+      if (b.containsDate(date)) return true;
+    }
+    for (final b in blockedDates) {
+      if (b.containsDate(date)) return true;
+    }
+    return false;
+  }
 
   factory ItemDetail.fromJson(Map<String, dynamic> json) {
-    final owner = json['owner'] is Map
+    final ownerJson = json['owner'] is Map
         ? Map<String, dynamic>.from(json['owner'] as Map)
         : <String, dynamic>{};
+    num parseNum(dynamic v) =>
+        v is num ? v : num.tryParse(v?.toString() ?? '') ?? 0;
+
     return ItemDetail(
       id: textOf(json['_id']),
       name: textOf(json['name']),
@@ -70,11 +206,23 @@ class ItemDetail {
       images: ((json['images'] as List?) ?? const [])
           .map((item) => item.toString())
           .toList(),
-      pricePerDay: json['pricePerDay'] is num
-          ? json['pricePerDay'] as num
-          : num.tryParse(textOf(json['pricePerDay'])) ?? 0,
+      pricePerDay: parseNum(json['pricePerDay']),
+      baseValue: parseNum(json['baseValue']),
+      depositPercentage: parseNum(json['depositPercentage']),
       address: textOf(json['address']),
-      ownerName: textOf(owner['fullName']),
+      owner: OwnerSummary.fromJson(ownerJson),
+      lat: parseNum(json['lat']).toDouble(),
+      lng: parseNum(json['lng']).toDouble(),
+      bookedDates: ((json['bookedDates'] as List?) ?? const [])
+          .map((e) => BookedDate.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      blockedDates: ((json['blockedDates'] as List?) ?? const [])
+          .map((e) =>
+              BlockedDate.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      isFavorited: json['isFavorited'] == true,
+      averageRating: parseNum(json['averageRating']).toDouble(),
+      totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -147,4 +295,3 @@ class AiPriceSuggestion {
     );
   }
 }
-

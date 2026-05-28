@@ -4,6 +4,8 @@ const Item = require('../models/Item.model');
 const Contract = require('../models/Contract.model');
 const User = require('../models/User.model');
 const Message = require('../models/Message.model');
+const Dispute = require('../models/Dispute.model');
+const Review = require('../models/Review.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
@@ -267,7 +269,9 @@ exports.createVNPayUrl = async (req, res) => {
       vnp_OrderInfo: 'Thanh toan ky quy don thue ' + (rental.code || rental._id),
       vnp_OrderType: 'other',
       vnp_Amount: amount,
-      vnp_ReturnUrl: process.env.VNP_RETURN_URL,
+      vnp_ReturnUrl: req.body.source === 'mobile' 
+          ? `${process.env.VNP_RETURN_URL}?source=mobile` 
+          : process.env.VNP_RETURN_URL,
       vnp_IpAddr: getClientIp(req),
       vnp_CreateDate: formatDateForVNPay(new Date())
     };
@@ -297,9 +301,17 @@ exports.handleVNPayReturn = async (req, res) => {
       return res.status(500).json({ message: MESSAGES.PAYMENT.VNPAY_CONFIG_MISSING, missing: ['VNP_HASH_SECRET'] });
     }
 
-    let vnpParams = { ...req.query };
+    let vnpParams = {};
+    const source = req.query.source;
+    
+    // Chỉ lấy các tham số bắt đầu bằng vnp_ để xác thực chữ ký (tránh lỗi do thêm source=mobile)
+    for (const key in req.query) {
+      if (key.startsWith('vnp_')) {
+        vnpParams[key] = req.query[key];
+      }
+    }
+    
     const secureHash = vnpParams.vnp_SecureHash;
-
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;
 
@@ -311,7 +323,10 @@ exports.handleVNPayReturn = async (req, res) => {
       .update(Buffer.from(signData, 'utf-8'))
       .digest('hex');
 
+    const isMobile = source === 'mobile';
+
     if (!secureHash || secureHash.toLowerCase() !== signed.toLowerCase()) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_SIGNATURE_INVALID));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.PAYMENT.VNPAY_SIGNATURE_INVALID
@@ -320,6 +335,7 @@ exports.handleVNPayReturn = async (req, res) => {
 
     const rentalId = vnpParams.vnp_TxnRef;
     if (!mongoose.Types.ObjectId.isValid(rentalId)) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_TRANSACTION_INVALID));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.PAYMENT.VNPAY_TRANSACTION_INVALID
@@ -328,6 +344,7 @@ exports.handleVNPayReturn = async (req, res) => {
 
     const rental = await Rental.findById(rentalId);
     if (!rental) {
+      if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.RENTAL.NOT_FOUND));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'failed',
         message: MESSAGES.RENTAL.NOT_FOUND
@@ -371,6 +388,7 @@ exports.handleVNPayReturn = async (req, res) => {
         });
       }
 
+      if (isMobile) return res.send(renderMobileResponse(true, 'Thanh toán thành công!'));
       return res.redirect(buildFrontendVNPayReturnUrl({
         status: 'success',
         rentalId: rental._id.toString(),
@@ -378,6 +396,7 @@ exports.handleVNPayReturn = async (req, res) => {
       }));
     }
 
+    if (isMobile) return res.send(renderMobileResponse(false, MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED));
     return res.redirect(buildFrontendVNPayReturnUrl({
       status: 'failed',
       rentalId: rental._id.toString(),
@@ -386,8 +405,37 @@ exports.handleVNPayReturn = async (req, res) => {
       message: MESSAGES.PAYMENT.VNPAY_PAYMENT_FAILED
     }));
   } catch (error) {
+    if (req.query.source === 'mobile') return res.send(renderMobileResponse(false, error.message));
     res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
+};
+
+const renderMobileResponse = (success, message) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Đang quay lại ứng dụng...</title>
+      <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f2f2f6; text-align: center; padding: 20px; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #f97316; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { color: #8e8e93; font-size: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="spinner"></div>
+      <p>Đang quay lại ứng dụng...</p>
+      <script>
+        setTimeout(() => {
+          window.close();
+        }, 500);
+      </script>
+    </body>
+    </html>
+  `;
 };
 
 // Middleware kiểm tra chủ sở hữu item (cho confirm/reject)
@@ -471,6 +519,12 @@ exports.confirmRental = async (req, res) => {
     );
     await updateItemRuntimeStatus(item._id);
 
+    publishToQueue({
+      task: 'rental_status_changed',
+      rentalId: savedRental._id,
+      status: RentalStatus.CONFIRMED
+    });
+
     res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract });
   } catch (error) {
     if (error.code === 11000) {
@@ -485,6 +539,12 @@ exports.confirmRental = async (req, res) => {
           { new: true }
         );
         await updateItemRuntimeStatus(rental.itemId);
+
+        publishToQueue({
+          task: 'rental_status_changed',
+          rentalId: savedRental._id,
+          status: RentalStatus.CONFIRMED
+        });
 
         return res.status(200).json({ message: MESSAGES.RENTAL.CONFIRMED, rental: savedRental, contract: existingContract });
       }
@@ -642,7 +702,12 @@ exports.signContract = async (req, res) => {
     const rental = await Rental.findById(req.params.id);
     if (!rental || !rental.contractId) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });
 
+    if (rental.status === RentalStatus.DISPUTED) {
+      return res.status(400).json({ message: 'Don thue dang tranh chap, khong the ky hop dong.' });
+    }
+
     const contract = await Contract.findById(rental.contractId);
+    if (!contract) return res.status(404).json({ message: 'Khong tim thay hop dong' });
     const userId = req.user._id;
 
     // Gắn thời gian VÀ dán ảnh chữ ký vào đúng người
@@ -760,7 +825,18 @@ exports.sendMessage = async (req, res) => {
       content: trimmedContent
     });
 
-    res.status(201).json(newMessage);
+    await newMessage.populate('senderId', '_id fullName avatarUrl');
+    const messageObject = newMessage.toObject();
+    const sender = messageObject.senderId;
+    res.status(201).json({
+      ...messageObject,
+      senderId: sender?._id || req.user._id,
+      sender: sender ? {
+        _id: sender._id,
+        fullName: sender.fullName,
+        avatarUrl: sender.avatarUrl || ''
+      } : null
+    });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi gửi tin nhắn', error: error.message });
   }
@@ -778,10 +854,178 @@ exports.getMessages = async (req, res) => {
       return res.status(error.status).json({ message: error.message });
     }
 
-    const messages = await Message.find({ rentalId: id }).sort({ createdAt: 1 });
-    res.status(200).json(messages);
+    const messages = await Message.find({ rentalId: id })
+      .populate('senderId', '_id fullName avatarUrl')
+      .sort({ createdAt: 1 });
+    res.status(200).json(messages.map((message) => {
+      const messageObject = message.toObject();
+      const sender = messageObject.senderId;
+      return {
+        ...messageObject,
+        senderId: sender?._id || message.senderId,
+        sender: sender ? {
+          _id: sender._id,
+          fullName: sender.fullName,
+          avatarUrl: sender.avatarUrl || ''
+        } : null
+      };
+    }));
   } catch (error) {
     res.status(500).json({ message: 'Lỗi tải lịch sử chat', error: error.message });
+  }
+};
+
+// [USER/ADMIN] GET /api/rentals/:id - Lấy chi tiết 1 đơn thuê
+exports.getRentalDetail = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: MESSAGES.COMMON.INVALID_RENTAL_ID });
+    }
+
+    const rental = await Rental.findById(id)
+      .populate({
+        path: 'itemId',
+        select: '_id code name pricePerDay images baseValue depositPercentage address ownerId'
+      })
+      .populate({
+        path: 'ownerId',
+        select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+        path: 'renterId',
+        select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      });
+
+    if (!rental) {
+      return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
+    }
+
+    // Only allow renter, owner, or admin to view
+    const isRenter = rental.renterId.equals(userId);
+    const isOwner = rental.ownerId.equals(userId);
+    const isAdmin = req.user.role === 'admin';
+    if (!isRenter && !isOwner && !isAdmin) {
+      return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
+    }
+
+    // Load related contract if exists
+    let contract = null;
+    if (rental.contractId) {
+      contract = await Contract.findById(rental.contractId)
+        .select('_id ownerSignedAt renterSignedAt ownerSignatureUrl renterSignatureUrl isFullySigned createdAt updatedAt');
+    } else {
+      contract = await Contract.findOne({ rentalId: rental._id })
+        .select('_id ownerSignedAt renterSignedAt ownerSignatureUrl renterSignatureUrl isFullySigned createdAt updatedAt');
+    }
+
+    // Load related dispute if exists
+    const dispute = await Dispute.findOne({ rentalId: rental._id })
+      .sort({ createdAt: -1 })
+      .populate('reporterId', '_id fullName email')
+      .populate('penalizeUserId', '_id fullName email');
+
+    // Populate review if exists
+    const review = await Review.findOne({ rentalId: rental._id, reviewerId: userId });
+
+    const counterparty = isOwner ? rental.renterId : rental.ownerId;
+
+    const itemSummary = rental.itemId ? {
+      _id: rental.itemId._id,
+      code: rental.itemId.code,
+      name: rental.itemId.name,
+      pricePerDay: rental.itemId.pricePerDay,
+      mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+      images: rental.itemId.images || []
+    } : null;
+
+    const responseData = {
+      _id: rental._id,
+      code: rental.code,
+      startDate: rental.startDate,
+      endDate: rental.endDate,
+      rentalFee: rental.rentalFee,
+      depositAmount: rental.depositAmount,
+      escrowAmount: rental.depositAmount, // both names for convenience
+      totalAmount: rental.totalAmount,
+      totalPrice: rental.totalAmount, // both names for convenience
+      commissionRate: rental.commissionRate,
+      commissionAmount: rental.commissionAmount,
+      payoutAmount: rental.payoutAmount,
+      paymentStatus: rental.paymentStatus,
+      status: rental.status,
+      createdAt: rental.createdAt,
+      updatedAt: rental.updatedAt,
+      note: rental.note || '',
+      cancellationReason: rental.cancellationReason || '',
+      cancelledBy: rental.cancelledBy || null,
+      cancelledAt: rental.cancelledAt || null,
+      contractId: rental.contractId,
+      pickupImages: rental.pickupImages || [],
+      returnImages: rental.returnImages || [],
+      pickupReport: (rental.pickupReport && rental.pickupReport.recordedBy) ? rental.pickupReport : null,
+      returnReport: (rental.returnReport && rental.returnReport.recordedBy) ? rental.returnReport : null,
+      actualReturnDate: rental.actualReturnDate || null,
+      overdueDays: rental.overdueDays || 0,
+      lateFeeAmount: rental.lateFeeAmount || 0,
+      contract: contract ? {
+        _id: contract._id,
+        ownerSignedAt: contract.ownerSignedAt,
+        renterSignedAt: contract.renterSignedAt,
+        ownerSignatureUrl: contract.ownerSignatureUrl,
+        renterSignatureUrl: contract.renterSignatureUrl,
+        isFullySigned: contract.isFullySigned,
+        createdAt: contract.createdAt,
+        updatedAt: contract.updatedAt
+      } : null,
+      isFullySigned: Boolean(contract?.isFullySigned),
+      item: itemSummary,
+      itemId: rental.itemId?._id || null,
+      itemName: rental.itemId?.name || 'Đồ đã bị xóa',
+      itemMainImage: (rental.itemId?.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+      counterparty: counterparty ? {
+        _id: counterparty._id,
+        fullName: counterparty.fullName,
+        email: counterparty.email,
+        avatarUrl: counterparty.avatarUrl || '',
+        ekycStatus: counterparty.ekycStatus,
+        averageRating: counterparty.averageRating || 0,
+        totalReviews: counterparty.totalReviews || 0,
+        trustScore: counterparty.trustScore || 50
+      } : null,
+      counterpartyName: counterparty?.fullName || '',
+      counterpartyId: counterparty?._id || '',
+      renter: rental.renterId ? {
+        _id: rental.renterId._id,
+        fullName: rental.renterId.fullName
+      } : null,
+      owner: rental.ownerId ? {
+        _id: rental.ownerId._id,
+        fullName: rental.ownerId.fullName
+      } : null,
+      ownerId: rental.ownerId?._id || '',
+      renterId: rental.renterId?._id || '',
+      dispute: dispute ? {
+        _id: dispute._id,
+        status: dispute.status,
+        reason: dispute.reason,
+        evidenceImages: dispute.evidenceImages || [],
+        mediationEndsAt: dispute.mediationEndsAt,
+        adminDecision: dispute.adminDecision,
+        resolvedAt: dispute.resolvedAt
+      } : null,
+      review: review ? {
+        _id: review._id,
+        rating: review.rating,
+        comment: review.comment
+      } : null
+    };
+
+    res.status(200).json(responseData);
+  } catch (error) {
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 

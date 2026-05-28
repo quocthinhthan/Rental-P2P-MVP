@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:rental_p2p_mobile/core/network/api_client.dart';
 import 'package:rental_p2p_mobile/features/rentals/data/rental_models.dart';
 
@@ -12,34 +14,8 @@ class RentalsRepository {
   }
 
   Future<RentalDetail> getRentalDetail(String rentalId) async {
-    // Use my-rentals view and find the specific rental (no single-rental endpoint)
-    // Fall back to parsing from the list
-    final result = await api.get('/views/my-rentals');
-    final view = MyRentalsView.fromJson(Map<String, dynamic>.from(result as Map));
-
-    // Find the rental by ID from either list
-    final allRentals = [...view.asRenter, ...view.asOwner];
-    final card = allRentals.firstWhere(
-      (r) => r.id == rentalId,
-      orElse: () => allRentals.first,
-    );
-
-    // Convert card to RentalDetail for detail page
-    return RentalDetail(
-      id: card.id,
-      itemId: '',
-      itemName: card.itemName,
-      itemMainImage: card.itemMainImage,
-      startDate: card.startDate,
-      endDate: card.endDate,
-      status: card.status,
-      paymentStatus: card.paymentStatus,
-      totalPrice: card.totalAmount,
-      escrowAmount: card.escrowAmount,
-      note: '',
-      counterpartyName: card.counterpartyName,
-      counterpartyId: '',
-    );
+    final result = await api.get('/rentals/$rentalId');
+    return RentalDetail.fromJson(Map<String, dynamic>.from(result as Map));
   }
 
   Future<void> confirmRental(String rentalId) {
@@ -50,8 +26,13 @@ class RentalsRepository {
     return api.patch('/rentals/$rentalId/reject', {});
   }
 
+  Future<void> cancelRental(String rentalId) {
+    return api.patch('/rentals/$rentalId/cancel', {});
+  }
+
   Future<String> createPaymentUrl(String rentalId) async {
-    final result = await api.post('/rentals/$rentalId/create-vnpay-url', {});
+    final result = await api
+        .post('/rentals/$rentalId/create-vnpay-url', {'source': 'mobile'});
     return (result as Map)['paymentUrl'].toString();
   }
 
@@ -61,15 +42,75 @@ class RentalsRepository {
     });
   }
 
-  Future<void> pickupRental(String rentalId, List<String> images) {
+  Future<RentalContractDetail> getRentalContract(String rentalId) async {
+    final result = await api.get('/rentals/$rentalId/contract');
+    return RentalContractDetail.fromJson(
+        Map<String, dynamic>.from(result as Map));
+  }
+
+  Future<String> uploadSignatureImage(String rentalId, Uint8List bytes) async {
+    return uploadImageBytes(
+      filename: 'chu-ky-hop-dong-$rentalId.png',
+      bytes: bytes,
+    );
+  }
+
+  Future<String> uploadHandoverImage({
+    required String rentalId,
+    required String type,
+    required int index,
+    required Uint8List bytes,
+  }) {
+    return uploadImageBytes(
+      filename: '$type-$rentalId-${index + 1}.jpg',
+      bytes: bytes,
+    );
+  }
+
+  Future<String> uploadImageBytes({
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    final result = await api.uploadFile(
+      '/upload',
+      fieldName: 'image',
+      filename: filename,
+      bytes: bytes,
+    );
+    return (result as Map)['imageUrl'].toString();
+  }
+
+  Future<void> pickupRental(
+    String rentalId,
+    List<String> images, {
+    String? condition,
+    String? accessories,
+    String? notes,
+  }) {
     return api.patch('/rentals/$rentalId/pickup', {
       'pickupImages': images,
+      if (condition != null && condition.isNotEmpty) 'condition': condition,
+      if (accessories != null && accessories.isNotEmpty)
+        'accessories': accessories,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
     });
   }
 
-  Future<void> completeRental(String rentalId, List<String> images) {
+  Future<void> completeRental(
+    String rentalId,
+    List<String> images, {
+    String? condition,
+    String? accessories,
+    String? notes,
+    String? damages,
+  }) {
     return api.patch('/rentals/$rentalId/complete', {
       'returnImages': images,
+      if (condition != null && condition.isNotEmpty) 'condition': condition,
+      if (accessories != null && accessories.isNotEmpty)
+        'accessories': accessories,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (damages != null && damages.isNotEmpty) 'damages': damages,
     });
   }
 
@@ -94,6 +135,28 @@ class RentalsRepository {
       'rentalId': rentalId,
       'reason': reason,
       'evidenceImages': evidenceImages,
+    });
+  }
+
+  Future<void> withdrawDispute(String disputeId) {
+    return api.patch('/disputes/$disputeId/withdraw', {});
+  }
+
+  Future<void> escalateDispute(String disputeId) {
+    return api.patch('/disputes/$disputeId/escalate', {});
+  }
+
+  Future<void> createReview({
+    required String rentalId,
+    required String revieweeId,
+    required int rating,
+    String comment = '',
+  }) {
+    return api.post('/reviews', {
+      'rentalId': rentalId,
+      'revieweeId': revieweeId,
+      'rating': rating,
+      if (comment.isNotEmpty) 'comment': comment,
     });
   }
 }
