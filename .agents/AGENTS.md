@@ -46,7 +46,7 @@ Mounted backend API groups in `server.js`:
 - `/api/admin`: dashboard, user moderation, item moderation, featured/status updates, item reports.
 - `/api/upload`: Cloudinary image upload/delete.
 - `/api/users`: public profile, favorites (wishlist) management.
-- `/api/reviews`: create review and list user reviews.
+- `/api/reviews`: create review, list user reviews, and list item reviews.
 - `/api/disputes`: create, list for admin, withdraw, escalate, resolve.
 
 ### Frontend
@@ -150,6 +150,7 @@ Verify the exact implementation before using or modifying these endpoints:
 - `GET /api/users/me/favorites` — authenticated; returns array of item summaries
 - `POST /api/users/me/favorites/{itemId}` — authenticated; idempotent, max 100
 - `DELETE /api/users/me/favorites/{itemId}` — authenticated; idempotent
+- `GET /api/reviews/items/{itemId}` — public; returns product-specific averageRating, totalReviews, and reviews list
 
 When touching these APIs from the frontend:
 

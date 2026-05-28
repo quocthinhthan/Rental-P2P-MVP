@@ -143,6 +143,9 @@ export const createReview = ({ rentalId, rating, comment }) =>
 export const getUserReviews = (userId, page = 1, limit = 5) =>
   api.get(`/reviews/users/${userId}?page=${page}&limit=${limit}`);
 
+export const getItemReviews = (itemId, page = 1, limit = 5) =>
+  api.get(`/reviews/items/${itemId}?page=${page}&limit=${limit}`);
+
 // === Rentals (Actions) ===
 export const createRentalRequest = (itemId, startDate, endDate, note) =>
   api.post('/rentals', { itemId, startDate, endDate, note });
@@ -289,6 +292,7 @@ const apiService = {
   getMyRentals,
   createReview,
   getUserReviews,
+  getItemReviews,
   createRentalRequest,
   createVNPayUrl,
   confirmRental,
