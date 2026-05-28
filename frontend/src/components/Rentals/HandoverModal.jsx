@@ -21,10 +21,10 @@ const modalCopy = {
   },
 };
 
-function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) {
-  const [files, setFiles] = useState([]);
+function HandoverModal({ isOpen, rental, type = 'pickup', report, onClose, onSuccess }) {
+  const [isEditing, setIsEditing] = useState(true);
   const [previews, setPreviews] = useState([]);
-  const [condition, setCondition] = useState('Hoạt động tốt, nguyên vẹn');
+  const [condition, setCondition] = useState('good');
   const [accessories, setAccessories] = useState('Đầy đủ phụ kiện theo mô tả');
   const [damages, setDamages] = useState('Không có hư hại phát sinh');
   const [notes, setNotes] = useState('');
@@ -34,24 +34,35 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
   const isPickup = type === 'pickup';
 
   useEffect(() => {
-    if (!isOpen) {
-      setFiles([]);
-      setPreviews([]);
-      setCondition('good');
-      setAccessories('Đầy đủ phụ kiện theo mô tả');
-      setDamages('Không có hư hại phát sinh');
-      setNotes('');
+    if (isOpen) {
+      if (report) {
+        const reportImages = isPickup ? (rental.pickupImages || []) : (rental.returnImages || []);
+        setPreviews(reportImages.map((url) => ({ url, isRemote: true })));
+        setCondition(report.condition || 'good');
+        setAccessories(report.accessories || 'Đầy đủ phụ kiện theo mô tả');
+        setDamages(report.damages || 'Không có hư hại phát sinh');
+        setNotes(report.notes || '');
+        setIsEditing(false);
+      } else {
+        setPreviews([]);
+        setCondition('good');
+        setAccessories('Đầy đủ phụ kiện theo mô tả');
+        setDamages('Không có hư hại phát sinh');
+        setNotes('');
+        setIsEditing(true);
+      }
     }
-  }, [isOpen, isPickup]);
+  }, [isOpen, report, rental, isPickup]);
 
   useEffect(() => {
-    const nextPreviews = files.map((file) => URL.createObjectURL(file));
-    setPreviews(nextPreviews);
-
     return () => {
-      nextPreviews.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+      previews.forEach((p) => {
+        if (!p.isRemote && p.url.startsWith('blob:')) {
+          URL.revokeObjectURL(p.url);
+        }
+      });
     };
-  }, [files]);
+  }, [previews]);
 
   if (!isOpen || !rental) return null;
 
@@ -59,9 +70,8 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
     const selectedFiles = Array.from(event.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    const combinedFiles = [...files, ...selectedFiles];
-
-    if (combinedFiles.length > 3) {
+    const totalCount = previews.length + selectedFiles.length;
+    if (totalCount > 3) {
       Swal.fire({
         title: 'Giới hạn số lượng ảnh! 📸',
         text: 'Bạn chỉ được tải lên tối đa 3 hình ảnh xác minh.',
@@ -72,59 +82,98 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
       return;
     }
 
-    const totalSize = combinedFiles.reduce((acc, file) => acc + file.size, 0);
-    const maxSizeBytes = 5 * 1024 * 1024;
-    if (totalSize > maxSizeBytes) {
-      Swal.fire({
-        title: 'Dung lượng quá lớn! 💾',
-        text: 'Tổng dung lượng các ảnh tải lên không được vượt quá 5MB.',
-        icon: 'warning',
-        confirmButtonColor: '#ffb524'
-      });
-      event.target.value = '';
-      return;
-    }
+    const nextPreviews = selectedFiles.map((file) => ({
+      url: URL.createObjectURL(file),
+      isRemote: false,
+      file,
+    }));
 
-    setFiles(combinedFiles);
+    setPreviews((prev) => [...prev, ...nextPreviews]);
     event.target.value = '';
   };
 
   const handleRemoveFile = (indexToRemove) => {
-    setFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    setPreviews((prev) => {
+      const item = prev[indexToRemove];
+      if (item && !item.isRemote && item.url.startsWith('blob:')) {
+        URL.revokeObjectURL(item.url);
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (files.length === 0) {
+    if (previews.length === 0) {
       Swal.fire('Thiếu ảnh xác nhận', copy.missing, 'warning');
       return;
     }
 
     try {
       setSubmitting(true);
-      const imageUrls = await apiService.uploadImages(files);
 
-      if (isPickup) {
-        await apiService.pickupRental(rental._id, {
-          pickupImages: imageUrls,
-          condition: condition.trim(),
-          accessories: accessories.trim(),
-          notes: notes.trim(),
-        });
+      if (report) {
+        // Phê duyệt biên bản (chúng ta là đối phương)
+        if (!isEditing) {
+          // Không chỉnh sửa, duyệt trực tiếp với các thông tin đã lưu
+          if (isPickup) {
+            await apiService.approvePickup(rental._id);
+          } else {
+            await apiService.approveReturn(rental._id);
+          }
+        } else {
+          // Có chỉnh sửa thông tin! Tải các ảnh local mới lên Cloudinary trước
+          const remoteUrls = previews.filter((p) => p.isRemote).map((p) => p.url);
+          const localFiles = previews.filter((p) => !p.isRemote).map((p) => p.file);
+
+          let uploadedUrls = [];
+          if (localFiles.length > 0) {
+            uploadedUrls = await apiService.uploadImages(localFiles);
+          }
+
+          const finalImages = [...remoteUrls, ...uploadedUrls];
+          const payload = {
+            condition: condition.trim(),
+            accessories: accessories.trim(),
+            notes: notes.trim(),
+          };
+
+          if (isPickup) {
+            payload.pickupImages = finalImages;
+            await apiService.approvePickup(rental._id, payload);
+          } else {
+            payload.damages = damages.trim();
+            payload.returnImages = finalImages;
+            await apiService.approveReturn(rental._id, payload);
+          }
+        }
       } else {
-        await apiService.completeRental(rental._id, {
-          returnImages: imageUrls,
-          condition: condition.trim(),
-          accessories: accessories.trim(),
-          damages: damages.trim(),
-          notes: notes.trim(),
-        });
+        // Tự ghi nhận biên bản lần đầu
+        const localFiles = previews.filter((p) => !p.isRemote).map((p) => p.file);
+        const imageUrls = await apiService.uploadImages(localFiles);
+
+        if (isPickup) {
+          await apiService.pickupRental(rental._id, {
+            pickupImages: imageUrls,
+            condition: condition.trim(),
+            accessories: accessories.trim(),
+            notes: notes.trim(),
+          });
+        } else {
+          await apiService.completeRental(rental._id, {
+            returnImages: imageUrls,
+            condition: condition.trim(),
+            accessories: accessories.trim(),
+            damages: damages.trim(),
+            notes: notes.trim(),
+          });
+        }
       }
 
       Swal.fire({
         title: 'Thành công! 🎉',
-        text: copy.success,
+        text: report ? 'Đã duyệt biên bản thành công.' : copy.success,
         icon: 'success',
         confirmButtonColor: '#ffb524'
       });
@@ -149,7 +198,9 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
             <p className="rental-modal-eyebrow" style={{ color: '#ffb524', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>
               {isPickup ? '📦 ' : '🔄 '} {copy.eyebrow}
             </p>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', marginTop: '4px' }}>{copy.title}</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', marginTop: '4px' }}>
+              {report ? (isEditing ? 'Chỉnh sửa biên bản giao nhận' : 'Xem & Duyệt biên bản giao nhận') : copy.title}
+            </h3>
           </div>
           <button 
             className="modal-close-btn" 
@@ -165,7 +216,9 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
 
         <form onSubmit={handleSubmit}>
           <p className="rental-modal-subtitle" style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '20px', lineHeight: '1.5' }}>
-            {copy.subtitle}
+            {report ? (
+              isEditing ? 'Bạn đang chỉnh sửa lại biên bản đã được đối phương ghi nhận.' : 'Vui lòng kiểm tra lại biên bản tình trạng thực tế dưới đây.'
+            ) : copy.subtitle}
           </p>
 
           <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '4px', marginBottom: '16px' }}>
@@ -179,7 +232,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
                 style={{ borderRadius: '8px', border: '1px solid #d1d5db', padding: '8px 12px', fontSize: '0.9rem', width: '100%', backgroundColor: '#fff' }}
                 value={condition}
                 onChange={(e) => setCondition(e.target.value)}
-                disabled={submitting}
+                disabled={submitting || !isEditing}
                 required
               >
                 <option value="good">Tốt / Nguyên vẹn</option>
@@ -201,7 +254,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
                 onChange={(e) => setAccessories(e.target.value)}
                 placeholder="Ví dụ: Đầy đủ pin, sạc và túi chống sốc..."
                 required
-                disabled={submitting}
+                disabled={submitting || !isEditing}
               />
             </div>
 
@@ -219,7 +272,7 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
                   onChange={(e) => setDamages(e.target.value)}
                   placeholder="Ví dụ: Không có hao mòn, hoặc bị nứt vỏ nhẹ..."
                   required
-                  disabled={submitting}
+                  disabled={submitting || !isEditing}
                 />
               </div>
             )}
@@ -236,88 +289,97 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Nhập ghi chú thêm cho đối tác..."
-                disabled={submitting}
+                disabled={submitting || !isEditing}
               />
             </div>
 
-            {/* Tải lên ảnh */}
-            <div className="mb-3">
-              <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', color: '#374151', marginBottom: '6px' }}>
-                Hình ảnh thực tế xác minh <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <label 
-                className="handover-upload-box"
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  border: '2px dashed #d1d5db', 
-                  borderRadius: '12px', 
-                  padding: '24px', 
-                  cursor: 'pointer',
-                  backgroundColor: '#f9fafb',
-                  transition: 'border-color 0.2s'
-                }}
-              >
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
-                  onChange={handleFileChange} 
-                  disabled={submitting} 
-                  style={{ display: 'none' }}
-                />
-                <span style={{ color: '#ffb524', fontWeight: '600', fontSize: '0.95rem' }}>📸 Chọn hoặc kéo thả ảnh vào đây</span>
-                <small style={{ color: '#6b7280', marginTop: '4px' }}>Tải lên tối đa 3 ảnh xác minh (tổng dung lượng dưới 5MB)</small>
-              </label>
-            </div>
+            {/* Tải lên ảnh (Chỉ hiển thị khi có quyền chỉnh sửa) */}
+            {isEditing && (
+              <div className="mb-3">
+                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', color: '#374151', marginBottom: '6px' }}>
+                  Tải thêm/thay thế hình ảnh thực tế <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <label 
+                  className="handover-upload-box"
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    border: '2px dashed #d1d5db', 
+                    borderRadius: '12px', 
+                    padding: '24px', 
+                    cursor: 'pointer',
+                    backgroundColor: '#f9fafb',
+                    transition: 'border-color 0.2s'
+                  }}
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    multiple 
+                    onChange={handleFileChange} 
+                    disabled={submitting} 
+                    style={{ display: 'none' }}
+                  />
+                  <span style={{ color: '#ffb524', fontWeight: '600', fontSize: '0.95rem' }}>📸 Chọn ảnh tải lên</span>
+                  <small style={{ color: '#6b7280', marginTop: '4px' }}>Tổng tối đa 3 ảnh xác minh (tổng dưới 5MB)</small>
+                </label>
+              </div>
+            )}
 
             {/* Preview ảnh */}
             {previews.length > 0 && (
-              <div 
-                className="handover-preview-grid"
-                style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
-                  gap: '8px', 
-                  marginTop: '12px' 
-                }}
-              >
-                {previews.map((previewUrl, index) => (
-                  <div key={previewUrl} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                    <img 
-                      src={previewUrl} 
-                      alt={`Ảnh thực tế ${index + 1}`} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(index)}
-                      disabled={submitting}
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: 'rgba(0, 0, 0, 0.6)',
-                        border: 'none',
-                        color: '#fff',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        lineHeight: 1
-                      }}
-                      title="Xóa ảnh này"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+              <div className="mb-3">
+                <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', color: '#374151', marginBottom: '6px' }}>
+                  Hình ảnh xác minh hiện có <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <div 
+                  className="handover-preview-grid"
+                  style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
+                    gap: '8px', 
+                    marginTop: '4px' 
+                  }}
+                >
+                  {previews.map((item, index) => (
+                    <div key={item.url} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                      <img 
+                        src={item.url} 
+                        alt={`Ảnh thực tế ${index + 1}`} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(index)}
+                          disabled={submitting}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: 'rgba(0, 0, 0, 0.6)',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            lineHeight: 1
+                          }}
+                          title="Xóa ảnh này"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -332,13 +394,24 @@ function HandoverModal({ isOpen, rental, type = 'pickup', onClose, onSuccess }) 
             >
               Hủy
             </button>
+            {report && !isEditing && (
+              <button 
+                className="btn-xs btn-outline-warning" 
+                type="button" 
+                onClick={() => setIsEditing(true)} 
+                disabled={submitting}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #f59e0b', color: '#d97706', cursor: 'pointer', backgroundColor: '#fffbeb', fontWeight: '600' }}
+              >
+                ✏️ Chỉnh sửa thông tin
+              </button>
+            )}
             <button 
               className="btn-xs btn-primary-xs" 
               type="submit" 
               disabled={submitting}
               style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', backgroundColor: '#ffb524', color: '#fff', fontWeight: '600' }}
             >
-              {submitting ? 'Đang xử lý...' : copy.button}
+              {submitting ? 'Đang xử lý...' : (report && !isEditing ? 'Đồng ý & Xác nhận' : copy.button)}
             </button>
           </div>
         </form>

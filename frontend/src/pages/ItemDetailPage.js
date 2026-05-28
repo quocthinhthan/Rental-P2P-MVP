@@ -242,11 +242,11 @@ function ItemDetailPage() {
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   /* ── state: reviews ── */
-  const [ownerReviews, setOwnerReviews]         = useState([]);
-  const [ownerAverageRating, setOwnerAverageRating] = useState(null);
-  const [ownerTotalReviews, setOwnerTotalReviews] = useState(0);
-  const [reviewLoading, setReviewLoading]       = useState(false);
-  const [reviewError, setReviewError]           = useState(null);
+  const [itemReviews, setItemReviews]             = useState([]);
+  const [itemAverageRating, setItemAverageRating] = useState(null);
+  const [itemTotalReviews, setItemTotalReviews]   = useState(0);
+  const [reviewLoading, setReviewLoading]         = useState(false);
+  const [reviewError, setReviewError]             = useState(null);
 
   /* ── state: tabs ── */
   const [activeTab, setActiveTab] = useState('desc');
@@ -335,29 +335,28 @@ function ItemDetailPage() {
   }, [itemId]);
 
   /* ─────────────────────────────────────
-     Fetch owner reviews
+     Fetch item reviews
      ───────────────────────────────────── */
   useEffect(() => {
-    const ownerId = item?.owner?._id;
-    if (!ownerId) return;
+    if (!itemId) return;
 
-    const fetchOwnerReviews = async () => {
+    const fetchItemReviews = async () => {
       setReviewLoading(true);
       setReviewError(null);
       try {
-        const res = await apiService.getUserReviews(ownerId, 1, 5);
-        setOwnerAverageRating(res.data.averageRating ?? item?.owner?.averageRating ?? 0);
-        setOwnerTotalReviews(res.data.totalReviews || 0);
-        setOwnerReviews(res.data.reviews || []);
+        const res = await apiService.getItemReviews(itemId, 1, 5);
+        setItemAverageRating(res.data.averageRating ?? 0);
+        setItemTotalReviews(res.data.totalReviews || 0);
+        setItemReviews(res.data.reviews || []);
       } catch {
-        setReviewError('Không thể tải đánh giá của chủ vật dụng.');
+        setReviewError('Không thể tải đánh giá của sản phẩm.');
       } finally {
         setReviewLoading(false);
       }
     };
 
-    fetchOwnerReviews();
-  }, [item?.owner?._id, item?.owner?.averageRating]);
+    fetchItemReviews();
+  }, [itemId]);
 
   /* ─────────────────────────────────────
      Hash → review tab
@@ -396,6 +395,25 @@ function ItemDetailPage() {
     e.preventDefault();
     if (!isLoggedIn) { navigate('/login'); return; }
 
+    const hasBankDetails = user?.bankAccount?.bankName && user?.bankAccount?.accountNumber && user?.bankAccount?.accountHolder;
+    if (!hasBankDetails) {
+      Swal.fire({
+        title: 'Yêu cầu điền thông tin ngân hàng ⚠️',
+        text: 'Để đảm bảo quyền lợi và hỗ trợ hệ thống hoàn trả tiền cọc/ký quỹ tự động khi kết thúc giao dịch, bạn vui lòng điền thông tin tài khoản ngân hàng trong phần Thông tin cá nhân trước.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Cập nhật ngay',
+        cancelButtonText: 'Để sau',
+        confirmButtonColor: '#ffb524',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/account');
+        }
+      });
+      return;
+    }
+
     if (startDate && endDate) {
       const chosenStart = new Date(startDate);
       chosenStart.setHours(0, 0, 0, 0);
@@ -425,7 +443,17 @@ function ItemDetailPage() {
     try {
       const res = await apiService.createRentalRequest(itemId, startDate, endDate, note);
       const pay = await apiService.createVNPayUrl(res.data._id);
-      window.location.href = pay.data.paymentUrl;
+      
+      Swal.fire({
+        title: 'Yêu cầu thuê thành công! 🎉',
+        text: 'Yêu cầu thuê đồ của bạn đã được tạo. Hệ thống sẽ chuyển hướng bạn sang cổng thanh toán VNPay để tiến hành đặt cọc (ký quỹ) bảo đảm giao dịch.',
+        icon: 'success',
+        confirmButtonText: 'Tiến hành đặt cọc',
+        confirmButtonColor: '#ffb524',
+        allowOutsideClick: false
+      }).then(() => {
+        window.location.href = pay.data.paymentUrl;
+      });
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Không thể tạo yêu cầu thuê.';
       
@@ -585,13 +613,13 @@ function ItemDetailPage() {
   const depositAmount = (baseValue * depositPercentage) / 100;
   const ownerProfile = item.owner ? {
     ...item.owner,
-    averageRating: ownerAverageRating ?? item.owner.averageRating ?? 0,
-    totalReviews: ownerTotalReviews || item.owner.totalReviews || 0
+    averageRating: item.owner.averageRating ?? 0,
+    totalReviews: item.owner.totalReviews ?? 0
   } : null;
 
   const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-  if (ownerReviews && ownerReviews.length > 0) {
-    ownerReviews.forEach(r => {
+  if (itemReviews && itemReviews.length > 0) {
+    itemReviews.forEach(r => {
       const rate = Math.round(r.rating);
       if (rate >= 1 && rate <= 5) {
         ratingBreakdown[rate] += 1;
@@ -1091,12 +1119,12 @@ function ItemDetailPage() {
                 onClick={() => setActiveTab('review')}
               >
                 <i className="fa fa-star me-2" /> Đánh giá
-                {ownerTotalReviews > 0 && (
+                {itemTotalReviews > 0 && (
                   <span
                     className="ms-2 badge rounded-pill"
                     style={{ background: 'var(--idp-brand-light)', color: 'var(--idp-brand)', fontSize: '.7rem' }}
                   >
-                    {ownerTotalReviews}
+                    {itemTotalReviews}
                   </span>
                 )}
               </button>
@@ -1130,20 +1158,20 @@ function ItemDetailPage() {
                           Đánh giá trung bình
                         </div>
                         <div className="idp-review-score-num text-primary fw-extrabold mb-1" style={{ fontSize: '3rem', fontWeight: 800 }}>
-                          {ownerAverageRating !== null && ownerTotalReviews > 0 ? ownerAverageRating.toFixed(1) : '--'}
+                          {itemAverageRating !== null && itemTotalReviews > 0 ? itemAverageRating.toFixed(1) : '--'}
                         </div>
                         <div className="idp-review-stars mb-2 d-flex justify-content-center gap-1">
-                          {ownerAverageRating !== null ? renderStars(Math.round(ownerAverageRating)) : renderStars(0)}
+                          {itemAverageRating !== null ? renderStars(Math.round(itemAverageRating)) : renderStars(0)}
                         </div>
                         <p className="idp-review-count text-muted small mb-3">
-                          {ownerTotalReviews} đánh giá công khai
+                          {itemTotalReviews} đánh giá công khai
                         </p>
                         
                         {/* Star progress breakdown chart */}
                         <div className="rating-breakdown border-top pt-3 mt-2">
                           {[5, 4, 3, 2, 1].map((star) => {
                             const count = ratingBreakdown[star];
-                            const percentage = ownerReviews.length > 0 ? (count / ownerReviews.length) * 100 : 0;
+                            const percentage = itemReviews.length > 0 ? (count / itemReviews.length) * 100 : 0;
                             return (
                               <div key={star} className="d-flex align-items-center gap-2 mb-2" style={{ fontSize: '.8rem' }}>
                                 <span style={{ width: '12px' }} className="fw-semibold text-dark">{star}</span>
@@ -1164,7 +1192,7 @@ function ItemDetailPage() {
                                   />
                                 </div>
                                 <span className="text-muted" style={{ width: '30px', textAlign: 'right', fontSize: '0.75rem' }}>
-                                  {ownerReviews.length > 0 ? `${Math.round(percentage)}%` : '0%'}
+                                  {itemReviews.length > 0 ? `${Math.round(percentage)}%` : '0%'}
                                 </span>
                               </div>
                             );
@@ -1188,7 +1216,7 @@ function ItemDetailPage() {
                             <span className="text-muted small">Đánh giá được gửi sau khi hoàn thành giao dịch thực tế.</span>
                           </div>
                           <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '.75rem' }}>
-                            {ownerTotalReviews} Nhận xét
+                            {itemTotalReviews} Nhận xét
                           </span>
                         </div>
 
@@ -1203,12 +1231,12 @@ function ItemDetailPage() {
                         {!reviewLoading && reviewError && (
                           <div className="alert alert-warning">{reviewError}</div>
                         )}
-                        {!reviewLoading && !reviewError && ownerReviews.length === 0 && (
+                        {!reviewLoading && !reviewError && itemReviews.length === 0 && (
                           <div className="alert alert-light border">Chưa có đánh giá nào.</div>
                         )}
-                        {!reviewLoading && !reviewError && ownerReviews.length > 0 && (
+                        {!reviewLoading && !reviewError && itemReviews.length > 0 && (
                           <div>
-                            {ownerReviews.map((review) => (
+                            {itemReviews.map((review) => (
                               <div key={review._id} className="idp-review-item">
                                 <img
                                   src={review.reviewerId?.avatarUrl || 'https://via.placeholder.com/52'}

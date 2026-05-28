@@ -136,12 +136,17 @@ export const getItemDetails = (itemId) => api.get(`/views/item-details/${itemId}
 
 export const getMyRentals = (config = {}) => api.get('/views/my-rentals', config);
 
+export const getFinancialStats = (range = 'all') => api.get(`/views/financial-stats?range=${encodeURIComponent(range)}`);
+
 // === Reviews ===
 export const createReview = ({ rentalId, rating, comment }) =>
   api.post('/reviews', { rentalId, rating, comment });
 
 export const getUserReviews = (userId, page = 1, limit = 5) =>
   api.get(`/reviews/users/${userId}?page=${page}&limit=${limit}`);
+
+export const getItemReviews = (itemId, page = 1, limit = 5) =>
+  api.get(`/reviews/items/${itemId}?page=${page}&limit=${limit}`);
 
 // === Rentals (Actions) ===
 export const createRentalRequest = (itemId, startDate, endDate, note) =>
@@ -165,6 +170,10 @@ export const pickupRental = (rentalId, payload) =>
 
 export const completeRental = (rentalId, payload) =>
   api.patch(`/rentals/${rentalId}/complete`, typeof payload === 'object' && !Array.isArray(payload) ? payload : { returnImages: payload });
+
+export const approvePickup = (rentalId, data) => api.patch(`/rentals/${rentalId}/approve-pickup`, data);
+
+export const approveReturn = (rentalId, data) => api.patch(`/rentals/${rentalId}/approve-return`, data);
 
 export const getRentalMessages = (rentalId) => api.get(`/rentals/${rentalId}/messages`, {
   skipGlobalLoading: true,
@@ -285,6 +294,7 @@ const apiService = {
   getMyRentals,
   createReview,
   getUserReviews,
+  getItemReviews,
   createRentalRequest,
   createVNPayUrl,
   confirmRental,
@@ -294,6 +304,8 @@ const apiService = {
   signContract,
   pickupRental,
   completeRental,
+  approvePickup,
+  approveReturn,
   getRentalMessages,
   sendRentalMessage,
   createDispute,
@@ -320,6 +332,8 @@ const apiService = {
   getFavorites,
   addFavorite,
   removeFavorite,
+  // Financial Stats
+  getFinancialStats,
 };
 
 export default apiService;

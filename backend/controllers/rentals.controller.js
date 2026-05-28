@@ -651,7 +651,7 @@ exports.completeRental = async (req, res) => {
     }
 
     if (rental.status !== RentalStatus.IN_PROGRESS) {
-      return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang diễn ra' });
+      return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang thuê' });
     }
     if (!returnImages || returnImages.length === 0) {
       return res.status(400).json({ message: 'Bắt buộc phải tải ảnh lên lúc trả đồ!' });
@@ -664,26 +664,21 @@ exports.completeRental = async (req, res) => {
       notes:       typeof notes === 'string'       ? notes.trim()       : '',
       damages:     typeof damages === 'string'     ? damages.trim()     : '',
       recordedBy:  req.user._id,
-      recordedAt:  new Date()
+      recordedAt:  new Date(),
+      approvedBy:  null,
+      approvedAt:  null
     };
 
     const savedRental = await Rental.findByIdAndUpdate(
       rental._id,
       {
         returnImages,
-        returnReport,
-        status: RentalStatus.COMPLETED
+        returnReport
       },
       { new: true }
     );
-    await updateItemRuntimeStatus(rental.itemId);
 
-    await Promise.all([
-      recalculateUserTrustScore(rental.renterId),
-      recalculateUserTrustScore(rental.ownerId)
-    ]);
-
-    res.status(200).json({ message: 'Trả đồ và hoàn thành đơn', rental: savedRental });
+    res.status(200).json({ message: 'Đã ghi nhận biên bản trả đồ. Đang chờ đối phương xác nhận.', rental: savedRental });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -729,6 +724,14 @@ exports.signContract = async (req, res) => {
     }
 
     await contract.save();
+
+    if (contract.isFullySigned) {
+      publishToQueue({
+        task: 'contract_fully_signed',
+        rentalId: rental._id
+      });
+    }
+
     res.status(200).json({ message: 'Ký hợp đồng thành công', contract });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -788,15 +791,16 @@ exports.pickupItem = async (req, res) => {
       accessories: typeof accessories === 'string' ? accessories.trim() : '',
       notes:       typeof notes === 'string'       ? notes.trim()       : '',
       recordedBy:  req.user._id,
-      recordedAt:  new Date()
+      recordedAt:  new Date(),
+      approvedBy:  null,
+      approvedAt:  null
     };
 
     rental.pickupImages = pickupImages;
     rental.pickupReport = pickupReport;
-    rental.status = RentalStatus.IN_PROGRESS;
     await rental.save();
 
-    res.status(200).json({ message: 'Đã xác nhận giao đồ', rental });
+    res.status(200).json({ message: 'Đã ghi nhận biên bản giao đồ. Đang chờ đối phương xác nhận.', rental });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
@@ -1026,6 +1030,115 @@ exports.getRentalDetail = async (req, res) => {
     res.status(200).json(responseData);
   } catch (error) {
     res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
+  }
+};
+
+// PATCH /api/rentals/:id/approve-pickup - Xác nhận biên bản bàn giao
+exports.approvePickup = async (req, res) => {
+  try {
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Không tìm thấy đơn' });
+
+    if (rental.status !== RentalStatus.CONFIRMED) {
+      return res.status(400).json({ message: 'Đơn thuê chưa được xác nhận' });
+    }
+
+    if (!rental.pickupReport || !rental.pickupReport.recordedBy) {
+      return res.status(400).json({ message: 'Biên bản bàn giao chưa được tạo' });
+    }
+
+    if (rental.pickupReport.recordedBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Bạn không thể tự xác nhận biên bản do mình tạo!' });
+    }
+
+    if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Bạn không có quyền tham gia đơn thuê này' });
+    }
+
+    // Nhận thông tin chỉnh sửa (nếu có) từ đối phương khi duyệt
+    const { condition, accessories, notes, pickupImages } = req.body;
+    if (condition) rental.pickupReport.condition = condition;
+    if (accessories) rental.pickupReport.accessories = accessories;
+    if (notes) rental.pickupReport.notes = notes;
+    if (Array.isArray(pickupImages) && pickupImages.length > 0) {
+      rental.pickupImages = pickupImages;
+    }
+
+    rental.pickupReport.approvedBy = req.user._id;
+    rental.pickupReport.approvedAt = new Date();
+    rental.status = RentalStatus.IN_PROGRESS;
+    await rental.save();
+
+    publishToQueue({
+      task: 'rental_status_changed',
+      rentalId: rental._id,
+      status: RentalStatus.IN_PROGRESS
+    });
+
+    res.status(200).json({ message: 'Xác nhận bàn giao đồ thành công. Đơn hàng chuyển sang Đang thuê.', rental });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// PATCH /api/rentals/:id/approve-return - Xác nhận biên bản trả đồ
+exports.approveReturn = async (req, res) => {
+  try {
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Không tìm thấy đơn' });
+
+    if (rental.status !== RentalStatus.IN_PROGRESS) {
+      return res.status(400).json({ message: 'Đơn thuê chưa ở trạng thái đang thuê' });
+    }
+
+    if (!rental.returnReport || !rental.returnReport.recordedBy) {
+      return res.status(400).json({ message: 'Biên bản trả đồ chưa được tạo' });
+    }
+
+    if (rental.returnReport.recordedBy.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Bạn không thể tự xác nhận biên bản do mình tạo!' });
+    }
+
+    if (!rental.renterId.equals(req.user._id) && !rental.ownerId.equals(req.user._id)) {
+      return res.status(403).json({ message: 'Bạn không có quyền tham gia đơn thuê này' });
+    }
+
+    // Nhận thông tin chỉnh sửa (nếu có) từ đối phương khi duyệt
+    const { condition, accessories, notes, damages, returnImages } = req.body;
+    if (condition) rental.returnReport.condition = condition;
+    if (accessories) rental.returnReport.accessories = accessories;
+    if (notes) rental.returnReport.notes = notes;
+    if (damages) rental.returnReport.damages = damages;
+    if (Array.isArray(returnImages) && returnImages.length > 0) {
+      rental.returnImages = returnImages;
+    }
+
+    rental.returnReport.approvedBy = req.user._id;
+    rental.returnReport.approvedAt = new Date();
+    rental.status = RentalStatus.COMPLETED;
+    await rental.save();
+
+    await updateItemRuntimeStatus(rental.itemId);
+
+    await Promise.all([
+      recalculateUserTrustScore(rental.renterId),
+      recalculateUserTrustScore(rental.ownerId)
+    ]);
+
+    publishToQueue({
+      task: 'rental_status_changed',
+      rentalId: rental._id,
+      status: RentalStatus.COMPLETED
+    });
+
+    publishToQueue({
+      task: 'contract_completed',
+      rentalId: rental._id
+    });
+
+    res.status(200).json({ message: 'Xác nhận trả đồ thành công. Đơn hàng đã hoàn thành.', rental });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 
