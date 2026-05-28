@@ -2,55 +2,91 @@ import 'package:flutter/material.dart';
 import 'package:rental_p2p_mobile/core/theme/app_theme.dart';
 import 'package:rental_p2p_mobile/core/widgets/error_snackbar.dart';
 import 'package:rental_p2p_mobile/features/auth/data/auth_repository.dart';
+import 'package:rental_p2p_mobile/features/auth/presentation/forgot_password_page.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({
     super.key,
     required this.repository,
-    required this.apiBaseUrl,
     required this.onSignedIn,
   });
 
   final AuthRepository repository;
-  final String apiBaseUrl;
-  final ValueChanged<UserSession> onSignedIn;
+  final Future<void> Function(UserSession) onSignedIn;
 
   @override
   State<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin {
-  final name = TextEditingController();
-  final email = TextEditingController();
-  final phone = TextEditingController();
-  final password = TextEditingController();
+class _AuthPageState extends State<AuthPage>
+    with SingleTickerProviderStateMixin {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  bool _registerMode = false;
+  bool _loading = false;
 
-  bool registerMode = false;
-  bool loading = false;
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _password.dispose();
+    _confirmPassword.dispose();
+    super.dispose();
+  }
 
-  Future<void> submit() async {
-    setState(() => loading = true);
+  String? _validate() {
+    if (_registerMode) {
+      if (_name.text.trim().isEmpty) {
+        return 'Vui lòng nhập họ tên';
+      }
+      if (_phone.text.trim().length < 10) {
+        return 'Số điện thoại phải có ít nhất 10 chữ số';
+      }
+      if (_password.text != _confirmPassword.text) {
+        return 'Mật khẩu xác nhận không khớp';
+      }
+    }
+    if (_email.text.trim().isEmpty || !_email.text.contains('@')) {
+      return 'Email không hợp lệ';
+    }
+    if (_password.text.length < 6) {
+      return 'Mật khẩu phải có ít nhất 6 ký tự';
+    }
+    return null;
+  }
+
+  Future<void> _submit() async {
+    final err = _validate();
+    if (err != null) {
+      showError(context, err);
+      return;
+    }
+    setState(() => _loading = true);
     try {
-      if (registerMode) {
+      if (_registerMode) {
         await widget.repository.register(
-          fullName: name.text.trim(),
-          email: email.text.trim(),
-          phoneNumber: phone.text.trim(),
-          password: password.text,
+          fullName: _name.text.trim(),
+          email: _email.text.trim(),
+          phoneNumber: _phone.text.trim(),
+          password: _password.text,
         );
       }
-
       final session = await widget.repository.login(
-        email: email.text.trim(),
-        password: password.text,
+        email: _email.text.trim(),
+        password: _password.text,
       );
-      widget.onSignedIn(session);
+      await widget.onSignedIn(session);
     } catch (error) {
       if (!mounted) return;
       showError(context, error);
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -59,21 +95,16 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     return Scaffold(
       body: Stack(
         children: [
-          // Gradient background
           Container(
-            height: MediaQuery.of(context).size.height * 0.42,
+            height: MediaQuery.of(context).size.height * 0.45,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xffee4d2d),
-                  Color(0xffff7143),
-                ],
+                colors: [Color(0xffee4d2d), Color(0xffff7143)],
               ),
             ),
           ),
-          // Decorative circles
           Positioned(
             top: -40,
             right: -40,
@@ -98,7 +129,6 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
               ),
             ),
           ),
-          // Content
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -112,29 +142,32 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                       const _BrandHeader(),
                       const SizedBox(height: 28),
                       _FormCard(
-                        registerMode: registerMode,
-                        loading: loading,
+                        registerMode: _registerMode,
+                        loading: _loading,
                         obscurePassword: _obscurePassword,
-                        name: name,
-                        email: email,
-                        phone: phone,
-                        password: password,
-                        onToggleObscure: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
-                        onSubmit: submit,
+                        obscureConfirm: _obscureConfirm,
+                        name: _name,
+                        email: _email,
+                        phone: _phone,
+                        password: _password,
+                        confirmPassword: _confirmPassword,
+                        onToggleObscure: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                        onToggleObscureConfirm: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
+                        onSubmit: _submit,
                         onToggleMode: () =>
-                            setState(() => registerMode = !registerMode),
+                            setState(() => _registerMode = !_registerMode),
+                        onForgotPassword: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ForgotPasswordPage(
+                              repository: widget.repository,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      Text(
-                        'API: ${widget.apiBaseUrl}',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 10,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
@@ -190,11 +223,11 @@ class _BrandHeader extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
-        Wrap(
+        const Wrap(
           alignment: WrapAlignment.center,
           spacing: 8,
           runSpacing: 8,
-          children: const [
+          children: [
             _TrustPill(icon: Icons.verified_user_outlined, label: 'eKYC'),
             _TrustPill(icon: Icons.payments_outlined, label: 'Ký quỹ'),
             _TrustPill(icon: Icons.chat_bubble_outline, label: 'Chat đơn thuê'),
@@ -210,25 +243,33 @@ class _FormCard extends StatelessWidget {
     required this.registerMode,
     required this.loading,
     required this.obscurePassword,
+    required this.obscureConfirm,
     required this.name,
     required this.email,
     required this.phone,
     required this.password,
+    required this.confirmPassword,
     required this.onToggleObscure,
+    required this.onToggleObscureConfirm,
     required this.onSubmit,
     required this.onToggleMode,
+    required this.onForgotPassword,
   });
 
   final bool registerMode;
   final bool loading;
   final bool obscurePassword;
+  final bool obscureConfirm;
   final TextEditingController name;
   final TextEditingController email;
   final TextEditingController phone;
   final TextEditingController password;
+  final TextEditingController confirmPassword;
   final VoidCallback onToggleObscure;
+  final VoidCallback onToggleObscureConfirm;
   final VoidCallback onSubmit;
   final VoidCallback onToggleMode;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -285,8 +326,10 @@ class _FormCard extends StatelessWidget {
                       children: [
                         TextField(
                           controller: name,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                            prefixIcon:
+                                Icon(Icons.person_outline_rounded, size: 20),
                             labelText: 'Họ và tên',
                           ),
                         ),
@@ -294,6 +337,7 @@ class _FormCard extends StatelessWidget {
                         TextField(
                           controller: phone,
                           keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.phone_outlined, size: 20),
                             labelText: 'Số điện thoại',
@@ -307,6 +351,7 @@ class _FormCard extends StatelessWidget {
             TextField(
               controller: email,
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
                 labelText: 'Email',
@@ -316,12 +361,17 @@ class _FormCard extends StatelessWidget {
             TextField(
               controller: password,
               obscureText: obscurePassword,
+              textInputAction:
+                  registerMode ? TextInputAction.next : TextInputAction.done,
+              onSubmitted: registerMode ? null : (_) => onSubmit(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                 labelText: 'Mật khẩu',
                 suffixIcon: IconButton(
                   icon: Icon(
-                    obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                     size: 20,
                     color: AppColors.muted,
                   ),
@@ -329,6 +379,29 @@ class _FormCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (registerMode) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPassword,
+                obscureText: obscureConfirm,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => onSubmit(),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                  labelText: 'Xác nhận mật khẩu',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscureConfirm
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 20,
+                      color: AppColors.muted,
+                    ),
+                    onPressed: onToggleObscureConfirm,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             FilledButton(
               onPressed: loading ? null : onSubmit,
@@ -343,6 +416,15 @@ class _FormCard extends StatelessWidget {
                     )
                   : Text(registerMode ? 'Tạo tài khoản' : 'Đăng nhập'),
             ),
+            if (!registerMode) ...[
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: onForgotPassword,
+                  child: const Text('Quên mật khẩu?'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

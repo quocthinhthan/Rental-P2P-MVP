@@ -30,3 +30,15 @@ String displayDate(Object? value) => shortDate(value);
 String dateRange(Object? start, Object? end) {
   return '${shortDate(start)} - ${shortDate(end)}';
 }
+
+/// Strip HTML tags
+String stripHtml(String htmlString) {
+  final RegExp exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);
+  return htmlString
+      .replaceAll(exp, '')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .trim();
+}

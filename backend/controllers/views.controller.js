@@ -266,6 +266,8 @@ exports.getMyRentalsView = async (req, res) => {
           payoutAmount: rental.payoutAmount,
             paymentStatus: rental.paymentStatus,
             status: rental.status,
+            createdAt: rental.createdAt,
+            updatedAt: rental.updatedAt,
             note: rental.note,
             cancellationReason: rental.cancellationReason || '',
             cancelledBy: rental.cancelledBy || null,

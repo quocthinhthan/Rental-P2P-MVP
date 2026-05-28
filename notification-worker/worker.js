@@ -156,9 +156,10 @@ const sendNotification = async (data) => {
         color = '#28a745';
         title = '✅ Đơn thuê đã được chấp nhận';
         message = `
+        <p><strong>Hợp đồng điện tử đã sẵn sàng. Vui lòng mở đơn thuê và ký hợp đồng trước khi giao nhận vật phẩm.</strong></p>
         <p>Yêu cầu thuê <strong>${itemId.name}</strong> từ 
         ${formatDate(startDate)} đến ${formatDate(endDate)} đã được chấp nhận.</p>
-        <p>Vui lòng liên hệ chủ sở hữu để nhận vật phẩm.</p>`;
+        <p>Sau khi cả hai bên ký đầy đủ, đơn thuê mới có thể chuyển sang bước giao/nhận đồ.</p>`;
       }
 
       if (status === 'rejected') {

@@ -9,6 +9,25 @@ import 'package:rental_p2p_mobile/features/items/presentation/my_item_detail_pag
 import 'package:rental_p2p_mobile/features/rentals/data/rental_models.dart';
 import 'package:rental_p2p_mobile/features/rentals/data/rentals_repository.dart';
 import 'package:rental_p2p_mobile/features/rentals/presentation/rental_detail_page.dart';
+import 'package:rental_p2p_mobile/features/account/data/account_repository.dart';
+
+bool _isDisplayableImageUrl(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null) return false;
+  if (uri.scheme == 'data') return value.startsWith('data:image');
+  if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+
+  final host = uri.host.toLowerCase();
+  if (host.contains('vnpayment.vn')) return false;
+  if (host.contains('cloudinary.com')) return true;
+
+  final path = uri.path.toLowerCase();
+  return path.endsWith('.jpg') ||
+      path.endsWith('.jpeg') ||
+      path.endsWith('.png') ||
+      path.endsWith('.webp') ||
+      path.endsWith('.gif');
+}
 
 class MyRentalsPage extends StatefulWidget {
   const MyRentalsPage({
@@ -16,11 +35,13 @@ class MyRentalsPage extends StatefulWidget {
     required this.repository,
     required this.itemsRepository,
     this.currentUserId = '',
+    this.accountRepository,
   });
 
   final RentalsRepository repository;
   final ItemsRepository itemsRepository;
   final String currentUserId;
+  final AccountRepository? accountRepository;
 
   @override
   State<MyRentalsPage> createState() => _MyRentalsPageState();
@@ -66,6 +87,16 @@ class _MyRentalsPageState extends State<MyRentalsPage>
         await widget.repository.rejectRental(id);
       }
       await loadRentals();
+      if (action == 'confirm' && mounted) {
+        await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => RentalDetailPage(
+            rentalId: id,
+            repository: widget.repository,
+            currentUserId: widget.currentUserId,
+          ),
+        ));
+        await loadRentals();
+      }
     } catch (error) {
       if (!mounted) return;
       showError(context, error);
@@ -173,7 +204,8 @@ class _MyRentalsPageState extends State<MyRentalsPage>
                   _RentalListView(
                     rentals: data?.asOwner ?? [],
                     emptyMessage: 'Chưa có đơn thuê nào',
-                    emptySubtitle: 'Khi có người thuê đồ của bạn, đơn sẽ hiện tại đây',
+                    emptySubtitle:
+                        'Khi có người thuê đồ của bạn, đơn sẽ hiện tại đây',
                     ownerView: true,
                     onRentalAction: rentalAction,
                     onRefresh: loadRentals,
@@ -330,15 +362,11 @@ class _RentalCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.inventory_2_outlined,
-                            color: AppColors.orange, size: 22),
+                      // Thumbnail with real image
+                      _ItemThumbnail(
+                        imageUrl: rental.itemMainImage,
+                        size: 56,
+                        statusColor: _statusColor,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -389,8 +417,8 @@ class _RentalCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
                       color: AppColors.page,
                       borderRadius: BorderRadius.circular(8),
@@ -417,8 +445,7 @@ class _RentalCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (ownerView &&
-                      rental.status == 'pending_confirmation') ...[
+                  if (ownerView && rental.status == 'pending_confirmation') ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -426,8 +453,7 @@ class _RentalCard extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: () =>
                                 onAction?.call(rental.id, 'reject'),
-                            icon: const Icon(Icons.close_rounded,
-                                size: 16),
+                            icon: const Icon(Icons.close_rounded, size: 16),
                             label: const Text('Từ chối'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.red,
@@ -457,7 +483,6 @@ class _RentalCard extends StatelessWidget {
   }
 }
 
-
 // ─── My Items View ───────────────────────────────────────────────────────────
 
 class _MyItemsView extends StatelessWidget {
@@ -473,9 +498,9 @@ class _MyItemsView extends StatelessWidget {
 
   Color _statusColor(String s) => switch (s.toLowerCase()) {
         'available' => AppColors.green,
-        'rented'    => AppColors.blue,
-        'delisted'  => AppColors.muted,
-        _           => AppColors.orange,
+        'rented' => AppColors.blue,
+        'delisted' => AppColors.muted,
+        _ => AppColors.orange,
       };
 
   @override
@@ -526,16 +551,11 @@ class _MyItemsView extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      // Icon / Thumbnail
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.inventory_2_outlined,
-                            color: AppColors.orange, size: 26),
+                      // Real image thumbnail
+                      _ItemThumbnail(
+                        imageUrl: item.mainImage,
+                        size: 60,
+                        statusColor: statusColor,
                       ),
                       const SizedBox(width: 12),
                       // Name + price
@@ -568,7 +588,8 @@ class _MyItemsView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           StatusBadge(
-                            label: item.status.isEmpty ? 'available' : item.status,
+                            label:
+                                item.status.isEmpty ? 'available' : item.status,
                             color: statusColor,
                           ),
                           const SizedBox(height: 6),
@@ -584,6 +605,84 @@ class _MyItemsView extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// ─── Reusable thumbnail widget ────────────────────────────────────────────────
+
+class _ItemThumbnail extends StatelessWidget {
+  const _ItemThumbnail({
+    required this.imageUrl,
+    required this.size,
+    required this.statusColor,
+  });
+
+  final String imageUrl;
+  final double size;
+  final Color statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayImage = _isDisplayableImageUrl(imageUrl);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: imageUrl.isEmpty
+              ? statusColor.withValues(alpha: 0.25)
+              : AppColors.line,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: !displayImage
+          ? Container(
+              color: statusColor.withValues(alpha: 0.08),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: statusColor,
+                size: size * 0.42,
+              ),
+            )
+          : Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: statusColor.withValues(alpha: 0.08),
+                child: Icon(
+                  Icons.inventory_2_outlined,
+                  color: statusColor,
+                  size: size * 0.42,
+                ),
+              ),
+              loadingBuilder: (_, child, prog) {
+                if (prog == null) return child;
+                return Container(
+                  color: AppColors.page,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

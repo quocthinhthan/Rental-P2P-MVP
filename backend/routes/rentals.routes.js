@@ -14,7 +14,8 @@ const {
   pickupItem,
   getContractByRentalId,
   sendMessage,
-  getMessages
+  getMessages,
+  getRentalDetail
 } = require('../controllers/rentals.controller');
 const { protect, checkVerified } = require('../middleware/auth.middleware');
 
@@ -23,6 +24,9 @@ router.post('/', protect, checkVerified, createRentalRequest);
 
 // GET /api/rentals/vnpay-return - VNPay redirect callback
 router.get('/vnpay-return', handleVNPayReturn);
+
+// GET /api/rentals/:id - (Renter/Owner/Admin) Lấy chi tiết đơn thuê
+router.get('/:id', protect, getRentalDetail);
 
 // POST /api/rentals/:id/create-vnpay-url - (Renter) Create VNPay payment URL
 router.post('/:id/create-vnpay-url', protect, createVNPayUrl);

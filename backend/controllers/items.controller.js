@@ -57,11 +57,13 @@ const validateCoordinates = (lat, lng) => {
 // GET /api/items?search=...&category=...&address=...&startDate=...&endDate=...
 const searchItems = async (req, res) => {
   try {
-    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius, includeMapLocation, limit } = req.query;
+    const { search, category, address, startDate, endDate, ownerId, exclude, lat, lng, radius, includeMapLocation, limit, page } = req.query;
     const shouldIncludeMapLocation = Boolean(lat && lng && (includeMapLocation === 'true' || includeMapLocation === '1'));
     const resultLimit = shouldIncludeMapLocation
       ? clampNumber(limit, DEFAULT_MAP_SEARCH_LIMIT, 1, MAX_MAP_SEARCH_LIMIT)
       : clampNumber(limit, DEFAULT_SEARCH_LIMIT, 1, MAX_SEARCH_LIMIT);
+    const resultPage = clampNumber(page, 1, 1, 100000);
+    const resultSkip = (resultPage - 1) * resultLimit;
 
     let query = { status: { $ne: 'delisted' } };
 
@@ -158,6 +160,7 @@ const searchItems = async (req, res) => {
             query: query // Đẩy toàn bộ filter (name, status, exclude...) vào đây
           }
         },
+        { $skip: resultSkip },
         { $limit: resultLimit },
         {
           $lookup: {
@@ -189,6 +192,7 @@ const searchItems = async (req, res) => {
         .select('_id code name category address pricePerDay images status ownerId isFeatured')
         .populate('ownerId', '_id fullName avatarUrl ekycStatus averageRating totalReviews trustScore')
         .sort({ createdAt: -1 })
+        .skip(resultSkip)
         .limit(resultLimit);
     }
 
