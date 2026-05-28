@@ -97,7 +97,14 @@ exports.loginUser = async (req, res) => {
           _id: user._id,
           fullName: user.fullName,
           email: user.email,
-          role: user.role
+          phoneNumber: user.phoneNumber,
+          address: user.address,
+          avatarUrl: user.avatarUrl,
+          role: user.role,
+          ekycStatus: user.ekycStatus,
+          trustScore: user.trustScore,
+          averageRating: user.averageRating,
+          totalReviews: user.totalReviews
         }
       });
     } else {

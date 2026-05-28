@@ -49,6 +49,7 @@ class StatusBadge extends StatelessWidget {
       'rejected'             => 'Từ chối',
       // Payment statuses
       'pending'              => 'Chờ duyệt',
+      'disputed'             => 'Đang tranh chấp',
       'escrowed'             => 'Đã ký quỹ',
       'refunded'             => 'Đã hoàn tiền',
       // Legacy / other

@@ -35,6 +35,11 @@ class RentalDetail {
     required this.note,
     required this.counterpartyName,
     required this.counterpartyId,
+    this.counterpartyAvatar = '',
+    this.ownerId = '',
+    this.renterId = '',
+    this.contract,
+    this.dispute,
   });
 
   final String id;
@@ -50,6 +55,36 @@ class RentalDetail {
   final String note;
   final String counterpartyName;
   final String counterpartyId;
+  final String counterpartyAvatar;
+  final String ownerId;
+  final String renterId;
+  final RentalContractData? contract;
+  final RentalDisputeData? dispute;
+
+  /// Convert to RentalCardData for use in RentalDetailPage.
+  RentalCardData toCard() {
+    return RentalCardData(
+      id: id,
+      contractId: contract?.id ?? '',
+      contract: contract,
+      isFullySigned: contract?.isFullySigned ?? false,
+      itemName: itemName,
+      itemMainImage: itemMainImage,
+      startDate: startDate,
+      endDate: endDate,
+      status: status,
+      paymentStatus: paymentStatus,
+      totalAmount: totalPrice,
+      escrowAmount: escrowAmount,
+      counterpartyName: counterpartyName,
+      counterpartyAvatar: counterpartyAvatar,
+      dispute: dispute,
+      createdAt: '',
+      updatedAt: '',
+      ownerId: ownerId,
+      renterId: renterId,
+    );
+  }
 
   factory RentalDetail.fromJson(Map<String, dynamic> json) {
     final item = json['item'] is Map
@@ -59,6 +94,12 @@ class RentalDetail {
         ? Map<String, dynamic>.from(json['counterparty'] as Map)
         : <String, dynamic>{};
     final escrow = json['escrowAmount'] ?? json['depositAmount'];
+    final contractJson = json['contract'] is Map
+        ? Map<String, dynamic>.from(json['contract'] as Map)
+        : null;
+    final disputeJson = json['dispute'] is Map
+        ? Map<String, dynamic>.from(json['dispute'] as Map)
+        : null;
 
     return RentalDetail(
       id: textOf(json['_id']),
@@ -78,6 +119,14 @@ class RentalDetail {
       note: textOf(json['note']),
       counterpartyName: textOf(counterparty['fullName']),
       counterpartyId: textOf(counterparty['_id']),
+      counterpartyAvatar: textOf(counterparty['avatarUrl']),
+      ownerId: _idOf(json['ownerId']),
+      renterId: _idOf(json['renterId']),
+      contract: contractJson == null
+          ? null
+          : RentalContractData.fromJson(contractJson),
+      dispute:
+          disputeJson == null ? null : RentalDisputeData.fromJson(disputeJson),
     );
   }
 }
@@ -358,6 +407,9 @@ class RentalCardData {
     required this.dispute,
     required this.createdAt,
     required this.updatedAt,
+    this.ownerId = '',
+    this.renterId = '',
+    this.counterpartyAvatar = '',
   });
 
   final String id;
@@ -376,6 +428,9 @@ class RentalCardData {
   final RentalDisputeData? dispute;
   final String createdAt;
   final String updatedAt;
+  final String ownerId;
+  final String renterId;
+  final String counterpartyAvatar;
 
   bool get ownerHasSigned => contract?.ownerHasSigned ?? false;
   bool get renterHasSigned => contract?.renterHasSigned ?? false;
@@ -418,9 +473,12 @@ class RentalCardData {
       totalAmount: total is num ? total : num.tryParse(textOf(total)) ?? 0,
       escrowAmount: escrow is num ? escrow : num.tryParse(textOf(escrow)) ?? 0,
       counterpartyName: textOf(counterparty['fullName']),
+      counterpartyAvatar: textOf(counterparty['avatarUrl']),
       dispute: dispute,
       createdAt: textOf(json['createdAt']),
       updatedAt: textOf(json['updatedAt']),
+      ownerId: _idOf(json['ownerId']),
+      renterId: _idOf(json['renterId']),
     );
   }
 }
@@ -459,6 +517,7 @@ class ChatMessage {
     required this.id,
     required this.senderId,
     required this.senderName,
+    required this.senderAvatar,
     required this.content,
     required this.createdAt,
   });
@@ -466,18 +525,23 @@ class ChatMessage {
   final String id;
   final String senderId;
   final String senderName;
+  final String senderAvatar;
   final String content;
   final String createdAt;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    final sender = json['sender'] is Map
-        ? Map<String, dynamic>.from(json['sender'] as Map)
+    final senderSource =
+        json['sender'] is Map ? json['sender'] : json['senderId'];
+    final sender = senderSource is Map
+        ? Map<String, dynamic>.from(senderSource)
         : <String, dynamic>{};
+    final rawSenderId = sender.isNotEmpty ? sender['_id'] : json['senderId'];
+
     return ChatMessage(
       id: textOf(json['_id']),
-      senderId: textOf(
-          sender['_id'].toString().isEmpty ? json['senderId'] : sender['_id']),
+      senderId: textOf(rawSenderId),
       senderName: textOf(sender['fullName']),
+      senderAvatar: textOf(sender['avatarUrl']),
       content: textOf(json['content']),
       createdAt: textOf(json['createdAt']),
     );

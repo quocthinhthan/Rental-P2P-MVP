@@ -4,6 +4,8 @@ const Item = require('../models/Item.model');
 const Contract = require('../models/Contract.model');
 const User = require('../models/User.model');
 const Message = require('../models/Message.model');
+const Dispute = require('../models/Dispute.model');
+const Review = require('../models/Review.model');
 const { publishToQueue } = require('../config/rabbitmq');
 const MESSAGES = require('../constants/messages.constant');
 const { ItemStatus } = require('../enums/item.enum');
@@ -823,7 +825,18 @@ exports.sendMessage = async (req, res) => {
       content: trimmedContent
     });
 
-    res.status(201).json(newMessage);
+    await newMessage.populate('senderId', '_id fullName avatarUrl');
+    const messageObject = newMessage.toObject();
+    const sender = messageObject.senderId;
+    res.status(201).json({
+      ...messageObject,
+      senderId: sender?._id || req.user._id,
+      sender: sender ? {
+        _id: sender._id,
+        fullName: sender.fullName,
+        avatarUrl: sender.avatarUrl || ''
+      } : null
+    });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi gửi tin nhắn', error: error.message });
   }
@@ -841,10 +854,178 @@ exports.getMessages = async (req, res) => {
       return res.status(error.status).json({ message: error.message });
     }
 
-    const messages = await Message.find({ rentalId: id }).sort({ createdAt: 1 });
-    res.status(200).json(messages);
+    const messages = await Message.find({ rentalId: id })
+      .populate('senderId', '_id fullName avatarUrl')
+      .sort({ createdAt: 1 });
+    res.status(200).json(messages.map((message) => {
+      const messageObject = message.toObject();
+      const sender = messageObject.senderId;
+      return {
+        ...messageObject,
+        senderId: sender?._id || message.senderId,
+        sender: sender ? {
+          _id: sender._id,
+          fullName: sender.fullName,
+          avatarUrl: sender.avatarUrl || ''
+        } : null
+      };
+    }));
   } catch (error) {
     res.status(500).json({ message: 'Lỗi tải lịch sử chat', error: error.message });
+  }
+};
+
+// [USER/ADMIN] GET /api/rentals/:id - Lấy chi tiết 1 đơn thuê
+exports.getRentalDetail = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: MESSAGES.COMMON.INVALID_RENTAL_ID });
+    }
+
+    const rental = await Rental.findById(id)
+      .populate({
+        path: 'itemId',
+        select: '_id code name pricePerDay images baseValue depositPercentage address ownerId'
+      })
+      .populate({
+        path: 'ownerId',
+        select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      })
+      .populate({
+        path: 'renterId',
+        select: '_id fullName email avatarUrl ekycStatus averageRating totalReviews trustScore'
+      });
+
+    if (!rental) {
+      return res.status(404).json({ message: MESSAGES.RENTAL.NOT_FOUND });
+    }
+
+    // Only allow renter, owner, or admin to view
+    const isRenter = rental.renterId.equals(userId);
+    const isOwner = rental.ownerId.equals(userId);
+    const isAdmin = req.user.role === 'admin';
+    if (!isRenter && !isOwner && !isAdmin) {
+      return res.status(403).json({ message: MESSAGES.RENTAL.NOT_PARTICIPANT });
+    }
+
+    // Load related contract if exists
+    let contract = null;
+    if (rental.contractId) {
+      contract = await Contract.findById(rental.contractId)
+        .select('_id ownerSignedAt renterSignedAt ownerSignatureUrl renterSignatureUrl isFullySigned createdAt updatedAt');
+    } else {
+      contract = await Contract.findOne({ rentalId: rental._id })
+        .select('_id ownerSignedAt renterSignedAt ownerSignatureUrl renterSignatureUrl isFullySigned createdAt updatedAt');
+    }
+
+    // Load related dispute if exists
+    const dispute = await Dispute.findOne({ rentalId: rental._id })
+      .sort({ createdAt: -1 })
+      .populate('reporterId', '_id fullName email')
+      .populate('penalizeUserId', '_id fullName email');
+
+    // Populate review if exists
+    const review = await Review.findOne({ rentalId: rental._id, reviewerId: userId });
+
+    const counterparty = isOwner ? rental.renterId : rental.ownerId;
+
+    const itemSummary = rental.itemId ? {
+      _id: rental.itemId._id,
+      code: rental.itemId.code,
+      name: rental.itemId.name,
+      pricePerDay: rental.itemId.pricePerDay,
+      mainImage: (rental.itemId.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+      images: rental.itemId.images || []
+    } : null;
+
+    const responseData = {
+      _id: rental._id,
+      code: rental.code,
+      startDate: rental.startDate,
+      endDate: rental.endDate,
+      rentalFee: rental.rentalFee,
+      depositAmount: rental.depositAmount,
+      escrowAmount: rental.depositAmount, // both names for convenience
+      totalAmount: rental.totalAmount,
+      totalPrice: rental.totalAmount, // both names for convenience
+      commissionRate: rental.commissionRate,
+      commissionAmount: rental.commissionAmount,
+      payoutAmount: rental.payoutAmount,
+      paymentStatus: rental.paymentStatus,
+      status: rental.status,
+      createdAt: rental.createdAt,
+      updatedAt: rental.updatedAt,
+      note: rental.note || '',
+      cancellationReason: rental.cancellationReason || '',
+      cancelledBy: rental.cancelledBy || null,
+      cancelledAt: rental.cancelledAt || null,
+      contractId: rental.contractId,
+      pickupImages: rental.pickupImages || [],
+      returnImages: rental.returnImages || [],
+      pickupReport: (rental.pickupReport && rental.pickupReport.recordedBy) ? rental.pickupReport : null,
+      returnReport: (rental.returnReport && rental.returnReport.recordedBy) ? rental.returnReport : null,
+      actualReturnDate: rental.actualReturnDate || null,
+      overdueDays: rental.overdueDays || 0,
+      lateFeeAmount: rental.lateFeeAmount || 0,
+      contract: contract ? {
+        _id: contract._id,
+        ownerSignedAt: contract.ownerSignedAt,
+        renterSignedAt: contract.renterSignedAt,
+        ownerSignatureUrl: contract.ownerSignatureUrl,
+        renterSignatureUrl: contract.renterSignatureUrl,
+        isFullySigned: contract.isFullySigned,
+        createdAt: contract.createdAt,
+        updatedAt: contract.updatedAt
+      } : null,
+      isFullySigned: Boolean(contract?.isFullySigned),
+      item: itemSummary,
+      itemId: rental.itemId?._id || null,
+      itemName: rental.itemId?.name || 'Đồ đã bị xóa',
+      itemMainImage: (rental.itemId?.images && rental.itemId.images.length > 0) ? rental.itemId.images[0] : '',
+      counterparty: counterparty ? {
+        _id: counterparty._id,
+        fullName: counterparty.fullName,
+        email: counterparty.email,
+        avatarUrl: counterparty.avatarUrl || '',
+        ekycStatus: counterparty.ekycStatus,
+        averageRating: counterparty.averageRating || 0,
+        totalReviews: counterparty.totalReviews || 0,
+        trustScore: counterparty.trustScore || 50
+      } : null,
+      counterpartyName: counterparty?.fullName || '',
+      counterpartyId: counterparty?._id || '',
+      renter: rental.renterId ? {
+        _id: rental.renterId._id,
+        fullName: rental.renterId.fullName
+      } : null,
+      owner: rental.ownerId ? {
+        _id: rental.ownerId._id,
+        fullName: rental.ownerId.fullName
+      } : null,
+      ownerId: rental.ownerId?._id || '',
+      renterId: rental.renterId?._id || '',
+      dispute: dispute ? {
+        _id: dispute._id,
+        status: dispute.status,
+        reason: dispute.reason,
+        evidenceImages: dispute.evidenceImages || [],
+        mediationEndsAt: dispute.mediationEndsAt,
+        adminDecision: dispute.adminDecision,
+        resolvedAt: dispute.resolvedAt
+      } : null,
+      review: review ? {
+        _id: review._id,
+        rating: review.rating,
+        comment: review.comment
+      } : null
+    };
+
+    res.status(200).json(responseData);
+  } catch (error) {
+    res.status(500).json({ message: MESSAGES.COMMON.SERVER_ERROR, error: error.message });
   }
 };
 

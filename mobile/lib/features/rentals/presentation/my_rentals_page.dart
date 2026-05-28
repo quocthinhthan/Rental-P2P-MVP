@@ -9,6 +9,7 @@ import 'package:rental_p2p_mobile/features/items/presentation/my_item_detail_pag
 import 'package:rental_p2p_mobile/features/rentals/data/rental_models.dart';
 import 'package:rental_p2p_mobile/features/rentals/data/rentals_repository.dart';
 import 'package:rental_p2p_mobile/features/rentals/presentation/rental_detail_page.dart';
+import 'package:rental_p2p_mobile/features/account/data/account_repository.dart';
 
 bool _isDisplayableImageUrl(String value) {
   final uri = Uri.tryParse(value);
@@ -34,11 +35,13 @@ class MyRentalsPage extends StatefulWidget {
     required this.repository,
     required this.itemsRepository,
     this.currentUserId = '',
+    this.accountRepository,
   });
 
   final RentalsRepository repository;
   final ItemsRepository itemsRepository;
   final String currentUserId;
+  final AccountRepository? accountRepository;
 
   @override
   State<MyRentalsPage> createState() => _MyRentalsPageState();
