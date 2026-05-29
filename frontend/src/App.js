@@ -35,6 +35,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminItemsPage from './pages/AdminItemsPage';
 import AdminItemDetailPage from './pages/AdminItemDetailPage';
 import AdminItemReportsPage from './pages/AdminItemReportsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -80,6 +81,7 @@ function App() {
           <Route path="/post-item" element={<PostItemPage />} />
           <Route path="/edit-item/:itemId" element={<PostItemPage />} />
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/items" element={<AdminItemsPage />} />
           <Route path="/admin/items/:id" element={<AdminItemDetailPage />} />
           <Route path="/admin/item-reports" element={<AdminItemReportsPage />} />

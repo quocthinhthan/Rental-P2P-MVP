@@ -4,6 +4,8 @@ const router = express.Router();
 const {
   getAllUsers,
   updateUserStatus,
+  getAdminUserDetail,
+  getAdminAuditLogs,
   updateItemStatus,
   getDashboardOverview,
   getDashboardCharts,
@@ -23,8 +25,14 @@ router.use(protect, admin);
 // GET /api/admin/users
 router.get('/users', getAllUsers);
 
+// GET /api/admin/users/:id
+router.get('/users/:id', getAdminUserDetail);
+
 // PATCH /api/admin/users/:id/status
 router.patch('/users/:id/status', updateUserStatus);
+
+// GET /api/admin/audit-logs
+router.get('/audit-logs', getAdminAuditLogs);
 
 // Dashboard APIs
 router.get('/dashboard/overview', getDashboardOverview);

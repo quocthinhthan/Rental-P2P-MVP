@@ -58,7 +58,7 @@ Mounted backend API groups in `server.js`:
 - `frontend/src/services/chatSocket.js`: rental chat Socket.IO client. It reads the same stored token as the API client.
 - `frontend/src/contexts/AuthContext.js`: auth state, token storage, `/auth/me` bootstrap, login/logout/updateUser helpers.
 - `frontend/src/contexts/LoadingContext.js`: global spinner state used by the axios interceptor.
-- `frontend/src/pages/`: page-level screens for home/shop/item detail/auth/account/rentals/admin/disputes/VNPay return.
+- `frontend/src/pages/`: page-level screens for home/shop/item detail/auth/account/rentals/admin (dashboard, items, disputes, users, item reports)/VNPay return.
 - `frontend/src/components/`: reusable UI grouped by domain:
   - `Layout`: header/footer.
   - `Auth`: protected route.
@@ -145,6 +145,10 @@ Verify the exact implementation before using or modifying these endpoints:
 - `POST /api/items/{id}/report` (Submit product violation report)
 - `GET /api/admin/item-reports` (Admin get violation reports list)
 - `PATCH /api/admin/item-reports/{reportId}/resolve` (Admin resolve violation report)
+- `GET /api/admin/users` (Admin get paginated, searchable, filtered users list)
+- `GET /api/admin/users/{id}` (Admin get deep user statistics, profiles, and logs)
+- `PATCH /api/admin/users/{id}/status` (Admin ban or suspend users with customizable reasons)
+- `GET /api/admin/audit-logs` (Admin get general system-wide action audit logs)
 - `POST /api/items/{id}/blocked-dates` — owner only; body: `{ startDate, endDate, reason? }`
 - `DELETE /api/items/{id}/blocked-dates/{blockId}` — owner only
 - `GET /api/users/me/favorites` — authenticated; returns array of item summaries

@@ -103,16 +103,83 @@ const findActiveRentalForItem = (itemId) => Rental.findOne({
 // GET /api/admin/users
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password');
-    res.status(200).json(users);
+    const page = parsePositiveInt(req.query.page, 1, 10000);
+    const limit = parsePositiveInt(req.query.limit, 20);
+    const skip = (page - 1) * limit;
+
+    const match = {};
+
+    // Search filter (fullName, email, phoneNumber)
+    if (req.query.search) {
+      const searchRegex = new RegExp(escapeRegex(req.query.search.trim()), 'i');
+      match.$or = [
+        { fullName: searchRegex },
+        { email: searchRegex },
+        { phoneNumber: searchRegex }
+      ];
+    }
+
+    // Role filter
+    if (req.query.role && req.query.role !== 'all') {
+      match.role = req.query.role;
+    }
+
+    // eKYC Status filter
+    if (req.query.ekycStatus && req.query.ekycStatus !== 'all') {
+      match.ekycStatus = req.query.ekycStatus;
+    }
+
+    // Account Status filter (banned, suspended, active)
+    if (req.query.status && req.query.status !== 'all') {
+      if (req.query.status === 'banned') {
+        match.isBanned = true;
+      } else if (req.query.status === 'suspended') {
+        match.isBanned = false;
+        match.suspendedUntil = { $ne: null, $gt: new Date() };
+      } else if (req.query.status === 'active') {
+        match.isBanned = false;
+        match.$or = [
+          { suspendedUntil: null },
+          { suspendedUntil: { $lte: new Date() } }
+        ];
+      }
+    }
+
+    // Sorting
+    let sort = { createdAt: -1 };
+    if (req.query.sortBy) {
+      const sortField = req.query.sortBy;
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+      sort = { [sortField]: sortOrder };
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(match)
+        .select('-password')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(match)
+    ]);
+
+    res.status(200).json({
+      users,
+      pagination: {
+        currentPage: page,
+        limitPerPage: limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit) || 1,
+        hasMore: page * limit < total
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // PATCH /api/admin/users/:id/status
 exports.updateUserStatus = async (req, res) => {
-  const { isBanned, suspendedUntil } = req.body;
+  const { isBanned, suspendedUntil, reason = '' } = req.body;
 
   try {
     if (!isObjectId(req.params.id)) {
@@ -149,7 +216,8 @@ exports.updateUserStatus = async (req, res) => {
         isBanned: user.isBanned,
         suspendedUntil: user.suspendedUntil,
         trustScore: updatedTrustUser?.trustScore
-      }
+      },
+      reason
     });
 
     res.status(200).json({
@@ -160,6 +228,111 @@ exports.updateUserStatus = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// GET /api/admin/users/:id
+exports.getAdminUserDetail = async (req, res) => {
+  try {
+    if (!isObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'User ID khong hop le' });
+    }
+
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const [
+      itemCount,
+      ownerRentalCount,
+      renterRentalCount,
+      disputeCount,
+      auditLogs
+    ] = await Promise.all([
+      Item.countDocuments({ ownerId: user._id }),
+      Rental.countDocuments({ ownerId: user._id }),
+      Rental.countDocuments({ renterId: user._id }),
+      Dispute.countDocuments({ $or: [{ reporterId: user._id }, { penalizeUserId: user._id }] }),
+      AuditLog.find({
+        $or: [
+          { targetId: user._id, targetType: 'User' },
+          { actorId: user._id }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .populate('actorId', 'fullName email')
+    ]);
+
+    res.status(200).json({
+      user,
+      stats: {
+        itemCount,
+        ownerRentalCount,
+        renterRentalCount,
+        disputeCount,
+      },
+      auditLogs
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/admin/audit-logs
+exports.getAdminAuditLogs = async (req, res) => {
+  try {
+    const page = parsePositiveInt(req.query.page, 1, 10000);
+    const limit = parsePositiveInt(req.query.limit, 20);
+    const skip = (page - 1) * limit;
+
+    const match = {};
+
+    if (req.query.action) {
+      match.action = req.query.action;
+    }
+
+    if (req.query.targetType) {
+      match.targetType = req.query.targetType;
+    }
+
+    if (req.query.search) {
+      const searchRegex = new RegExp(escapeRegex(req.query.search.trim()), 'i');
+      const matchedUsers = await User.find({
+        $or: [
+          { fullName: searchRegex },
+          { email: searchRegex }
+        ]
+      }).select('_id');
+      const userIds = matchedUsers.map(u => u._id);
+      match.$or = [
+        { actorId: { $in: userIds } },
+        { reason: searchRegex }
+      ];
+    }
+
+    const [auditLogs, total] = await Promise.all([
+      AuditLog.find(match)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('actorId', 'fullName email role'),
+      AuditLog.countDocuments(match)
+    ]);
+
+    res.status(200).json({
+      auditLogs,
+      pagination: {
+        currentPage: page,
+        limitPerPage: limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit) || 1,
+        hasMore: page * limit < total
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 
 // GET /api/admin/dashboard/overview
 exports.getDashboardOverview = async (req, res) => {

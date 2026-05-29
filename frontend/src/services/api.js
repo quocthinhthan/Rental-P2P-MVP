@@ -237,6 +237,21 @@ const buildAdminQueryString = (params = {}) => {
   return query.toString();
 };
 
+// === Admin User Management ===
+export const getAdminUsers = (params = {}) => {
+  const queryString = buildAdminQueryString(params);
+  return api.get(`/admin/users${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getAdminUserDetail = (id) => api.get(`/admin/users/${id}`);
+
+export const updateAdminUserStatus = (id, payload) => api.patch(`/admin/users/${id}/status`, payload);
+
+export const getAdminAuditLogs = (params = {}) => {
+  const queryString = buildAdminQueryString(params);
+  return api.get(`/admin/audit-logs${queryString ? `?${queryString}` : ''}`);
+};
+
 // === Admin Product Management ===
 export const getAdminItems = (params = {}) => {
   const queryString = buildAdminQueryString(params);
@@ -323,6 +338,10 @@ const apiService = {
   updateAdminItemFeature,
   getAdminItemReports,
   resolveAdminItemReport,
+  getAdminUsers,
+  getAdminUserDetail,
+  updateAdminUserStatus,
+  getAdminAuditLogs,
   getBestsellers,
   uploadImages,
   // Blocked Dates
